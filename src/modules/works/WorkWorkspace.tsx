@@ -82,6 +82,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
   const [newInquiryTeacherAnswer, setNewInquiryTeacherAnswer] = useState('');
   const [newInquiryStatus, setNewInquiryStatus] = useState<'DRAFT' | 'SENT' | 'ANSWERED'>('DRAFT');
   const [isFormulating, setIsFormulating] = useState(false);
+  const [copiedInquiryId, setCopiedInquiryId] = useState<string | null>(null);
 
   // Google Docs & Canva link modal state
   const [isLinksModalOpen, setIsLinksModalOpen] = useState(false);
@@ -668,32 +669,69 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
               <div className="space-y-3">
                 {inquiries.map((inq) => (
                   <Card key={inq.id} variant="elevated" className="space-y-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
                       <h4 className="font-bold text-sm text-[#2B2D42]">{inq.topic}</h4>
-                      <Badge variant={inq.status === 'ANSWERED' ? 'verified' : inq.status === 'SENT' ? 'lavender' : 'amber'} size="sm">
-                        {inq.status === 'ANSWERED' ? 'Respuesta Oficial Recibida' : inq.status === 'SENT' ? 'Enviada al Docente' : 'Borrador'}
-                      </Badge>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {inq.status !== 'ANSWERED' && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const nextStatus = inq.status === 'DRAFT' ? 'SENT' : 'DRAFT';
+                              await db.inquiries.update(inq.id, { status: nextStatus, updatedAt: Date.now() });
+                              showToast(
+                                nextStatus === 'SENT' ? 'Marcada como Enviada' : 'Marcada como Borrador',
+                                'Estado de la consulta actualizado.',
+                                'info'
+                              );
+                            }}
+                            className="text-[10px] font-bold text-[#5A6275] bg-[#F5F1EB] hover:bg-[#EBE5DF] px-2 py-0.5 rounded-md cursor-pointer transition-colors"
+                            title="Cambiar estado"
+                          >
+                            {inq.status === 'DRAFT' ? 'Marcar Enviada' : 'Marcar Borrador'}
+                          </button>
+                        )}
+                        <Badge
+                          variant={inq.status === 'ANSWERED' ? 'mint' : inq.status === 'SENT' ? 'lavender' : 'amber'}
+                          size="sm"
+                        >
+                          {inq.status === 'ANSWERED' ? 'Respuesta Oficial Recibida' : inq.status === 'SENT' ? 'Enviada al Docente' : 'Borrador'}
+                        </Badge>
+                      </div>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-[#F5F1EB]/70 text-xs space-y-1.5">
+                    <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EBE5DF] text-xs space-y-1.5 shadow-2xs">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-[#5A6275]">Pregunta Formal:</span>
+                        <span className="font-bold text-[10px] uppercase tracking-wider text-[#8C3A32]">
+                          Consulta Formal para el Profesor:
+                        </span>
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(inq.formalQuestion);
+                            setCopiedInquiryId(inq.id);
                             showToast('Mensaje copiado', 'Consulta formal copiada al portapapeles.', 'success');
+                            setTimeout(() => setCopiedInquiryId(null), 2000);
                           }}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#8C3A32] hover:text-[#2B2D42] transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#8C3A32] hover:text-[#2B2D42] bg-white px-2.5 py-1 rounded-lg border border-[#EBE5DF] transition-colors cursor-pointer shadow-2xs"
                           title="Copiar texto formal"
                         >
-                          <Copy className="w-3 h-3" /> Copiar Mensaje
+                          {copiedInquiryId === inq.id ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-600" />
+                              <span>¡Copiado!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              <span>Copiar Mensaje</span>
+                            </>
+                          )}
                         </button>
                       </div>
                       <p className="text-[#2B2D42] whitespace-pre-line leading-relaxed">{inq.formalQuestion}</p>
                     </div>
 
                     {inq.teacherAnswer ? (
-                      <div className="p-3.5 rounded-xl bg-emerald-50/80 border border-emerald-200 text-xs space-y-1">
+                      <div className="p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200 text-xs space-y-1 shadow-2xs">
                         <div className="flex items-center gap-1.5 font-bold text-emerald-900">
                           <CheckCircle2 className="w-4 h-4 text-emerald-700" />
                           <span>Respuesta Oficial de {course?.teacherName || 'Profesor/a'}:</span>
@@ -706,7 +744,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                         )}
                       </div>
                     ) : (
-                      <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/60 space-y-2">
+                      <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/70 space-y-2 shadow-2xs">
                         <span className="text-xs font-semibold text-amber-900 block">
                           ¿El docente ya respondió esta duda? Registra la respuesta para que sea vinculante en el trabajo:
                         </span>

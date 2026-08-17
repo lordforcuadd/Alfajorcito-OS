@@ -182,8 +182,31 @@ export const WorksView: React.FC<WorksViewProps> = ({
                     </span>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <CitationStyleBadge style={work.citationStyle} />
-                      <Badge variant={work.status === 'ENTREGADO' ? 'mint' : 'rose'} size="sm">
-                        {work.status === 'ENTREGADO' ? 'Entregado' : work.status}
+                      <Badge
+                        variant={
+                          work.status === 'ENTREGADO'
+                            ? 'mint'
+                            : work.status === 'INVESTIGACION'
+                            ? 'lavender'
+                            : work.status === 'PLANIFICACION'
+                            ? 'amber'
+                            : 'rose'
+                        }
+                        size="sm"
+                      >
+                        {work.status === 'ENTREGADO'
+                          ? 'Entregado'
+                          : work.status === 'INVESTIGACION'
+                          ? 'Investigando'
+                          : work.status === 'PLANIFICACION'
+                          ? 'Planificación'
+                          : work.status === 'REDACTANDO'
+                          ? 'Redactando'
+                          : work.status === 'EN_REVISION'
+                          ? 'En Revisión'
+                          : work.status === 'CORRECCION'
+                          ? 'En Corrección'
+                          : work.status}
                       </Badge>
                     </div>
                   </div>
