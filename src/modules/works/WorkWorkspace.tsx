@@ -36,7 +36,7 @@ import { validateSourceAge } from '../../utils/sourceAgeValidator';
 import { formatFullReference, formatInTextParenthetical, formatInTextNarrative } from '../../utils/citationEngine';
 import { generateGoogleDocsRichHTML, generateGoogleCalendarUrl, generateICSFile } from '../../utils/googleExporter';
 import { formulateQuestionForTeacher, analyzeInstructionsOffline } from '../../services/aiService';
-import type { Work, Course, Source, Task, InquiryToTeacher, Citation, Paraphrase, Idea } from '../../types';
+import type { Work, Course, Source, Task, InquiryToTeacher, Citation, Paraphrase, Idea, UserProfile, TaskPriority } from '../../types';
 
 export interface WorkWorkspaceProps {
   workId: string;
@@ -61,7 +61,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
   const paraphrases = useLiveQuery(() => db.paraphrases.where({ workId }).toArray(), [workId]) || [];
   const ideas = useLiveQuery(() => db.ideas.where({ workId }).toArray(), [workId]) || [];
   const userProfileRecord = useLiveQuery(() => db.settings.get('user_profile'));
-  const userProfile = userProfileRecord?.value as any;
+  const userProfile = userProfileRecord?.value as UserProfile | undefined;
 
   const course = courses.find((c) => c.id === work?.courseId);
   const workSources = allSources.filter((s) => s.workIds.includes(workId));
@@ -503,7 +503,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                 <div className="w-full sm:w-40 shrink-0">
                   <Select
                     value={newTaskPriority}
-                    onChange={(e) => setNewTaskPriority(e.target.value as any)}
+                    onChange={(e) => setNewTaskPriority(e.target.value as TaskPriority)}
                   >
                     <option value="LOW">Prioridad Baja</option>
                     <option value="MEDIUM">Prioridad Media</option>

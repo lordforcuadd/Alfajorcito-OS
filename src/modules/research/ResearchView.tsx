@@ -28,7 +28,7 @@ import { useToast } from '../../components/common/Toast';
 import { resolveDOI, searchOpenAlex, searchSemanticScholar, type AcademicSearchResult } from '../../services/academicApis';
 import { auditSourceMetadata } from '../../utils/antiHallucination';
 import { formatFullReference } from '../../utils/citationEngine';
-import type { Source, VerificationStatus, Idea, Paraphrase, Work } from '../../types';
+import type { Source, VerificationStatus, Idea, Paraphrase, Work, Author } from '../../types';
 
 export interface ResearchViewProps {
   onOpenQuickCapture: (tab?: 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task') => void;
@@ -277,7 +277,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                         </h4>
 
                         <p className="text-xs text-[#5A6275]">
-                          {item.authors.map((a: any) => `${a.lastName || ''}, ${a.firstName || ''}`).join('; ')}
+                          {item.authors.map((a: Author) => `${a.lastName || ''}, ${a.firstName || ''}`).join('; ')}
                         </p>
 
                         {item.abstract && (
@@ -376,7 +376,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
             ].map((f) => (
               <button
                 key={f.id}
-                onClick={() => setVerificationFilter(f.id as any)}
+                onClick={() => setVerificationFilter(f.id as VerificationStatus | 'ALL')}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer select-none shrink-0 ${
                   verificationFilter === f.id
                     ? 'bg-[#E8A598] text-[#2B2D42] shadow-2xs'

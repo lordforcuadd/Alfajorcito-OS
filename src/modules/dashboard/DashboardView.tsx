@@ -90,11 +90,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Dynamic user profile query
   const userProfileRecord = useLiveQuery(() => db.settings.get('user_profile'));
-  const userProfile = (userProfileRecord?.value as any) || {
-    name: 'Estudiante de Psicología USMP',
+  const userProfile = (userProfileRecord?.value as UserProfile | undefined) || {
+    name: 'Saory (Psicología USMP)',
     institution: 'Universidad de San Martín de Porres (USMP)',
     faculty: 'Facultad de Ciencias de la Comunicación, Turismo y Psicología',
-    currentCycle: 'VIII Ciclo (8vo Ciclo)'
+    major: 'Psicología',
+    currentCycle: 'VIII Ciclo (8vo Ciclo)',
+    defaultCitationStyle: 'APA_7'
   };
 
   return (

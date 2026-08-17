@@ -50,7 +50,7 @@ export interface GraphNode {
   vy: number;
   isDragging?: boolean;
   phase: number;
-  rawItem: any;
+  rawItem: Note | Concept | Course | Work;
   connectionsCount: number;
 }
 
@@ -1077,101 +1077,113 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
 
           {/* Node specifics */}
           <div className="text-xs text-[#475569] space-y-2">
-            {selectedNode.type === 'note' && (
-              <>
-                <div className="max-h-44 overflow-y-auto p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2E8F0] shadow-2xs">
-                  <FormattedNoteContent
-                    content={selectedNode.rawItem.content}
-                    notes={notes}
-                    concepts={concepts}
-                    courses={courses}
-                    works={works}
-                    onNavigateToNote={(n) => onOpenNote(n)}
-                    onNavigateToWork={onOpenWork}
-                  />
-                </div>
-                <div className="flex items-center justify-between text-[10px]">
-                  <span>
-                    Categoría:{' '}
-                    <strong>
-                      {selectedNode.rawItem.paraCategory === 'ATOMIC'
-                        ? 'Idea Rápida'
-                        : selectedNode.rawItem.paraCategory === 'PROJECT'
-                        ? 'Proyecto / Tesis'
-                        : selectedNode.rawItem.paraCategory === 'AREA'
-                        ? 'Materia'
-                        : selectedNode.rawItem.paraCategory === 'RESOURCE'
-                        ? 'Recurso'
-                        : 'Archivo'}
-                    </strong>
-                  </span>
-                  <span>{selectedNode.connectionsCount} enlaces</span>
-                </div>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => onOpenNote(selectedNode.rawItem)}
-                  icon={<FileText className="w-3.5 h-3.5" />}
-                  className="w-full font-bold"
-                >
-                  Leer Nota Completa & Editar
-                </Button>
-              </>
-            )}
-
-            {selectedNode.type === 'work' && (
-              <>
-                <div className="space-y-0.5 text-[11px]">
-                  <p>
-                    Estado:{' '}
-                    <strong className="text-[#E11D48]">
-                      {selectedNode.rawItem.status === 'PLANIFICACION'
-                        ? 'Planificación'
-                        : selectedNode.rawItem.status === 'INVESTIGANDO'
-                        ? 'Investigando Fuentes'
-                        : selectedNode.rawItem.status === 'REDACTANDO'
-                        ? 'Redactando Borrador'
-                        : selectedNode.rawItem.status === 'REVISION'
-                        ? 'En Revisión'
-                        : 'Entregado'}
-                    </strong>
-                  </p>
-                  <p>Entrega: <strong>{new Date(selectedNode.rawItem.deadline).toLocaleDateString()}</strong></p>
-                </div>
-                {onOpenWork && (
+            {selectedNode.type === 'note' && (() => {
+              const noteItem = selectedNode.rawItem as Note;
+              return (
+                <>
+                  <div className="max-h-44 overflow-y-auto p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2E8F0] shadow-2xs">
+                    <FormattedNoteContent
+                      content={noteItem.content}
+                      notes={notes}
+                      concepts={concepts}
+                      courses={courses}
+                      works={works}
+                      onNavigateToNote={(n) => onOpenNote(n)}
+                      onNavigateToWork={onOpenWork}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span>
+                      Categoría:{' '}
+                      <strong>
+                        {noteItem.paraCategory === 'ATOMIC'
+                          ? 'Idea Rápida'
+                          : noteItem.paraCategory === 'PROJECT'
+                          ? 'Proyecto / Tesis'
+                          : noteItem.paraCategory === 'AREA'
+                          ? 'Materia'
+                          : noteItem.paraCategory === 'RESOURCE'
+                          ? 'Recurso'
+                          : 'Archivo'}
+                      </strong>
+                    </span>
+                    <span>{selectedNode.connectionsCount} enlaces</span>
+                  </div>
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => onOpenWork(selectedNode.rawItem.id)}
-                    icon={<GraduationCap className="w-3.5 h-3.5" />}
-                    className="w-full"
+                    onClick={() => onOpenNote(noteItem)}
+                    icon={<FileText className="w-3.5 h-3.5" />}
+                    className="w-full font-bold"
                   >
-                    Abrir Espacio de Trabajo
+                    Leer Nota Completa & Editar
                   </Button>
-                )}
-              </>
-            )}
+                </>
+              );
+            })()}
 
-            {selectedNode.type === 'course' && (
-              <div className="space-y-1 text-[11px]">
-                <p>Periodo: <strong>{selectedNode.rawItem.period}</strong></p>
-                {selectedNode.rawItem.teacherName && (
-                  <p>Docente: <strong>{selectedNode.rawItem.teacherName}</strong></p>
-                )}
-                <span className="text-[10px] text-[#64748B] block pt-0.5">
-                  {selectedNode.connectionsCount} trabajos y notas vinculadas
-                </span>
-              </div>
-            )}
+            {selectedNode.type === 'work' && (() => {
+              const workItem = selectedNode.rawItem as Work;
+              return (
+                <>
+                  <div className="space-y-0.5 text-[11px]">
+                    <p>
+                      Estado:{' '}
+                      <strong className="text-[#E11D48]">
+                        {workItem.status === 'PLANIFICACION'
+                          ? 'Planificación'
+                          : workItem.status === 'INVESTIGACION'
+                          ? 'Investigando Fuentes'
+                          : workItem.status === 'REDACTANDO'
+                          ? 'Redactando Borrador'
+                          : workItem.status === 'EN_REVISION'
+                          ? 'En Revisión'
+                          : 'Entregado'}
+                      </strong>
+                    </p>
+                    <p>Entrega: <strong>{new Date(workItem.deadline).toLocaleDateString()}</strong></p>
+                  </div>
+                  {onOpenWork && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => onOpenWork(workItem.id)}
+                      icon={<GraduationCap className="w-3.5 h-3.5" />}
+                      className="w-full"
+                    >
+                      Abrir Espacio de Trabajo
+                    </Button>
+                  )}
+                </>
+              );
+            })()}
 
-            {selectedNode.type === 'concept' && (
-              <div className="space-y-1 text-[11px]">
-                <p className="line-clamp-2">{selectedNode.rawItem.description || 'Concepto clave de psicología.'}</p>
-                <span className="text-[10px] text-[#64748B] block pt-0.5">
-                  {selectedNode.connectionsCount} notas conectadas
-                </span>
-              </div>
-            )}
+            {selectedNode.type === 'course' && (() => {
+              const courseItem = selectedNode.rawItem as Course;
+              return (
+                <div className="space-y-1 text-[11px]">
+                  <p>Periodo: <strong>{courseItem.period}</strong></p>
+                  {courseItem.teacherName && (
+                    <p>Docente: <strong>{courseItem.teacherName}</strong></p>
+                  )}
+                  <span className="text-[10px] text-[#64748B] block pt-0.5">
+                    {selectedNode.connectionsCount} trabajos y notas vinculadas
+                  </span>
+                </div>
+              );
+            })()}
+
+            {selectedNode.type === 'concept' && (() => {
+              const conceptItem = selectedNode.rawItem as Concept;
+              return (
+                <div className="space-y-1 text-[11px]">
+                  <p className="line-clamp-2">{conceptItem.description || 'Concepto clave de psicología.'}</p>
+                  <span className="text-[10px] text-[#64748B] block pt-0.5">
+                    {selectedNode.connectionsCount} notas conectadas
+                  </span>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}

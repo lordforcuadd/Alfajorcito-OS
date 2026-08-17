@@ -172,7 +172,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setParaFilter(tab.id as any)}
+                onClick={() => setParaFilter(tab.id as ParaCategory | 'ALL')}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer select-none shrink-0 ${
                   paraFilter === tab.id
                     ? 'bg-[#E8A598] text-[#2B2D42] shadow-2xs'

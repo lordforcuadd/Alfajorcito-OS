@@ -25,7 +25,7 @@ import { db } from '../../db';
 import { resolveDOI } from '../../services/academicApis';
 import { formulateQuestionForTeacher, analyzeInstructionsOffline } from '../../services/aiService';
 import { useToast } from '../common/Toast';
-import type { CitationStyle, WorkType, ParaCategory, TaskPriority, SourceType } from '../../types';
+import type { CitationStyle, WorkType, ParaCategory, TaskPriority, SourceType, Author } from '../../types';
 
 export type CaptureTab = 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task';
 
@@ -137,7 +137,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       const result = await resolveDOI(sourceDoiOrSearch.trim());
       if (result) {
         setSourceTitle(result.title);
-        const authorStr = result.authors.map((a: any) => `${a.lastName || ''}, ${a.firstName || ''}`).join('; ');
+        const authorStr = result.authors.map((a: Author) => `${a.lastName || ''}, ${a.firstName || ''}`).join('; ');
         setSourceAuthor(authorStr);
         setSourceYear(result.year);
         setSourcePublication(result.publication || '');

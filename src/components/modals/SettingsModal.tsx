@@ -277,7 +277,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => setActiveTab(tab.id as 'profile' | 'ai' | 'obsidian' | 'data')}
             className={`flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeTab === tab.id
                 ? 'bg-[#FDF2F0] text-[#8C3A32] border border-[#E8A598]/60 shadow-xs'
@@ -339,7 +339,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             <Select
               label="Área de Especialidad"
               value={userSpecialty}
-              onChange={(e) => setUserSpecialty(e.target.value as any)}
+              onChange={(e) => setUserSpecialty(e.target.value as UserProfile['specialty'])}
             >
               <option value="CLINICA">Psicología Clínica y de la Salud</option>
               <option value="EDUCATIVA">Psicología Educativa</option>

@@ -1,0 +1,138 @@
+import { describe, it, expect } from 'vitest';
+import {
+  formatFullReference,
+  formatInTextParenthetical,
+  formatInTextNarrative,
+  formatAuthorNamesAPA
+} from '../utils/citationEngine';
+import type { Source } from '../types';
+
+describe('Citation Engine Extended Suite — Strict Academic APA 7 & Multi-style Verification', () => {
+  it('formats single author APA 7 correctly', () => {
+    const source: Source = {
+      id: 'src-single',
+      workIds: ['work-1'],
+      title: 'Emotion regulation: Conceptual and empirical foundations',
+      authors: [{ firstName: 'James', lastName: 'Gross' }],
+      year: 2015,
+      type: 'BOOK_CHAPTER',
+      publication: 'Handbook of Emotion Regulation (2nd ed., pp. 3-20). The Guilford Press',
+      doi: '10.1002/9781118993811.ch1',
+      accessedAt: Date.now(),
+      verificationStatus: 'VERIFIED',
+      verificationProvider: 'CROSSREF',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    const apa = formatFullReference(source, 'APA_7');
+    expect(apa).toBe('Gross, J. (2015). Emotion regulation: Conceptual and empirical foundations. Handbook of Emotion Regulation (2nd ed., pp. 3-20). The Guilford Press. https://doi.org/10.1002/9781118993811.ch1');
+
+    const narrative = formatInTextNarrative(source, 'APA_7');
+    expect(narrative).toBe('Gross (2015)');
+
+    const parenthetical = formatInTextParenthetical(source, 'APA_7', 'p. 14');
+    expect(parenthetical).toBe('(Gross, 2015, p. 14)');
+  });
+
+  it('formats 3 or more authors with et al. in parenthetical and narrative APA 7', () => {
+    const source: Source = {
+      id: 'src-multiple',
+      workIds: ['work-1'],
+      title: 'Validación de la escala GAD-7 para la detección de síntomas de ansiedad generalizada en adultos de Lima Metropolitana',
+      authors: [
+        { firstName: 'David', lastName: 'Villarreal-Zegarra' },
+        { firstName: 'Ángel', lastName: 'Ccorahua-Ríos' },
+        { firstName: 'Joel', lastName: 'Burgos-Mejía' }
+      ],
+      year: 2021,
+      type: 'JOURNAL_ARTICLE',
+      publication: 'Revista Peruana de Medicina Experimental y Salud Pública',
+      volume: '38',
+      issue: '4',
+      pages: '560-567',
+      doi: '10.17843/rpmesp.2021.384.7733',
+      accessedAt: Date.now(),
+      verificationStatus: 'VERIFIED',
+      verificationProvider: 'CROSSREF',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    const narrative = formatInTextNarrative(source, 'APA_7');
+    expect(narrative).toBe('Villarreal-Zegarra et al. (2021)');
+
+    const parenthetical = formatInTextParenthetical(source, 'APA_7', 'p. 562');
+    expect(parenthetical).toBe('(Villarreal-Zegarra et al., 2021, p. 562)');
+
+    const fullRef = formatFullReference(source, 'APA_7');
+    expect(fullRef).toContain('Villarreal-Zegarra, D., Ccorahua-Ríos, Á., & Burgos-Mejía, J. (2021)');
+    expect(fullRef).toContain('Revista Peruana de Medicina Experimental y Salud Pública, 38(4), 560-567');
+  });
+
+  it('handles missing year with "s.f." gracefully', () => {
+    const source: Source = {
+      id: 'src-nodate',
+      workIds: ['work-1'],
+      title: 'Guía de Práctica Clínica en Salud Mental',
+      authors: [{ firstName: 'Ministerio de Salud', lastName: 'MINSA' }],
+      year: 0,
+      type: 'REPORT',
+      publication: 'MINSA Perú',
+      accessedAt: Date.now(),
+      verificationStatus: 'VERIFIED',
+      verificationProvider: 'MANUAL',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    const ref = formatFullReference(source, 'APA_7');
+    expect(ref).toContain('(s.f.)');
+
+    const inText = formatInTextParenthetical(source, 'APA_7');
+    expect(inText).toBe('(MINSA, s.f.)');
+  });
+
+  it('formats Chicago Author-Date correctly', () => {
+    const source: Source = {
+      id: 'src-chicago',
+      workIds: ['work-1'],
+      title: 'Cognitive behavior therapy: Basics and beyond',
+      authors: [{ firstName: 'Judith S.', lastName: 'Beck' }],
+      year: 2021,
+      type: 'BOOK',
+      publication: 'The Guilford Press',
+      accessedAt: Date.now(),
+      verificationStatus: 'VERIFIED',
+      verificationProvider: 'MANUAL',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    const inText = formatInTextParenthetical(source, 'CHICAGO_AUTHOR_DATE', 'p. 45');
+    expect(inText).toBe('(Beck 2021, p. 45)');
+  });
+
+  it('formats Vancouver and IEEE numbered citation correctly', () => {
+    const source: Source = {
+      id: 'src-vancouver',
+      workIds: ['work-1'],
+      title: 'Propiedades psicométricas del inventario de depresión de Beck',
+      authors: [{ firstName: 'César', lastName: 'Merino-Soto' }],
+      year: 2022,
+      type: 'JOURNAL_ARTICLE',
+      publication: 'Liberabit',
+      accessedAt: Date.now(),
+      verificationStatus: 'VERIFIED',
+      verificationProvider: 'CROSSREF',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    const inTextVancouver = formatInTextParenthetical(source, 'VANCOUVER');
+    expect(inTextVancouver).toBe('[1]');
+
+    const inTextIEEE = formatInTextParenthetical(source, 'IEEE');
+    expect(inTextIEEE).toBe('[1]');
+  });
+});

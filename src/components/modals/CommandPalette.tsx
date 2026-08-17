@@ -15,6 +15,7 @@ import {
 import { db } from '../../db';
 import { Modal } from '../common/Modal';
 import { Badge } from '../common/Badge';
+import type { Work, Source, Note, Concept, InquiryToTeacher, Task } from '../../types';
 
 export interface CommandPaletteProps {
   isOpen: boolean;
@@ -23,6 +24,17 @@ export interface CommandPaletteProps {
 }
 
 type FilterCategory = 'ALL' | 'WORKS' | 'SOURCES' | 'NOTES' | 'CONCEPTS' | 'INQUIRIES' | 'TASKS';
+
+export type CommandPaletteItem = {
+  id: string;
+  title: string;
+  subtitle: string;
+  category: FilterCategory;
+  icon: React.ReactNode;
+  badgeText: string;
+  badgeVariant: 'rose' | 'lavender' | 'mint' | 'amber' | 'default';
+  rawItem: Work | Source | Note | Concept | InquiryToTeacher | Task;
+};
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, onNavigate }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,16 +62,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
   const results = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
 
-    const items: Array<{
-      id: string;
-      title: string;
-      subtitle: string;
-      category: FilterCategory;
-      icon: React.ReactNode;
-      badgeText: string;
-      badgeVariant: 'rose' | 'lavender' | 'mint' | 'amber' | 'default';
-      rawItem: any;
-    }> = [];
+    const items: CommandPaletteItem[] = [];
 
     const workStatusSpanish: Record<string, string> = {
       PLANIFICACION: 'Planificación',
