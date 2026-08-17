@@ -783,43 +783,72 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                         {ageCheck.message}
                       </p>
 
-                      {/* Citation Actions */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#EBE5DF]">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleInsertCitation(source, 'parenthetical')}
-                            icon={<Plus className="w-3.5 h-3.5" />}
-                          >
-                            Cita Parentética
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleInsertCitation(source, 'narrative')}
-                            icon={<Plus className="w-3.5 h-3.5" />}
-                          >
-                            Cita Narrativa
-                          </Button>
+                      {/* Citation Previews & Direct Insertion */}
+                      <div className="space-y-2 pt-2 border-t border-[#EBE5DF]">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                          {/* Parenthetical insertion preview */}
+                          <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#EBE5DF] flex items-center justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <span className="text-[10px] font-bold text-[#8C3A32] uppercase block">
+                                Cita Parentética
+                              </span>
+                              <code className="text-[11px] font-mono text-[#2B2D42] truncate block">
+                                {formatInTextParenthetical(source, work.citationStyle)}
+                              </code>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleInsertCitation(source, 'parenthetical')}
+                              icon={<Plus className="w-3.5 h-3.5" />}
+                              className="shrink-0 text-xs font-bold text-[#8C3A32]"
+                              title="Insertar al final de la idea en el borrador"
+                            >
+                              Insertar
+                            </Button>
+                          </div>
+
+                          {/* Narrative insertion preview */}
+                          <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#EBE5DF] flex items-center justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <span className="text-[10px] font-bold text-[#8C3A32] uppercase block">
+                                Cita Narrativa
+                              </span>
+                              <code className="text-[11px] font-mono text-[#2B2D42] truncate block">
+                                {formatInTextNarrative(source, work.citationStyle)}
+                              </code>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleInsertCitation(source, 'narrative')}
+                              icon={<Plus className="w-3.5 h-3.5" />}
+                              className="shrink-0 text-xs font-bold text-[#2B2D42]"
+                              title="Insertar autor en la redacción"
+                            >
+                              Insertar
+                            </Button>
+                          </div>
                         </div>
 
                         {/* Historical context toggle */}
-                        <button
-                          onClick={async () => {
-                            await db.sources.update(source.id, {
-                              historicalContextApproved: !source.historicalContextApproved,
-                              updatedAt: Date.now()
-                            });
-                          }}
-                          className={`text-xs px-2.5 py-1 rounded-xl font-semibold border transition-all cursor-pointer ${
-                            source.historicalContextApproved
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                              : 'bg-[#F5F1EB] text-[#5A6275] border-[#EBE5DF] hover:bg-[#EBE5DF]'
-                          }`}
-                        >
-                          {source.historicalContextApproved ? 'Excepción Seminal Aprobada' : 'Aprobar como Contexto Histórico'}
-                        </button>
+                        <div className="flex justify-end pt-1">
+                          <button
+                            onClick={async () => {
+                              await db.sources.update(source.id, {
+                                historicalContextApproved: !source.historicalContextApproved,
+                                updatedAt: Date.now()
+                              });
+                            }}
+                            className={`text-[11px] px-2.5 py-1 rounded-xl font-semibold border transition-all cursor-pointer ${
+                              source.historicalContextApproved
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : 'bg-[#F5F1EB] text-[#5A6275] border-[#EBE5DF] hover:bg-[#EBE5DF]'
+                            }`}
+                          >
+                            {source.historicalContextApproved ? '✓ Excepción Seminal Aprobada' : 'Aprobar como Contexto Histórico'}
+                          </button>
+                        </div>
                       </div>
                     </Card>
                   );
