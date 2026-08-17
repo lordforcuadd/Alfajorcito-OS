@@ -55,23 +55,79 @@ export class AlfajorcitoDB extends Dexie {
 
 export const db = new AlfajorcitoDB();
 
+// Helper to clear all academic entities (leaving database at 0 for fresh user testing)
+export async function clearAllDatabaseData() {
+  await db.courses.clear();
+  await db.works.clear();
+  await db.sources.clear();
+  await db.ideas.clear();
+  await db.paraphrases.clear();
+  await db.citations.clear();
+  await db.notes.clear();
+  await db.concepts.clear();
+  await db.tasks.clear();
+  await db.inquiries.clear();
+  await db.settings.put({ key: 'has_initialized', value: true, updatedAt: Date.now() });
+}
+
 // Helper to seed complete, realistic academic data for USMP Psychology student (8vo Ciclo en curso + proyección a Internado 9no y 10mo)
-export async function initializeDatabaseSeed() {
-  const coursesCount = await db.courses.count();
-  if (coursesCount > 0) {
-    // Sanitize any legacy note text if present
-    const existingNotes = await db.notes.toArray();
-    for (const n of existingNotes) {
-      if (n.content.includes('Sanmarquin') || n.title.includes('Sanmarquin')) {
-        const newTitle = n.title.replace(/Sanmarquin\w+/gi, 'USMP');
-        const newContent = n.content.replace(/Sanmarquin\w+/gi, 'Universitarios de la USMP');
-        await db.notes.update(n.id, { title: newTitle, content: newContent, updatedAt: Date.now() });
-      }
-    }
+export async function initializeDatabaseSeed(force = false) {
+  const isInitialized = await db.settings.get('has_initialized');
+  if (isInitialized && !force) {
     return;
   }
 
   const now = Date.now();
+
+  if (!force) {
+    // Fresh clean startup: Initialize default profile and settings with 0 courses/works
+    const initialUserProfile: SettingRecord = {
+      key: 'user_profile',
+      value: {
+        name: 'Saory (Psicología USMP)',
+        institution: 'Universidad de San Martín de Porres (USMP)',
+        faculty: 'Facultad de Ciencias de la Comunicación, Turismo y Psicología',
+        major: 'Psicología',
+        currentCycle: 'VIII Ciclo (8vo Ciclo)',
+        specialty: 'CLINICA',
+        thesisTitle: '',
+        internshipSite: '',
+        defaultCitationStyle: 'APA_7'
+      } as UserProfile,
+      updatedAt: now
+    };
+
+    const initialAISettings: SettingRecord = {
+      key: 'ai_settings',
+      value: {
+        provider: 'offline_heuristics',
+        modelName: 'gemini-1.5-flash',
+        temperature: 0.2,
+        tokensUsedThisMonth: 0
+      } as AISettings,
+      updatedAt: now
+    };
+
+    const initialObsidianSettings: SettingRecord = {
+      key: 'obsidian_settings',
+      value: {
+        restApiEnabled: false,
+        restApiEndpoint: 'https://127.0.0.1:27124',
+        restApiToken: '',
+        defaultParaFolder: '01_Projects'
+      } as ObsidianSettings,
+      updatedAt: now
+    };
+
+    await db.settings.bulkPut([
+      initialUserProfile,
+      initialAISettings,
+      initialObsidianSettings,
+      { key: 'has_initialized', value: true, updatedAt: now }
+    ]);
+    return;
+  }
+
   const dayMs = 86400000;
 
   // 1. Cursos Reales de la Facultad de Ciencias de la Comunicación, Turismo y Psicología (FCCTP - USMP)

@@ -20,7 +20,7 @@ import {
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { Input, Select, TextArea } from '../common/Input';
-import { db, initializeDatabaseSeed } from '../../db';
+import { db, initializeDatabaseSeed, clearAllDatabaseData } from '../../db';
 import { exportVaultZip } from '../../utils/obsidianExporter';
 import { testAIConnection } from '../../services/aiService';
 import { useToast } from '../common/Toast';
@@ -537,33 +537,58 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             </div>
           </div>
 
-          {/* Reset Demo Data */}
-          <div className="p-4 rounded-2xl bg-[#FFF8E1] border border-[#FFCC80]/60 space-y-2">
-            <h4 className="font-bold text-xs text-[#795548]">Reiniciar Datos de Demostración (Psicología USMP)</h4>
-            <p className="text-xs text-[#795548]/90">
-              Si deseas recargar los ejemplos iniciales de investigación en psicología, tesis y citas APA 7 de la FCCTP USMP, puedes reiniciar la base de datos local.
-            </p>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={async () => {
-                await db.courses.clear();
-                await db.works.clear();
-                await db.sources.clear();
-                await db.ideas.clear();
-                await db.paraphrases.clear();
-                await db.citations.clear();
-                await db.notes.clear();
-                await db.concepts.clear();
-                await db.tasks.clear();
-                await db.inquiries.clear();
-                await initializeDatabaseSeed();
-                showToast('Base reiniciada', 'Datos de psicología USMP restaurados.', 'success');
-              }}
-              icon={<RefreshCw className="w-3.5 h-3.5" />}
-            >
-              Recargar Semillas USMP
-            </Button>
+          {/* Database Reset & Management */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Clear all data (0 records) */}
+            <div className="p-4 rounded-2xl bg-[#FFF5F5] border border-[#FFCDD2] space-y-2 flex flex-col justify-between">
+              <div>
+                <h4 className="font-bold text-xs text-[#C62828] flex items-center gap-1.5">
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Vaciar Toda la Base de Datos (0 Datos)</span>
+                </h4>
+                <p className="text-xs text-[#5A6275] mt-1 leading-relaxed">
+                  Elimina todos los cursos, trabajos, fuentes, notas y tareas para iniciar desde cero y probar el sistema completamente en blanco.
+                </p>
+              </div>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={async () => {
+                  await clearAllDatabaseData();
+                  showToast('Base vaciada', 'Se han eliminado todos los datos. La aplicación está lista en blanco.', 'info');
+                  onClose();
+                }}
+                icon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                Limpiar Todo (Dejar en Blanco)
+              </Button>
+            </div>
+
+            {/* Reload Demo Data */}
+            <div className="p-4 rounded-2xl bg-[#FFF8E1] border border-[#FFCC80]/60 space-y-2 flex flex-col justify-between">
+              <div>
+                <h4 className="font-bold text-xs text-[#795548] flex items-center gap-1.5">
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Recargar Semillas de Ejemplo (Psicología USMP)</span>
+                </h4>
+                <p className="text-xs text-[#5A6275] mt-1 leading-relaxed">
+                  Restaura los cursos de 8vo Ciclo, tesis de regulación emocional, fuentes indexadas y notas de ejemplo.
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={async () => {
+                  await clearAllDatabaseData();
+                  await initializeDatabaseSeed(true);
+                  showToast('Semillas restauradas', 'Datos de ejemplo de psicología USMP cargados.', 'success');
+                  onClose();
+                }}
+                icon={<RefreshCw className="w-3.5 h-3.5" />}
+              >
+                Recargar Semillas USMP
+              </Button>
+            </div>
           </div>
         </div>
       )}
