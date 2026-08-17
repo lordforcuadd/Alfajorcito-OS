@@ -206,17 +206,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       const text = await file.text();
       const data = JSON.parse(text);
 
-      if (data.courses) await db.courses.bulkPut(data.courses);
-      if (data.works) await db.works.bulkPut(data.works);
-      if (data.sources) await db.sources.bulkPut(data.sources);
-      if (data.ideas) await db.ideas.bulkPut(data.ideas);
-      if (data.paraphrases) await db.paraphrases.bulkPut(data.paraphrases);
-      if (data.citations) await db.citations.bulkPut(data.citations);
-      if (data.notes) await db.notes.bulkPut(data.notes);
-      if (data.concepts) await db.concepts.bulkPut(data.concepts);
-      if (data.tasks) await db.tasks.bulkPut(data.tasks);
-      if (data.inquiries) await db.inquiries.bulkPut(data.inquiries);
-      if (data.settings) await db.settings.bulkPut(data.settings);
+      if (Array.isArray(data.courses)) await db.courses.bulkPut(data.courses);
+      if (Array.isArray(data.works)) await db.works.bulkPut(data.works);
+      if (Array.isArray(data.sources)) await db.sources.bulkPut(data.sources);
+      if (Array.isArray(data.ideas)) await db.ideas.bulkPut(data.ideas);
+      if (Array.isArray(data.paraphrases)) await db.paraphrases.bulkPut(data.paraphrases);
+      if (Array.isArray(data.citations)) await db.citations.bulkPut(data.citations);
+      if (Array.isArray(data.notes)) await db.notes.bulkPut(data.notes);
+      if (Array.isArray(data.concepts)) await db.concepts.bulkPut(data.concepts);
+      if (Array.isArray(data.tasks)) await db.tasks.bulkPut(data.tasks);
+      if (Array.isArray(data.inquiries)) await db.inquiries.bulkPut(data.inquiries);
+      if (Array.isArray(data.settings)) await db.settings.bulkPut(data.settings);
 
       showToast('Copia restaurada', 'Todos los datos se han importado correctamente.', 'success');
       onClose();
