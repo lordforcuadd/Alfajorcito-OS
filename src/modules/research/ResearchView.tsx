@@ -69,7 +69,10 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
 
   // Execute Academic Search
   const handleExecuteSearch = async () => {
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim()) {
+      showToast('Término requerido', 'Ingresa una palabra clave, autor o DOI para buscar.', 'warning');
+      return;
+    }
     setIsSearching(true);
     try {
       if (searchEngine === 'DOI') {

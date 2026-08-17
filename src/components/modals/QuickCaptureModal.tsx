@@ -174,11 +174,12 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
     try {
       const now = Date.now();
       const slug = noteTitle
+        .trim()
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)+/g, '');
+        .replace(/(^-|-$)+/g, '') || `nota-${now}`;
 
       const parsedTags = noteTags
         .split(',')
@@ -190,7 +191,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         id: `note-${Math.random().toString(36).substring(2, 9)}`,
         slug,
         title: noteTitle.trim(),
-        content: noteContent,
+        content: noteContent.trim(),
         paraCategory: notePara,
         courseId: noteCourseId || undefined,
         workId: noteWorkId || undefined,
@@ -214,10 +215,20 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
   };
 
   const handleSaveWork = async () => {
-    if (!workTitle.trim() || !workCourseId) {
-      showToast('Campos requeridos', 'Por favor completa el título y selecciona un curso.', 'warning');
+    if (courses.length === 0) {
+      showToast('Curso requerido', 'Primero debes crear un curso antes de registrar un trabajo.', 'warning');
+      setActiveTab('course');
       return;
     }
+    if (!workTitle.trim()) {
+      showToast('Título requerido', 'Por favor ingresa el título del trabajo o tesis.', 'warning');
+      return;
+    }
+    if (!workCourseId) {
+      showToast('Curso requerido', 'Por favor selecciona la asignatura correspondiente.', 'warning');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const now = Date.now();
@@ -231,9 +242,9 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         title: workTitle.trim(),
         type: workType,
         status: 'PLANIFICACION',
-        deadline: deadlineMs,
+        deadline: isNaN(deadlineMs) ? now + 86400000 * 7 : deadlineMs,
         citationStyle: workCitationStyle,
-        rawInstructions: workInstructions,
+        rawInstructions: workInstructions.trim(),
         instructionAnalysis: analysis,
         googleDocUrl: workGoogleDocUrl.trim() || undefined,
         canvaUrl: workCanvaUrl.trim() || undefined,
@@ -259,6 +270,11 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       showToast('Nombre requerido', 'Por favor ingresa el nombre del curso.', 'warning');
       return;
     }
+    if (courseTeacherEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(courseTeacherEmail.trim())) {
+      showToast('Correo inválido', 'Ingresa un correo institucional válido (e.g. docente@usmp.pe).', 'warning');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const now = Date.now();
@@ -266,7 +282,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         id: `course-${Math.random().toString(36).substring(2, 9)}`,
         name: courseName.trim(),
         code: courseCode.trim() || undefined,
-        period: coursePeriod.trim(),
+        period: coursePeriod.trim() || '2026-II',
         teacherName: courseTeacherName.trim() || undefined,
         teacherEmail: courseTeacherEmail.trim() || undefined,
         syllabusUrl: courseSyllabusUrl.trim() || undefined,
@@ -280,6 +296,8 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       setCourseName('');
       setCourseCode('');
       setCourseTeacherName('');
+      setCourseTeacherEmail('');
+      setCourseSyllabusUrl('');
       onClose();
     } finally {
       setIsSubmitting(false);
@@ -291,25 +309,33 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       showToast('Título requerido', 'Ingresa el título de la fuente o libro.', 'warning');
       return;
     }
+    const parsedYear = Number(sourceYear);
+    if (isNaN(parsedYear) || parsedYear < 1800 || parsedYear > new Date().getFullYear() + 2) {
+      showToast('Año inválido', 'Por favor ingresa un año de publicación válido (ej. 2024).', 'warning');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const now = Date.now();
-      const authors = sourceAuthor.split(';').map((a) => {
-        const parts = a.trim().split(',');
-        return {
-          lastName: parts[0]?.trim() || '',
-          firstName: parts[1]?.trim() || ''
-        };
-      });
+      const authors = sourceAuthor
+        ? sourceAuthor.split(';').map((a) => {
+            const parts = a.trim().split(',');
+            return {
+              lastName: parts[0]?.trim() || '',
+              firstName: parts[1]?.trim() || ''
+            };
+          }).filter(a => a.lastName || a.firstName)
+        : [];
 
       await db.sources.add({
         id: `src-${Math.random().toString(36).substring(2, 9)}`,
         workIds: sourceWorkId ? [sourceWorkId] : [],
         title: sourceTitle.trim(),
-        authors,
-        year: Number(sourceYear) || new Date().getFullYear(),
+        authors: authors.length > 0 ? authors : [{ firstName: '', lastName: 'Autor' }],
+        year: parsedYear,
         type: 'JOURNAL_ARTICLE',
-        publication: sourcePublication || undefined,
+        publication: sourcePublication.trim() || undefined,
         doi: sourceDoiOrSearch.trim() || undefined,
         accessedAt: now,
         verificationStatus: sourceDoiOrSearch.includes('10.') ? 'VERIFIED' : 'PARTIALLY_VERIFIED',
@@ -321,6 +347,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       showToast('Fuente guardada', 'Registrada en tu biblioteca de investigación.', 'success');
       setSourceTitle('');
       setSourceAuthor('');
+      setSourcePublication('');
       setSourceDoiOrSearch('');
       onClose();
     } finally {
@@ -329,10 +356,24 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
   };
 
   const handleSaveInquiry = async () => {
-    if (!inquiryTopic.trim() || !inquiryCourseId) {
-      showToast('Campos requeridos', 'Selecciona el curso e indica el tema de la duda.', 'warning');
+    if (courses.length === 0) {
+      showToast('Curso requerido', 'Primero debes registrar un curso para asociar la consulta.', 'warning');
+      setActiveTab('course');
       return;
     }
+    if (!inquiryCourseId) {
+      showToast('Curso requerido', 'Selecciona el curso al que pertenece la duda.', 'warning');
+      return;
+    }
+    if (!inquiryTopic.trim()) {
+      showToast('Tema requerido', 'Indica el tema o criterio de la duda.', 'warning');
+      return;
+    }
+    if (!inquiryRawQuestion.trim()) {
+      showToast('Duda requerida', 'Escribe tu pregunta o duda para el docente.', 'warning');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const now = Date.now();
@@ -371,7 +412,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       await db.tasks.add({
         id: `task-${Math.random().toString(36).substring(2, 9)}`,
         title: taskTitle.trim(),
-        dueDate: dueMs,
+        dueDate: dueMs && !isNaN(dueMs) ? dueMs : undefined,
         priority: taskPriority,
         workId: taskWorkId || undefined,
         isCompleted: false,

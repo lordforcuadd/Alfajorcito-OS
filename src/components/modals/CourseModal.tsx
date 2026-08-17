@@ -64,6 +64,10 @@ export const CourseModal: React.FC<CourseModalProps> = ({
       showToast('Nombre requerido', 'Por favor ingresa el nombre del curso.', 'warning');
       return;
     }
+    if (teacherEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(teacherEmail.trim())) {
+      showToast('Correo inválido', 'Ingresa un correo institucional válido (e.g. docente@usmp.pe).', 'warning');
+      return;
+    }
 
     setIsSubmitting(true);
     try {

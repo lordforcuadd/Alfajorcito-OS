@@ -628,9 +628,16 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                     variant="primary"
                     size="sm"
                     onClick={async () => {
-                      if (!newInquiryTopic.trim()) return;
+                      if (!newInquiryTopic.trim()) {
+                        showToast('Tema requerido', 'Por favor ingresa el tema de la consulta.', 'warning');
+                        return;
+                      }
+                      if (!newInquiryDoubt.trim()) {
+                        showToast('Duda requerida', 'Por favor describe tu duda para el profesor.', 'warning');
+                        return;
+                      }
                       const formal = await formulateQuestionForTeacher(
-                        newInquiryDoubt,
+                        newInquiryDoubt.trim(),
                         course?.name || 'Materia',
                         course?.teacherName
                       );
