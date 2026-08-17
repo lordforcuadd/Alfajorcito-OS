@@ -401,13 +401,19 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
 
   const handleSaveTask = async () => {
     if (!taskTitle.trim()) {
-      showToast('Título requerido', 'Ingresa una descripción de la tarea.', 'warning');
+      showToast('Título requerido', 'Por favor ingresa la descripción del pendiente o tarea.', 'warning');
       return;
     }
+    if (taskTitle.trim().length > 300) {
+      showToast('Texto muy extenso', 'La descripción de la tarea no debe superar los 300 caracteres.', 'warning');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const now = Date.now();
       const dueMs = taskDueDate ? new Date(taskDueDate).getTime() : undefined;
+      const linkedWork = works.find((w) => w.id === taskWorkId);
 
       await db.tasks.add({
         id: `task-${Math.random().toString(36).substring(2, 9)}`,
@@ -415,14 +421,18 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         dueDate: dueMs && !isNaN(dueMs) ? dueMs : undefined,
         priority: taskPriority,
         workId: taskWorkId || undefined,
+        courseId: linkedWork?.courseId || undefined,
         isCompleted: false,
         category: 'GENERAL',
         createdAt: now,
         updatedAt: now
       });
 
-      showToast('Tarea guardada', 'Añadida a tus pendientes.', 'success');
+      showToast('Tarea guardada', 'Añadida a tus pendientes académicos.', 'success');
       setTaskTitle('');
+      setTaskDueDate('');
+      setTaskPriority('MEDIUM');
+      setTaskWorkId('');
       onClose();
     } finally {
       setIsSubmitting(false);
@@ -906,6 +916,9 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
             placeholder="e.g. Calcular Omega de McDonald para el instrumento DERS"
             value={taskTitle}
             onChange={(e) => setTaskTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSaveTask();
+            }}
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
