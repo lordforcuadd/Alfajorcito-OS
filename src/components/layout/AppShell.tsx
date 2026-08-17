@@ -41,7 +41,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   // Dynamic user profile from IndexedDB (Live reactivity on settings edit!)
   const userProfileRecord = useLiveQuery(() => db.settings.get('user_profile'));
   const profile = (userProfileRecord?.value as UserProfile | undefined) || {
-    name: 'Estudiante de Psicología USMP',
+    name: 'Saory',
     institution: 'Universidad de San Martín de Porres (USMP)',
     faculty: 'Facultad de Ciencias de la Comunicación, Turismo y Psicología',
     major: 'Psicología',

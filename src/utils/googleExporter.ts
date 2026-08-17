@@ -16,7 +16,7 @@ export function generateGoogleDocsRichHTML(
   // APA 7 Official Cover Page Header (Dynamic from UserProfile)
   const institutionName = profile?.institution || 'Universidad de San Martín de Porres (USMP)';
   const facultyName = profile?.faculty || 'Facultad de Ciencias de la Comunicación, Turismo y Psicología';
-  const studentName = profile?.name || 'Estudiante de Psicología USMP';
+  const studentName = profile?.name || 'Saory';
   const cycleInfo = profile?.currentCycle || 'VIII Ciclo (8vo Ciclo)';
 
   const coverPageHtml = `

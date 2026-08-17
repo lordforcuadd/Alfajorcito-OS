@@ -84,7 +84,7 @@ export async function initializeDatabaseSeed(force = false) {
     const initialUserProfile: SettingRecord = {
       key: 'user_profile',
       value: {
-        name: 'Saory (Psicología USMP)',
+        name: 'Saory',
         institution: 'Universidad de San Martín de Porres (USMP)',
         faculty: 'Facultad de Ciencias de la Comunicación, Turismo y Psicología',
         major: 'Psicología',
@@ -778,7 +778,7 @@ Es el estándar exigido en tesis de licenciatura de la [[Facultad de Ciencias de
   const initialUserProfile: SettingRecord = {
     key: 'user_profile',
     value: {
-      name: 'Estudiante de Psicología USMP',
+      name: 'Saory',
       institution: 'Universidad de San Martín de Porres (USMP)',
       faculty: 'Facultad de Ciencias de la Comunicación, Turismo y Psicología',
       major: 'Psicología',

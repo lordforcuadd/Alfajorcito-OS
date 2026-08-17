@@ -46,7 +46,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [obsidianToken, setObsidianToken] = useState('');
 
   // Profile State (USMP Psicología)
-  const [userName, setUserName] = useState('Estudiante de Psicología USMP');
+  const [userName, setUserName] = useState('Saory');
   const [userInstitution, setUserInstitution] = useState('Universidad de San Martín de Porres (USMP)');
   const [userFaculty, setUserFaculty] = useState('Facultad de Ciencias de la Comunicación, Turismo y Psicología');
   const [userMajor, setUserMajor] = useState('Psicología');
@@ -105,7 +105,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
       const prof = settingsRecords.find((s) => s.key === 'user_profile')?.value as UserProfile | undefined;
       if (prof) {
-        setUserName(prof.name || 'Saory (Psicología USMP)');
+        setUserName(prof.name || 'Saory');
         setUserInstitution(prof.institution || 'Universidad de San Martín de Porres (USMP)');
         setUserFaculty(prof.faculty || 'Facultad de Ciencias de la Comunicación, Turismo y Psicología');
         setUserMajor(prof.major || 'Psicología');
@@ -306,7 +306,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="Nombre de la Estudiante"
-              placeholder="e.g. Saory (Psicología USMP)"
+              placeholder="e.g. Saory"
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
             />

@@ -177,7 +177,7 @@ async function getEffectiveUserProfile(passedProfile?: Partial<UserProfile>): Pr
     console.warn('Could not read user_profile from db:', err);
   }
   return {
-    name: 'Estudiante de Psicología USMP',
+    name: 'Saory',
     institution: 'Universidad de San Martín de Porres (USMP)',
     faculty: 'Facultad de Ciencias de la Comunicación, Turismo y Psicología',
     major: 'Psicología',
@@ -198,7 +198,7 @@ export async function formulateQuestionForTeacher(
   const effectiveSettings = await getEffectiveAISettings(explicitSettings);
   const profile = await getEffectiveUserProfile(explicitProfile);
 
-  const studentName = profile.name || 'Estudiante de Psicología USMP';
+  const studentName = profile.name || 'Saory';
   const institution = profile.institution || 'Universidad de San Martín de Porres (USMP)';
   const facultyMajor = `${profile.faculty || 'FCCTP'} - ${profile.major || 'Psicología'}`;
   const cycle = String(profile.currentCycle || 'VIII Ciclo (8vo Ciclo)');
