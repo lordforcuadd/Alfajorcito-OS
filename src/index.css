@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+:root {
+  --bg-canvas: #FAF8F5;
+  --bg-surface: #FFFFFF;
+  --bg-surface-subtle: #F5F1EB;
+  --text-primary: #2B2D42;
+  --text-secondary: #5A6275;
+  --text-muted: #8D99AE;
+  --border-subtle: #EBE5DF;
+  --border-focus: #D98880;
+
+  /* Pastel Palette */
+  --pastel-rose: #E8A598;
+  --pastel-rose-soft: #FDF2F0;
+  --pastel-rose-dark: #C97768;
+  --pastel-lavender: #B39DDB;
+  --pastel-lavender-soft: #F3E5F5;
+  --pastel-mint: #80CBC4;
+  --pastel-mint-soft: #E0F2F1;
+  --pastel-amber: #FFCC80;
+  --pastel-amber-soft: #FFF8E1;
+  --pastel-coral: #EF9A9A;
+  --pastel-coral-soft: #FFEBEE;
+  --pastel-blue: #90CAF9;
+  --pastel-blue-soft: #E3F2FD;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 100dvh;
+}
+
+code, pre, .font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Custom smooth scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #EBE5DF;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #D98880;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom subtle horizontal scrollbar for PC tabs */
+.tab-scroll-pc {
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  touch-action: pan-x;
+  scrollbar-width: thin;
+  scrollbar-color: #E8A598 transparent;
+}
+.tab-scroll-pc::-webkit-scrollbar {
+  height: 4px;
+}
+.tab-scroll-pc::-webkit-scrollbar-track {
+  background: rgba(235, 229, 223, 0.3);
+  border-radius: 9999px;
+}
+.tab-scroll-pc::-webkit-scrollbar-thumb {
+  background: #E8A598;
+  border-radius: 9999px;
+}
+.tab-scroll-pc::-webkit-scrollbar-thumb:hover {
+  background: #C97768;
+}
+
+/* French indentation for Academic Bibliographies */
+.french-indent {
+  padding-left: 2rem;
+  text-indent: -2rem;
+}
+@media (min-width: 640px) {
+  .french-indent {
+    padding-left: 2.5rem;
+    text-indent: -2.5rem;
+  }
+}
+
+/* Animation utilities */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseSubtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 2s ease-in-out infinite;
+}
+
+/* Mobile Touch Optimization & Safe Area */
+button, input, select, textarea, [role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.pt-safe {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+/* Momentum scrolling on iOS */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Glass & elevated styling */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(235, 229, 223, 0.8);
+}

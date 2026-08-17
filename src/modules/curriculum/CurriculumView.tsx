@@ -1,0 +1,387 @@
+import React, { useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import {
+  GraduationCap,
+  BookOpen,
+  Award,
+  Calendar,
+  CheckCircle2,
+  ChevronRight,
+  ShieldCheck,
+  Stethoscope,
+  Building2,
+  FileText,
+  Search,
+  ExternalLink,
+  Plus,
+  Edit2,
+  Trash2,
+  Check
+} from 'lucide-react';
+import { Card } from '../../components/common/Card';
+import { Button } from '../../components/common/Button';
+import { Badge } from '../../components/common/Badge';
+import { Modal } from '../../components/common/Modal';
+import { CourseModal } from '../../components/modals/CourseModal';
+import { USMP_PSYCHOLOGY_CURRICULUM } from '../../services/usmpCurriculum';
+import { db } from '../../db';
+import { useToast } from '../../components/common/Toast';
+import type { CurriculumCourse, Course, Work, UserProfile } from '../../types';
+
+export interface CurriculumViewProps {
+  onOpenQuickCapture: (tab?: 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task', courseId?: string) => void;
+  onOpenWork?: (workId: string) => void;
+}
+
+export const CurriculumView: React.FC<CurriculumViewProps> = ({
+  onOpenQuickCapture,
+  onOpenWork
+}) => {
+  const { showToast } = useToast();
+  const [selectedCycle, setSelectedCycle] = useState<number>(8);
+  const [inspectedCourse, setInspectedCourse] = useState<CurriculumCourse | null>(null);
+  const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
+  const [courseToEdit, setCourseToEdit] = useState<Course | null>(null);
+
+  // Live queries
+  const userCourses = useLiveQuery(() => db.courses.toArray()) || [];
+  const userWorks = useLiveQuery(() => db.works.toArray()) || [];
+  const userProfile = useLiveQuery(async () => {
+    const rec = await db.settings.get('user_profile');
+    return rec?.value as UserProfile | undefined;
+  });
+
+  const coursesByCycle = USMP_PSYCHOLOGY_CURRICULUM.filter((c) => c.cycle === selectedCycle);
+
+  const getAreaBadge = (area: CurriculumCourse['area']) => {
+    switch (area) {
+      case 'CLINICA':
+        return <Badge variant="rose" size="sm">Psicología Clínica</Badge>;
+      case 'INVESTIGACION':
+        return <Badge variant="lavender" size="sm">Tesis & Investigación</Badge>;
+      case 'DEONTOLOGIA':
+        return <Badge variant="amber" size="sm">Ética & Deontología</Badge>;
+      case 'SALUD_PUBLICA':
+        return <Badge variant="mint" size="sm">Salud Comunitaria / Organizacional</Badge>;
+      default:
+        return <Badge variant="default" size="sm">{area}</Badge>;
+    }
+  };
+
+  // Toggle Enroll / Unenroll USMP Course in User's Active Courses
+  const handleToggleEnrollCourse = async (curriculumCourse: CurriculumCourse, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+
+    const existingCourse = userCourses.find(
+      (c) => c.code === curriculumCourse.code || c.name.toLowerCase() === curriculumCourse.name.toLowerCase()
+    );
+
+    if (existingCourse) {
+      // Unenroll
+      const confirmRemove = window.confirm(`¿Deseas desmatricularte de "${curriculumCourse.name}"?`);
+      if (!confirmRemove) return;
+      await db.courses.delete(existingCourse.id);
+      showToast('Asignatura retirada', `${curriculumCourse.name} se eliminó de tus cursos activos.`, 'info');
+    } else {
+      // Enroll
+      const colors = ['#D98880', '#B39DDB', '#80CBC4', '#FFCC80', '#90CAF9'];
+      const assignedColor = colors[Math.floor(Math.random() * colors.length)];
+      await db.courses.add({
+        id: `course-${Math.random().toString(36).substring(2, 9)}`,
+        code: curriculumCourse.code,
+        name: curriculumCourse.name,
+        period: `2026-II (${curriculumCourse.cycle}vo Ciclo)`,
+        color: assignedColor,
+        isArchived: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      });
+      showToast('¡Matrícula registrada!', `${curriculumCourse.name} agregada a tus cursos activos.`, 'success');
+    }
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header Banner */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/40 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-bold text-[#8C3A32] uppercase tracking-wider flex-wrap">
+              <span className="flex items-center gap-1.5"><GraduationCap className="w-3.5 h-3.5" /> {userProfile?.institution || 'USMP'}</span>
+              <span>•</span>
+              <span>{userProfile?.faculty || 'Facultad de Ciencias de la Comunicación, Turismo y Psicología'}</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-[#2B2D42] mt-1">
+              Malla Curricular & Plan de Internado / Tesis
+            </h2>
+            <p className="text-xs sm:text-sm text-[#5A6275] mt-0.5">
+              Personaliza tus asignaturas matriculadas, revisa prerrequisitos y planifica tu ruta de titulación.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs px-3 py-1.5 rounded-full font-bold bg-[#E8A598]/20 text-[#8C3A32] border border-[#E8A598]/40 shrink-0">
+              Ciclo Actual: {userProfile?.currentCycle || '8vo Ciclo'}
+            </span>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setCourseToEdit(null);
+                setIsCourseModalOpen(true);
+              }}
+              icon={<Plus className="w-4 h-4 stroke-[2.5]" />}
+            >
+              Nuevo Curso
+            </Button>
+          </div>
+        </div>
+
+        {/* Pathway summary */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          <div className="p-3 rounded-2xl bg-white border border-[#EBE5DF] space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-[#8C3A32] uppercase">Ciclo 8 (Actual)</span>
+              <span className="text-[10px] bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">En Curso</span>
+            </div>
+            <p className="text-xs font-bold text-[#2B2D42]">Taller de Tesis I & Psicoterapia</p>
+            <p className="text-[11px] text-[#5A6275]">Aprobación de proyecto de tesis y seminarios clínicos.</p>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-white border border-[#EBE5DF] space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-[#512DA8] uppercase">Ciclo 9 (Próximo)</span>
+              <span className="text-[10px] bg-[#F3E5F5] text-[#512DA8] font-bold px-2 py-0.5 rounded-full border border-[#B39DDB]/50">Internado I</span>
+            </div>
+            <p className="text-xs font-bold text-[#2B2D42]">Prácticas Preprofesionales I & Tesis II</p>
+            <p className="text-[11px] text-[#5A6275]">Inmersión en sedes hospitalarias/CSMC y recolección de datos.</p>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-white border border-[#EBE5DF] space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-[#004D40] uppercase">Ciclo 10 (Final)</span>
+              <span className="text-[10px] bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">Licenciatura</span>
+            </div>
+            <p className="text-xs font-bold text-[#2B2D42]">Internado II & Sustentación de Tesis</p>
+            <p className="text-[11px] text-[#5A6275]">Memoria de prácticas, dictamen y título profesional USMP.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Cycle Selector Pills with smooth PC wheel & touch scroll */}
+      <div
+        onWheel={(e) => {
+          if (e.deltaY !== 0) {
+            e.currentTarget.scrollLeft += e.deltaY;
+          }
+        }}
+        className="flex items-center gap-2 pb-1.5 tab-scroll-pc flex-nowrap"
+      >
+        {[
+          { cycle: 8, label: 'VIII Ciclo (8vo - Actual)' },
+          { cycle: 9, label: 'IX Ciclo (9no - Internado I)' },
+          { cycle: 10, label: 'X Ciclo (10mo - Internado II & Tesis)' }
+        ].map((item) => (
+          <button
+            key={item.cycle}
+            onClick={() => setSelectedCycle(item.cycle)}
+            className={`px-4 py-2.5 sm:py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none whitespace-nowrap shrink-0 active:scale-[0.98] ${
+              selectedCycle === item.cycle
+                ? 'bg-[#E8A598] text-[#2B2D42] shadow-2xs border border-[#D98880]/30'
+                : 'bg-white text-[#5A6275] border border-[#EBE5DF] hover:bg-[#F5F1EB]'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Courses in Selected Cycle */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {coursesByCycle.map((course) => {
+          const matchingDbCourse = userCourses.find(
+            (c) => c.code === course.code || c.name.toLowerCase() === course.name.toLowerCase()
+          );
+          const isEnrolled = !!matchingDbCourse;
+          const relatedWorks = matchingDbCourse ? userWorks.filter((w) => w.courseId === matchingDbCourse.id) : [];
+
+          return (
+            <Card
+              key={course.code}
+              variant="interactive"
+              onClick={() => setInspectedCourse(course)}
+              className="space-y-3 flex flex-col justify-between"
+            >
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+                  <span className="text-xs font-bold font-mono text-[#8C3A32] bg-[#FDF2F0] px-2 py-0.5 rounded-lg border border-[#E8A598]/40">
+                    {course.code}
+                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {getAreaBadge(course.area)}
+                    <Badge variant="default" size="sm">{course.credits} créditos</Badge>
+                  </div>
+                </div>
+
+                <h3 className="font-extrabold text-sm sm:text-base text-[#2B2D42] leading-snug">
+                  {course.name}
+                </h3>
+
+                <p className="text-xs text-[#5A6275] line-clamp-3 leading-relaxed">
+                  {course.description}
+                </p>
+              </div>
+
+              {/* Course Footer with Dynamic Enrollment Toggle */}
+              <div className="pt-3 border-t border-[#EBE5DF] flex items-center justify-between text-xs text-[#5A6275] gap-2">
+                <button
+                  onClick={(e) => handleToggleEnrollCourse(course, e)}
+                  className={`text-xs px-2.5 py-1 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 ${
+                    isEnrolled
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-rose-50 hover:text-rose-800 hover:border-rose-300'
+                      : 'bg-[#F5F1EB] text-[#2B2D42] border border-[#EBE5DF] hover:bg-[#E8A598]/20 hover:border-[#E8A598]'
+                  }`}
+                  title={isEnrolled ? 'Click para quitar de tus cursos' : 'Click para agregar a tus cursos'}
+                >
+                  {isEnrolled ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" /> En Mis Cursos
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-3.5 h-3.5" /> Matricular
+                    </>
+                  )}
+                </button>
+
+                <span className="text-[11px] font-bold text-[#8C3A32] flex items-center gap-1 shrink-0">
+                  Ver Sílabo <ChevronRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Course Detail Modal */}
+      {inspectedCourse && (
+        <Modal
+          isOpen={!!inspectedCourse}
+          onClose={() => setInspectedCourse(null)}
+          title={`${inspectedCourse.code} • ${inspectedCourse.name}`}
+          subtitle={`Facultad de Ciencias de la Comunicación, Turismo y Psicología - USMP • ${inspectedCourse.cycle}vo Ciclo • ${inspectedCourse.credits} Créditos`}
+          maxWidth="xl"
+        >
+          <div className="space-y-4">
+            {/* Area and Type Badges */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {getAreaBadge(inspectedCourse.area)}
+              <Badge variant="default" size="sm">Tipo: {inspectedCourse.type}</Badge>
+              <Badge variant="rose" size="sm">Créditos: {inspectedCourse.credits}</Badge>
+            </div>
+
+            {/* Description */}
+            <div className="p-3.5 rounded-2xl bg-[#F5F1EB]/70 border border-[#EBE5DF] space-y-1 text-xs text-[#2B2D42] leading-relaxed">
+              <span className="font-bold text-[#8C3A32] block uppercase tracking-wider text-[10px]">
+                Descripción de la Asignatura
+              </span>
+              <p>{inspectedCourse.description}</p>
+            </div>
+
+            {/* Prerequisites */}
+            <div className="p-3 rounded-2xl bg-white border border-[#EBE5DF] space-y-1.5">
+              <span className="font-bold text-xs text-[#5A6275] block uppercase tracking-wider text-[10px]">
+                Prerrequisitos Académicos (FCCTP USMP)
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {inspectedCourse.prerequisites.map((req, i) => (
+                  <span key={i} className="text-xs bg-[#F5F1EB] text-[#2B2D42] px-2.5 py-1 rounded-xl font-medium border border-[#EBE5DF]">
+                    {req}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Competencies */}
+            <div className="p-3.5 rounded-2xl bg-[#FDF2F0] border border-[#E8A598]/50 space-y-2">
+              <span className="font-bold text-xs text-[#8C3A32] block uppercase tracking-wider text-[10px]">
+                Competencias & Resultados de Aprendizaje
+              </span>
+              <ul className="space-y-1.5 text-xs text-[#2B2D42]">
+                {inspectedCourse.competencies.map((comp, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#D98880] shrink-0 mt-0.5" />
+                    <span>{comp}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Action Buttons with Responsive Flex Grouping */}
+            <div className="pt-3 border-t border-[#EBE5DF] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5">
+              <Button variant="ghost" onClick={() => setInspectedCourse(null)} className="w-full sm:w-auto">
+                Cerrar
+              </Button>
+              <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    handleToggleEnrollCourse(inspectedCourse);
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  {userCourses.some((c) => c.code === inspectedCourse.code)
+                    ? 'Quitar de Mis Cursos'
+                    : 'Matricular en Mis Cursos'}
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={async () => {
+                    let courseId = '';
+                    const existing = userCourses.find(
+                      (c) =>
+                        c.code === inspectedCourse.code ||
+                        c.name.toLowerCase() === inspectedCourse.name.toLowerCase()
+                    );
+                    if (existing) {
+                      courseId = existing.id;
+                    } else {
+                      const newCourseId = `course-${Math.random().toString(36).substring(2, 9)}`;
+                      await db.courses.add({
+                        id: newCourseId,
+                        code: inspectedCourse.code,
+                        name: inspectedCourse.name,
+                        period: `2026-II (${inspectedCourse.cycle}vo Ciclo)`,
+                        color: '#D98880',
+                        isArchived: false,
+                        createdAt: Date.now(),
+                        updatedAt: Date.now()
+                      });
+                      courseId = newCourseId;
+                    }
+                    setInspectedCourse(null);
+                    onOpenQuickCapture('work', courseId);
+                  }}
+                  icon={<Plus className="w-4 h-4 stroke-[2.5]" />}
+                  className="w-full sm:w-auto font-bold"
+                >
+                  Crear Trabajo
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Course Modal for creating/editing custom courses */}
+      <CourseModal
+        isOpen={isCourseModalOpen}
+        onClose={() => {
+          setIsCourseModalOpen(false);
+          setCourseToEdit(null);
+        }}
+        courseToEdit={courseToEdit}
+      />
+    </div>
+  );
+};

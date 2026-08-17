@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%">
+  <defs>
+    <radialGradient id="topCookie" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#FCE8D0"/>
+      <stop offset="55%" stop-color="#EDB87C"/>
+      <stop offset="100%" stop-color="#D79956"/>
+    </radialGradient>
+    <radialGradient id="bottomCookie" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#E8B478"/>
+      <stop offset="100%" stop-color="#C58540"/>
+    </radialGradient>
+    <linearGradient id="dulceDeLeche" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#C46D5E"/>
+      <stop offset="50%" stop-color="#A94E40"/>
+      <stop offset="100%" stop-color="#8C3A32"/>
+    </linearGradient>
+    <filter id="subtleDrop" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#8C3A32" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- 100% Transparent Background - Big Bold Alfajor -->
+  <g filter="url(#subtleDrop)">
+    <!-- Bottom Cookie Base Layer -->
+    <ellipse cx="64" cy="92" rx="52" ry="20" fill="#B06E2E"/>
+    <ellipse cx="64" cy="86" rx="52" ry="20" fill="url(#bottomCookie)"/>
+
+    <!-- Dulce de Leche / Manjar Blanco Filling (Thick, Creamy & Generous) -->
+    <path d="M 12 62 C 12 48, 116 48, 116 62 L 116 77 C 116 91, 12 91, 12 77 Z" fill="url(#dulceDeLeche)"/>
+    <ellipse cx="64" cy="63" rx="52" ry="19" fill="#BD6253"/>
+
+    <!-- Top Cookie Biscuit -->
+    <path d="M 12 37 C 12 23, 116 23, 116 37 L 116 51 C 116 65, 12 65, 12 51 Z" fill="#D39450"/>
+    <ellipse cx="64" cy="35" rx="52" ry="21" fill="url(#topCookie)"/>
+
+    <!-- Delicate Powdered Sugar Dusting (Nevado de Azúcar Impalpable) -->
+    <ellipse cx="64" cy="33" rx="32" ry="12" fill="#FFFFFF" opacity="0.88"/>
+    <circle cx="64" cy="30" r="2.2" fill="#FFFFFF"/>
+    <circle cx="56" cy="33" r="1.8" fill="#FFFFFF"/>
+    <circle cx="72" cy="32" r="1.8" fill="#FFFFFF"/>
+    <circle cx="48" cy="30" r="1.4" fill="#FFFFFF"/>
+    <circle cx="80" cy="34" r="1.4" fill="#FFFFFF"/>
+    <circle cx="63" cy="36" r="1.6" fill="#FFFFFF"/>
+    <circle cx="69" cy="27" r="1.4" fill="#FFFFFF"/>
+    <circle cx="58" cy="27" r="1.3" fill="#FFFFFF"/>
+    <circle cx="42" cy="34" r="1.2" fill="#FFFFFF" opacity="0.9"/>
+    <circle cx="86" cy="31" r="1.2" fill="#FFFFFF" opacity="0.9"/>
+    <circle cx="53" cy="37" r="1.3" fill="#FFFFFF" opacity="0.85"/>
+    <circle cx="75" cy="37" r="1.3" fill="#FFFFFF" opacity="0.85"/>
+  </g>
+</svg>

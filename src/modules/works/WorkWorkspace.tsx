@@ -1,0 +1,1049 @@
+import React, { useState, useEffect } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import confetti from 'canvas-confetti';
+import {
+  ArrowLeft,
+  GraduationCap,
+  Calendar,
+  BookOpen,
+  CheckSquare,
+  HelpCircle,
+  FileText,
+  Share2,
+  ExternalLink,
+  Sparkles,
+  Plus,
+  CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
+  Copy,
+  Trash2,
+  Columns,
+  Maximize2,
+  Link2,
+  Edit3,
+  Layout
+} from 'lucide-react';
+import { db } from '../../db';
+import { Card } from '../../components/common/Card';
+import { Button } from '../../components/common/Button';
+import { Badge, CitationStyleBadge, VerificationBadge } from '../../components/common/Badge';
+import { Tabs } from '../../components/common/Tabs';
+import { Modal } from '../../components/common/Modal';
+import { Input, TextArea, Select } from '../../components/common/Input';
+import { useToast } from '../../components/common/Toast';
+import { validateSourceAge } from '../../utils/sourceAgeValidator';
+import { formatFullReference, formatInTextParenthetical, formatInTextNarrative } from '../../utils/citationEngine';
+import { generateGoogleDocsRichHTML, generateGoogleCalendarUrl, generateICSFile } from '../../utils/googleExporter';
+import { formulateQuestionForTeacher, analyzeInstructionsOffline } from '../../services/aiService';
+import type { Work, Course, Source, Task, InquiryToTeacher, Citation, Paraphrase, Idea } from '../../types';
+
+export interface WorkWorkspaceProps {
+  workId: string;
+  onBack: () => void;
+  onOpenSourceDetail?: (sourceId: string) => void;
+}
+
+type WorkspaceTab = 'overview' | 'instructions' | 'checklist' | 'inquiries' | 'sources' | 'draft' | 'export';
+
+export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, onOpenSourceDetail }) => {
+  const { showToast } = useToast();
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>('overview');
+  const [splitMode, setSplitMode] = useState<boolean>(false);
+
+  // Live queries
+  const work = useLiveQuery(() => db.works.get(workId), [workId]);
+  const courses = useLiveQuery(() => db.courses.toArray()) || [];
+  const allSources = useLiveQuery(() => db.sources.toArray()) || [];
+  const tasks = useLiveQuery(() => db.tasks.where({ workId }).toArray(), [workId]) || [];
+  const inquiries = useLiveQuery(() => db.inquiries.where({ workId }).toArray(), [workId]) || [];
+  const citations = useLiveQuery(() => db.citations.where({ workId }).toArray(), [workId]) || [];
+  const paraphrases = useLiveQuery(() => db.paraphrases.where({ workId }).toArray(), [workId]) || [];
+  const ideas = useLiveQuery(() => db.ideas.where({ workId }).toArray(), [workId]) || [];
+  const userProfileRecord = useLiveQuery(() => db.settings.get('user_profile'));
+  const userProfile = userProfileRecord?.value as any;
+
+  const course = courses.find((c) => c.id === work?.courseId);
+  const workSources = allSources.filter((s) => s.workIds.includes(workId));
+
+  // Local draft editing state
+  const [draftText, setDraftText] = useState<string>('');
+  const [hasUnsavedDraft, setHasUnsavedDraft] = useState(false);
+
+  // New task input state
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskPriority, setNewTaskPriority] = useState<Task['priority']>('MEDIUM');
+
+  // New inquiry input state
+  const [newInquiryTopic, setNewInquiryTopic] = useState('');
+  const [newInquiryDoubt, setNewInquiryDoubt] = useState('');
+  const [newInquiryTeacherAnswer, setNewInquiryTeacherAnswer] = useState('');
+  const [newInquiryStatus, setNewInquiryStatus] = useState<'DRAFT' | 'SENT' | 'ANSWERED'>('DRAFT');
+  const [isFormulating, setIsFormulating] = useState(false);
+
+  // Google Docs & Canva link modal state
+  const [isLinksModalOpen, setIsLinksModalOpen] = useState(false);
+  const [editGoogleDocUrl, setEditGoogleDocUrl] = useState('');
+  const [editCanvaUrl, setEditCanvaUrl] = useState('');
+
+  React.useEffect(() => {
+    if (work && !hasUnsavedDraft) {
+      setDraftText(work.draftContent || '');
+    }
+  }, [work]);
+
+  // Save Draft
+  const handleSaveDraft = async () => {
+    await db.works.update(workId, { draftContent: draftText, updatedAt: Date.now() });
+    setHasUnsavedDraft(false);
+    showToast('Borrador guardado', 'Cambios sincronizados en la base de datos local.', 'success');
+  };
+
+  // Auto-Save Draft (1.5s debounce)
+  useEffect(() => {
+    if (!hasUnsavedDraft) return;
+    const timer = setTimeout(async () => {
+      await db.works.update(workId, { draftContent: draftText, updatedAt: Date.now() });
+      setHasUnsavedDraft(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [draftText, hasUnsavedDraft, workId]);
+
+  // Keyboard shortcut Ctrl+S
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSaveDraft();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [draftText, workId]);
+
+  if (!work) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-sm text-[#8D99AE]">Cargando espacio de trabajo...</p>
+      </div>
+    );
+  }
+
+  // Word count calculation
+  const wordCount = draftText.trim() ? draftText.trim().split(/\s+/).length : 0;
+  const targetWordCount = work.instructionAnalysis?.wordCountTarget || 2500;
+  const wordProgressPct = Math.min(100, Math.round((wordCount / targetWordCount) * 100));
+
+  // Assignment Delivery Celebration
+  const handleMarkDelivered = async () => {
+    const newStatus = work.status === 'ENTREGADO' ? 'REDACTANDO' : 'ENTREGADO';
+    await db.works.update(workId, { status: newStatus, updatedAt: Date.now() });
+
+    if (newStatus === 'ENTREGADO') {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+      showToast('¡Felicitaciones!', 'Trabajo marcado como ENTREGADO. El conocimiento ha sido preservado.', 'success');
+    }
+  };
+
+  // Insert Citation into Draft
+  const handleInsertCitation = (source: Source, type: 'parenthetical' | 'narrative') => {
+    const citeText = type === 'parenthetical'
+      ? formatInTextParenthetical(source, work.citationStyle)
+      : formatInTextNarrative(source, work.citationStyle);
+
+    setDraftText((prev) => `${prev} ${citeText}`);
+    setHasUnsavedDraft(true);
+    showToast('Cita insertada', `Añadida cita ${type} en estilo ${work.citationStyle}`, 'success');
+  };
+
+  // Copy Google Docs Rich Text
+  const handleCopyGoogleDocsHtml = () => {
+    const html = generateGoogleDocsRichHTML(work, workSources, userProfile, course?.name, course?.teacherName);
+    const blobHtml = new Blob([html], { type: 'text/html' });
+    const blobText = new Blob([draftText], { type: 'text/plain' });
+
+    const data = [new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })];
+    navigator.clipboard.write(data).then(() => {
+      showToast('Copiado para Google Docs', 'Pega directamente en tu documento manteniendo portada APA 7 y sangría francesa.', 'success');
+    });
+  };
+
+  // Download .ics Calendar File
+  const handleDownloadICS = () => {
+    const icsContent = generateICSFile(work, course?.name);
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Entrega_${work.title.replace(/\s+/g, '_')}.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Evento creado', 'Archivo .ics descargado para importar a Google/Apple Calendar.', 'success');
+  };
+
+  return (
+    <div className="space-y-5 animate-fade-in">
+      {/* Top Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#EBE5DF]">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="p-2 rounded-xl text-[#5A6275] hover:bg-white hover:border-[#EBE5DF] border border-transparent transition-all cursor-pointer"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-[#8C3A32] uppercase">{course?.name || 'Materia'}</span>
+              <CitationStyleBadge style={work.citationStyle} />
+              <Badge variant={work.status === 'ENTREGADO' ? 'mint' : 'rose'} size="sm">
+                {work.status}
+              </Badge>
+            </div>
+            <h2 className="text-lg sm:text-xl font-extrabold text-[#2B2D42] mt-0.5">{work.title}</h2>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          {/* Split-View Toggle for Tablets / Large screens */}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setSplitMode(!splitMode)}
+            icon={<Columns className="w-4 h-4" />}
+            title="Alternar vista dividida (Split View)"
+          >
+            {splitMode ? 'Vista Única' : 'Split View'}
+          </Button>
+
+          <Button
+            variant={work.status === 'ENTREGADO' ? 'secondary' : 'mint'}
+            size="sm"
+            onClick={handleMarkDelivered}
+            icon={<CheckCircle2 className="w-4 h-4" />}
+          >
+            {work.status === 'ENTREGADO' ? 'Reabrir Trabajo' : 'Marcar Entregado'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <Tabs
+        tabs={[
+          { id: 'overview', label: 'Resumen', icon: <GraduationCap className="w-4 h-4" /> },
+          { id: 'instructions', label: 'Indicaciones del Profe', icon: <FileText className="w-4 h-4" /> },
+          { id: 'checklist', label: 'Tareas & Criterios', icon: <CheckSquare className="w-4 h-4" />, badge: tasks.filter(t => !t.isCompleted).length },
+          { id: 'inquiries', label: 'Preguntas al Profe', icon: <HelpCircle className="w-4 h-4" />, badge: inquiries.length },
+          { id: 'sources', label: 'Fuentes y Libros', icon: <BookOpen className="w-4 h-4" />, badge: workSources.length },
+          { id: 'draft', label: 'Redacción & Citas', icon: <FileText className="w-4 h-4" /> },
+          { id: 'export', label: 'Exportar a Google Docs', icon: <Share2 className="w-4 h-4" /> }
+        ]}
+        activeTab={activeTab}
+        onChange={(tab) => setActiveTab(tab as WorkspaceTab)}
+      />
+
+      {/* Main Workspace Layout (Supports Split-View on Tablet/Desktop) */}
+      <div className={`grid gap-5 ${splitMode ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
+        {/* LEFT PANEL / MAIN VIEW */}
+        <div className="space-y-5">
+          {/* 1. OVERVIEW TAB */}
+          {activeTab === 'overview' && (
+            <div className="space-y-5">
+              {/* Progress & Target Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Card variant="default">
+                  <span className="text-xs text-[#5A6275] font-semibold">Fecha Límite</span>
+                  <p className="text-sm sm:text-base font-extrabold text-[#2B2D42] mt-1">
+                    {new Date(work.deadline).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
+                  </p>
+                  <span className="text-[11px] text-[#D98880] font-semibold">
+                    {Math.ceil((work.deadline - Date.now()) / 86400000)} días restantes
+                  </span>
+                </Card>
+
+                <Card variant="default">
+                  <span className="text-xs text-[#5A6275] font-semibold">Progreso de Palabras</span>
+                  <p className="text-sm sm:text-base font-extrabold text-[#2B2D42] mt-1">
+                    {wordCount} / {targetWordCount} palabras
+                  </p>
+                  <div className="w-full bg-[#EBE5DF] h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div className="bg-[#E8A598] h-full transition-all" style={{ width: `${wordProgressPct}%` }} />
+                  </div>
+                </Card>
+
+                <Card variant="default">
+                  <span className="text-xs text-[#5A6275] font-semibold">Fuentes Indexadas</span>
+                  <p className="text-sm sm:text-base font-extrabold text-[#2B2D42] mt-1">
+                    {workSources.length} de {work.minRequiredSources || 4} requeridas
+                  </p>
+                  <span className="text-[11px] text-emerald-700 font-semibold">
+                    {workSources.filter((s) => s.verificationStatus === 'VERIFIED').length} verificadas
+                  </span>
+                </Card>
+              </div>
+
+              {/* Quick Actions and External Links */}
+              <Card variant="pastel_rose" className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h4 className="font-bold text-sm text-[#8C3A32] flex items-center gap-1.5">
+                      <Link2 className="w-4 h-4 text-[#8C3A32]" />
+                      <span>Integraciones de Google Docs & Canva</span>
+                    </h4>
+                    <p className="text-xs text-[#5A6275] mt-0.5">
+                      Vincula tu borrador en la nube y diapositivas para abrirlos o crearlos con un clic.
+                    </p>
+                  </div>
+
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={<Edit3 className="w-3.5 h-3.5 text-[#8C3A32]" />}
+                    onClick={() => {
+                      setEditGoogleDocUrl(work.googleDocUrl || '');
+                      setEditCanvaUrl(work.canvaUrl || '');
+                      setIsLinksModalOpen(true);
+                    }}
+                    className="shrink-0"
+                  >
+                    {work.googleDocUrl || work.canvaUrl ? 'Editar Enlaces' : 'Vincular Enlaces'}
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-[#E8A598]/40">
+                  {/* Google Docs Tile */}
+                  <div className="p-3 rounded-xl bg-white border border-[#EBE5DF] flex items-center justify-between gap-2 shadow-2xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="font-bold text-xs text-[#2B2D42] block truncate">Google Docs</span>
+                        <span className="text-[11px] text-[#5A6275] block truncate">
+                          {work.googleDocUrl ? 'Documento Vinculado' : 'Sin vincular aún'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {work.googleDocUrl ? (
+                        <a
+                          href={work.googleDocUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold transition-colors"
+                        >
+                          <ExternalLink className="w-3 h-3" /> Abrir
+                        </a>
+                      ) : (
+                        <a
+                          href="https://docs.new"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#F5F1EB] hover:bg-[#EBE5DF] text-[#5A6275] text-[11px] font-bold transition-colors"
+                          title="Abrir docs.new para crear un documento nuevo"
+                        >
+                          <Plus className="w-3 h-3" /> Crear Doc
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Canva Tile */}
+                  <div className="p-3 rounded-xl bg-white border border-[#EBE5DF] flex items-center justify-between gap-2 shadow-2xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                        <Layout className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="font-bold text-xs text-[#2B2D42] block truncate">Canva Diapositivas</span>
+                        <span className="text-[11px] text-[#5A6275] block truncate">
+                          {work.canvaUrl ? 'Presentación Vinculada' : 'Sin vincular aún'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {work.canvaUrl ? (
+                        <a
+                          href={work.canvaUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 text-xs font-bold transition-colors"
+                        >
+                          <ExternalLink className="w-3 h-3" /> Abrir
+                        </a>
+                      ) : (
+                        <a
+                          href="https://www.canva.com/presentations/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#F5F1EB] hover:bg-[#EBE5DF] text-[#5A6275] text-[11px] font-bold transition-colors"
+                          title="Abrir Canva para crear diapositivas"
+                        >
+                          <Plus className="w-3 h-3" /> Crear Slides
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* 2. INSTRUCTIONS TAB (Explicit Official Requirements vs AI Inferences) */}
+          {activeTab === 'instructions' && (
+            <div className="space-y-4">
+              <Card variant="default">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-bold text-sm text-[#2B2D42] flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-[#D98880]" />
+                    <span>Consigna Textual Original</span>
+                  </h4>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={<Sparkles className="w-3.5 h-3.5 text-[#D98880]" />}
+                    onClick={async () => {
+                      if (work.rawInstructions) {
+                        const analysis = analyzeInstructionsOffline(work.rawInstructions);
+                        await db.works.update(workId, { instructionAnalysis: analysis, updatedAt: Date.now() });
+                        showToast('Análisis completado', 'Requisitos explícitos e inferencias actualizadas.', 'success');
+                      }
+                    }}
+                  >
+                    Reanalizar Consigna
+                  </Button>
+                </div>
+                <div className="p-3.5 rounded-xl bg-[#F5F1EB]/80 text-xs text-[#2B2D42] whitespace-pre-wrap leading-relaxed font-mono">
+                  {work.rawInstructions || 'Sin consigna registrada. Puedes añadirla en cualquier momento.'}
+                </div>
+              </Card>
+
+              {/* Explicit Requirements from Professor */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card variant="elevated" className="border-l-4 border-l-[#2E7D32]">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 uppercase tracking-wider mb-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>Requisitos Explícitos del Profesor (Oficial)</span>
+                  </div>
+                  <ul className="space-y-2 text-xs text-[#2B2D42]">
+                    {(work.instructionAnalysis?.explicitRequirements || [
+                      'Extensión objetivo según rúbrica',
+                      `Estilo de citación obligatorio: ${work.citationStyle}`
+                    ]).map((req, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="text-emerald-600 font-bold">•</span>
+                        <span>{req}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+
+                {/* AI Inferences (Clearly separated to prevent hallucination) */}
+                <Card variant="subtle" className="border-l-4 border-l-[#B39DDB]">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#6A1B9A] uppercase tracking-wider mb-2">
+                    <Sparkles className="w-4 h-4 text-[#B39DDB]" />
+                    <span>Sugerencias e Inferencias de IA (No Oficial)</span>
+                  </div>
+                  <ul className="space-y-2 text-xs text-[#5A6275]">
+                    {(work.instructionAnalysis?.aiInferences || [
+                      'Sugerencia: estructurar esquema con Introducción, Desarrollo argumentativo y Conclusiones.'
+                    ]).map((inf, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <Sparkles className="w-3.5 h-3.5 text-[#B39DDB] shrink-0 mt-0.5" />
+                        <span>{inf}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {/* 3. CHECKLIST TAB */}
+          {activeTab === 'checklist' && (
+            <Card variant="default" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-sm text-[#2B2D42]">Checklist de Entregables & Tareas</h4>
+                <span className="text-xs text-[#5A6275]">
+                  {tasks.filter((t) => t.isCompleted).length} de {tasks.length} completadas
+                </span>
+              </div>
+
+              {/* Add Task Input & Priority Selector */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <Input
+                    placeholder="Añadir nuevo entregable o tarea..."
+                    value={newTaskTitle}
+                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    onKeyDown={async (e) => {
+                      if (e.key === 'Enter' && newTaskTitle.trim()) {
+                        await db.tasks.add({
+                          id: `task-${Math.random().toString(36).substring(2, 9)}`,
+                          workId,
+                          courseId: work.courseId,
+                          title: newTaskTitle.trim(),
+                          isCompleted: false,
+                          priority: newTaskPriority,
+                          category: 'ASSIGNMENT_CHECKLIST',
+                          createdAt: Date.now(),
+                          updatedAt: Date.now()
+                        });
+                        setNewTaskTitle('');
+                      }
+                    }}
+                  />
+                </div>
+                <div className="w-full sm:w-40 shrink-0">
+                  <Select
+                    value={newTaskPriority}
+                    onChange={(e) => setNewTaskPriority(e.target.value as any)}
+                  >
+                    <option value="LOW">Prioridad Baja</option>
+                    <option value="MEDIUM">Prioridad Media</option>
+                    <option value="HIGH">Prioridad Alta</option>
+                    <option value="URGENT">Urgente</option>
+                  </Select>
+                </div>
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={async () => {
+                    if (!newTaskTitle.trim()) return;
+                    await db.tasks.add({
+                      id: `task-${Math.random().toString(36).substring(2, 9)}`,
+                      workId,
+                      courseId: work.courseId,
+                      title: newTaskTitle.trim(),
+                      isCompleted: false,
+                      priority: newTaskPriority,
+                      category: 'ASSIGNMENT_CHECKLIST',
+                      createdAt: Date.now(),
+                      updatedAt: Date.now()
+                    });
+                    setNewTaskTitle('');
+                  }}
+                  icon={<Plus className="w-4 h-4" />}
+                  className="shrink-0"
+                >
+                  Añadir
+                </Button>
+              </div>
+
+              {/* Tasks List */}
+              <div className="space-y-2 pt-2">
+                {tasks.length === 0 ? (
+                  <p className="text-xs text-[#8D99AE] py-4 text-center italic bg-[#F5F1EB]/40 rounded-2xl border border-dashed border-[#EBE5DF]">
+                    No hay tareas registradas para este trabajo. ¡Añade una arriba!
+                  </p>
+                ) : (
+                  tasks.map((t) => {
+                    const priorityConfig = {
+                      URGENT: { variant: 'rose' as const, label: 'Urgente' },
+                      HIGH: { variant: 'amber' as const, label: 'Prioridad Alta' },
+                      MEDIUM: { variant: 'lavender' as const, label: 'Media' },
+                      LOW: { variant: 'mint' as const, label: 'Baja' }
+                    }[t.priority || 'MEDIUM'] || { variant: 'default' as const, label: 'Media' };
+
+                    return (
+                      <div
+                        key={t.id}
+                        className={`flex items-center justify-between gap-3 p-3 rounded-2xl border transition-all ${
+                          t.isCompleted
+                            ? 'bg-[#F5F1EB]/50 border-[#EBE5DF] opacity-60'
+                            : 'bg-white border-[#EBE5DF] hover:border-[#E8A598]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <input
+                            type="checkbox"
+                            checked={t.isCompleted}
+                            onChange={async () => {
+                              await db.tasks.update(t.id, {
+                                isCompleted: !t.isCompleted,
+                                completedAt: !t.isCompleted ? Date.now() : undefined,
+                                updatedAt: Date.now()
+                              });
+                            }}
+                            className="rounded border-[#EBE5DF] text-[#E8A598] focus:ring-[#E8A598] cursor-pointer shrink-0 w-4 h-4"
+                          />
+                          <span
+                            className={`text-xs font-semibold break-words [overflow-wrap:anywhere] min-w-0 flex-1 ${
+                              t.isCompleted ? 'line-through text-[#8D99AE]' : 'text-[#2B2D42]'
+                            }`}
+                          >
+                            {t.title}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant={priorityConfig.variant} size="sm">
+                            {priorityConfig.label}
+                          </Badge>
+                          <button
+                            onClick={async () => {
+                              await db.tasks.delete(t.id);
+                              showToast('Tarea eliminada', 'La tarea ha sido retirada.', 'info');
+                            }}
+                            className="p-1 text-[#8D99AE] hover:text-[#C62828] hover:bg-[#F5F1EB] rounded-lg transition-colors cursor-pointer"
+                            title="Eliminar tarea"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </Card>
+          )}
+
+          {/* 4. INQUIRIES TO TEACHER TAB */}
+          {activeTab === 'inquiries' && (
+            <div className="space-y-4">
+              <Card variant="default" className="space-y-3">
+                <h4 className="font-bold text-sm text-[#2B2D42]">Registrar Nueva Consulta al Profesor</h4>
+                <Input
+                  label="Tema de la Duda"
+                  placeholder="e.g. Inclusión de fuente seminal fuera de rango de 5 años"
+                  value={newInquiryTopic}
+                  onChange={(e) => setNewInquiryTopic(e.target.value)}
+                />
+                <TextArea
+                  label="Duda Informal"
+                  placeholder="Escribe tu duda..."
+                  rows={2}
+                  value={newInquiryDoubt}
+                  onChange={(e) => setNewInquiryDoubt(e.target.value)}
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={async () => {
+                      if (!newInquiryTopic.trim()) return;
+                      const formal = await formulateQuestionForTeacher(
+                        newInquiryDoubt,
+                        course?.name || 'Materia',
+                        course?.teacherName
+                      );
+                      await db.inquiries.add({
+                        id: `inq-${Math.random().toString(36).substring(2, 9)}`,
+                        workId,
+                        courseId: work.courseId,
+                        topic: newInquiryTopic.trim(),
+                        rawQuestion: newInquiryDoubt.trim(),
+                        formalQuestion: formal,
+                        status: 'DRAFT',
+                        createdAt: Date.now(),
+                        updatedAt: Date.now()
+                      });
+                      setNewInquiryTopic('');
+                      setNewInquiryDoubt('');
+                      showToast('Consulta guardada', 'Registrada para revisión.', 'success');
+                    }}
+                  >
+                    Guardar Duda
+                  </Button>
+                </div>
+              </Card>
+
+              {/* Existing Inquiries List */}
+              <div className="space-y-3">
+                {inquiries.map((inq) => (
+                  <Card key={inq.id} variant="elevated" className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-sm text-[#2B2D42]">{inq.topic}</h4>
+                      <Badge variant={inq.status === 'ANSWERED' ? 'verified' : inq.status === 'SENT' ? 'lavender' : 'amber'} size="sm">
+                        {inq.status === 'ANSWERED' ? 'Respuesta Oficial Recibida' : inq.status === 'SENT' ? 'Enviada al Docente' : 'Borrador'}
+                      </Badge>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-[#F5F1EB]/70 text-xs space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-[#5A6275]">Pregunta Formal:</span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(inq.formalQuestion);
+                            showToast('Mensaje copiado', 'Consulta formal copiada al portapapeles.', 'success');
+                          }}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#8C3A32] hover:text-[#2B2D42] transition-colors cursor-pointer"
+                          title="Copiar texto formal"
+                        >
+                          <Copy className="w-3 h-3" /> Copiar Mensaje
+                        </button>
+                      </div>
+                      <p className="text-[#2B2D42] whitespace-pre-line leading-relaxed">{inq.formalQuestion}</p>
+                    </div>
+
+                    {inq.teacherAnswer ? (
+                      <div className="p-3.5 rounded-xl bg-emerald-50/80 border border-emerald-200 text-xs space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold text-emerald-900">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                          <span>Respuesta Oficial de {course?.teacherName || 'Profesor/a'}:</span>
+                        </div>
+                        <p className="text-emerald-950 leading-relaxed">{inq.teacherAnswer}</p>
+                        {inq.bindingDecision && (
+                          <div className="mt-2 pt-2 border-t border-emerald-200 font-semibold text-emerald-800">
+                            Directriz vinculante: {inq.bindingDecision}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/60 space-y-2">
+                        <span className="text-xs font-semibold text-amber-900 block">
+                          ¿El docente ya respondió esta duda? Registra la respuesta para que sea vinculante en el trabajo:
+                        </span>
+                        <TextArea
+                          rows={2}
+                          placeholder="Pega aquí la respuesta oficial dada por el docente..."
+                          value={newInquiryTeacherAnswer}
+                          onChange={(e) => setNewInquiryTeacherAnswer(e.target.value)}
+                        />
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={async () => {
+                            if (!newInquiryTeacherAnswer.trim()) return;
+                            await db.inquiries.update(inq.id, {
+                              teacherAnswer: newInquiryTeacherAnswer.trim(),
+                              status: 'ANSWERED',
+                              answeredDate: Date.now(),
+                              updatedAt: Date.now()
+                            });
+                            setNewInquiryTeacherAnswer('');
+                            showToast('Respuesta guardada', 'La respuesta oficial del profesor ha sido registrada.', 'success');
+                          }}
+                        >
+                          Guardar Respuesta Oficial
+                        </Button>
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 5. SOURCES & AGE COMPLIANCE TAB */}
+          {activeTab === 'sources' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-bold text-sm text-[#2B2D42]">Fuentes del Trabajo & Control de Antigüedad</h4>
+                  <p className="text-xs text-[#5A6275]">
+                    Límite de antigüedad sugerido: últimos {work.maxSourceAgeYears || 5} años.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {workSources.map((source) => {
+                  const ageCheck = validateSourceAge(source, work);
+                  return (
+                    <Card key={source.id} variant="elevated" className="space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h5 className="font-bold text-sm text-[#2B2D42]">{source.title}</h5>
+                          <p className="text-xs text-[#5A6275] mt-0.5">
+                            {(source.authors || []).map((a) => `${a.lastName}, ${a.firstName}`).join('; ')} ({source.year}) • {source.publication}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <VerificationBadge status={source.verificationStatus} />
+                          <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold border flex items-center gap-1 ${ageCheck.badgeColor}`}>
+                            {ageCheck.iconType === 'valid' ? (
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                            ) : ageCheck.iconType === 'warning' ? (
+                              <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                            ) : (
+                              <AlertCircle className="w-3 h-3 text-rose-600 shrink-0" />
+                            )}
+                            <span>{source.year}</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Age Compliance Note */}
+                      <p className="text-xs text-[#5A6275] italic bg-[#F5F1EB]/60 p-2 rounded-xl">
+                        {ageCheck.message}
+                      </p>
+
+                      {/* Citation Actions */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#EBE5DF]">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleInsertCitation(source, 'parenthetical')}
+                            icon={<Plus className="w-3.5 h-3.5" />}
+                          >
+                            Cita Parentética
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleInsertCitation(source, 'narrative')}
+                            icon={<Plus className="w-3.5 h-3.5" />}
+                          >
+                            Cita Narrativa
+                          </Button>
+                        </div>
+
+                        {/* Historical context toggle */}
+                        <button
+                          onClick={async () => {
+                            await db.sources.update(source.id, {
+                              historicalContextApproved: !source.historicalContextApproved,
+                              updatedAt: Date.now()
+                            });
+                          }}
+                          className={`text-xs px-2.5 py-1 rounded-xl font-semibold border transition-all cursor-pointer ${
+                            source.historicalContextApproved
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              : 'bg-[#F5F1EB] text-[#5A6275] border-[#EBE5DF] hover:bg-[#EBE5DF]'
+                          }`}
+                        >
+                          {source.historicalContextApproved ? 'Excepción Seminal Aprobada' : 'Aprobar como Contexto Histórico'}
+                        </button>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 6. DRAFT & EDITOR TAB */}
+          {activeTab === 'draft' && (
+            <Card variant="default" className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h4 className="font-bold text-sm text-[#2B2D42]">Borrador Académico</h4>
+                  <div className="flex items-center gap-2 text-xs text-[#5A6275] mt-0.5 flex-wrap">
+                    <span className="font-semibold text-[#2B2D42]">{wordCount} palabras</span>
+                    <span>•</span>
+                    <span>~{Math.max(1, Math.ceil(wordCount / 200))} min de lectura</span>
+                    <span>•</span>
+                    <span className="font-semibold text-[#8C3A32]">Estilo {work.citationStyle}</span>
+                    <span>•</span>
+                    <span className="text-[11px] text-[#5A6275]">
+                      {hasUnsavedDraft ? '🟡 Guardando...' : '🟢 Autoguardado activo'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-[#5A6275] hidden sm:inline">
+                    Atajo: <kbd className="px-1.5 py-0.5 bg-[#F5F1EB] rounded text-[10px] font-mono border border-[#EBE5DF]">Ctrl + S</kbd>
+                  </span>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleSaveDraft}
+                    disabled={!hasUnsavedDraft}
+                  >
+                    {hasUnsavedDraft ? 'Guardar Cambios' : 'Guardado'}
+                  </Button>
+                </div>
+              </div>
+
+              {work.instructionAnalysis?.wordCountTarget && (
+                <div className="p-2.5 rounded-xl bg-[#F5F1EB]/60 space-y-1">
+                  <div className="flex items-center justify-between text-[11px] text-[#5A6275]">
+                    <span>Meta de la consigna: {work.instructionAnalysis.wordCountTarget} palabras</span>
+                    <span className="font-bold text-[#2B2D42]">{Math.min(100, Math.round((wordCount / work.instructionAnalysis.wordCountTarget) * 100))}%</span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full bg-[#EBE5DF] overflow-hidden">
+                    <div
+                      className="h-full bg-[#E8A598] rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, (wordCount / work.instructionAnalysis.wordCountTarget) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <TextArea
+                rows={16}
+                value={draftText}
+                onChange={(e) => {
+                  setDraftText(e.target.value);
+                  setHasUnsavedDraft(true);
+                }}
+                className="font-serif leading-relaxed text-sm"
+                placeholder="Comienza a redactar tu ensayo o trabajo aquí. Puedes insertar citas directamente desde el panel de fuentes..."
+              />
+            </Card>
+          )}
+
+          {/* 7. EXPORT TAB */}
+          {activeTab === 'export' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Google Docs Export */}
+                <Card variant="elevated" className="space-y-3 flex flex-col justify-between">
+                  <div>
+                    <h4 className="font-bold text-sm text-[#2B2D42] flex items-center gap-2">
+                      <Share2 className="w-4 h-4 text-[#D98880]" />
+                      <span>Google Docs (Sangría Francesa)</span>
+                    </h4>
+                    <p className="text-xs text-[#5A6275] mt-1 leading-relaxed">
+                      Copia el borrador completo junto con la lista de referencias bibliográficas en formato Rich Text para pegarlo en Google Docs.
+                    </p>
+                  </div>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={handleCopyGoogleDocsHtml}
+                    icon={<Copy className="w-4 h-4" />}
+                  >
+                    Copiar Formato Google Docs
+                  </Button>
+                </Card>
+
+                {/* Google Calendar / .ICS */}
+                <Card variant="elevated" className="space-y-3 flex flex-col justify-between">
+                  <div>
+                    <h4 className="font-bold text-sm text-[#2B2D42] flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-[#FFB300]" />
+                      <span>Google Calendar & .ICS</span>
+                    </h4>
+                    <p className="text-xs text-[#5A6275] mt-1 leading-relaxed">
+                      Sincroniza la fecha de entrega con tu calendario personal para recibir alertas automáticas.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <a
+                      href={generateGoogleCalendarUrl(work, course?.name)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-[#EBE5DF] text-xs font-bold text-[#2B2D42] hover:bg-[#F5F1EB] shadow-xs"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" /> Abrir Google Cal
+                    </a>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleDownloadICS}
+                    >
+                      Descargar .ics
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT PANEL (ONLY IN SPLIT-VIEW MODE ON TABLET/DESKTOP) */}
+        {splitMode && (
+          <div className="space-y-4 border-l border-[#EBE5DF] pl-5">
+            <h4 className="font-bold text-sm text-[#2B2D42]">Panel Secundario de Apoyo</h4>
+            <div className="space-y-3">
+              {workSources.map((s) => (
+                <div key={s.id} className="p-3 rounded-2xl bg-white border border-[#EBE5DF] text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[#2B2D42] truncate">{s.title}</span>
+                    <VerificationBadge status={s.verificationStatus} />
+                  </div>
+                  <p className="text-[#5A6275] line-clamp-2">{s.abstract || 'Sin resumen disponible.'}</p>
+                  <div className="flex justify-end gap-1.5 pt-1">
+                    <button
+                      onClick={() => handleInsertCitation(s, 'parenthetical')}
+                      className="text-[11px] font-bold text-[#D98880] hover:underline"
+                    >
+                      + Citar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Edit Google Docs & Canva Links Modal */}
+      {isLinksModalOpen && (
+        <Modal
+          isOpen={isLinksModalOpen}
+          onClose={() => setIsLinksModalOpen(false)}
+          title="Vincular Google Docs & Canva"
+          subtitle="Guarda los enlaces directos a tus archivos de trabajo en la nube"
+          maxWidth="md"
+        >
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Input
+                label="Enlace de Google Docs (Borrador Oficial)"
+                placeholder="https://docs.google.com/document/d/..."
+                value={editGoogleDocUrl}
+                onChange={(e) => setEditGoogleDocUrl(e.target.value)}
+                leftIcon={<FileText className="w-4 h-4 text-blue-500" />}
+              />
+              <div className="flex justify-between items-center text-[11px] text-[#5A6275] px-1">
+                <span>Pega el link de tu Google Doc</span>
+                <a
+                  href="https://docs.new"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#8C3A32] font-semibold hover:underline inline-flex items-center gap-1"
+                >
+                  <ExternalLink className="w-3 h-3" /> Crear nuevo en docs.new
+                </a>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Input
+                label="Enlace de Canva (Diapositivas / Infografía)"
+                placeholder="https://www.canva.com/design/..."
+                value={editCanvaUrl}
+                onChange={(e) => setEditCanvaUrl(e.target.value)}
+                leftIcon={<Layout className="w-4 h-4 text-purple-500" />}
+              />
+              <div className="flex justify-between items-center text-[11px] text-[#5A6275] px-1">
+                <span>Pega el link de tu diseño en Canva</span>
+                <a
+                  href="https://www.canva.com/presentations/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#8C3A32] font-semibold hover:underline inline-flex items-center gap-1"
+                >
+                  <ExternalLink className="w-3 h-3" /> Ir a Canva
+                </a>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-[#EBE5DF] flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <Button variant="ghost" onClick={() => setIsLinksModalOpen(false)} className="w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={async () => {
+                  await db.works.update(workId, {
+                    googleDocUrl: editGoogleDocUrl.trim() || undefined,
+                    canvaUrl: editCanvaUrl.trim() || undefined,
+                    updatedAt: Date.now()
+                  });
+                  showToast('Enlaces actualizados', 'Google Docs y Canva vinculados al trabajo.', 'success');
+                  setIsLinksModalOpen(false);
+                }}
+                className="w-full sm:w-auto font-bold"
+              >
+                Guardar Enlaces
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+};
