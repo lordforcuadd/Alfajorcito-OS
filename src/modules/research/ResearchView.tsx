@@ -16,7 +16,9 @@ import {
   Calendar,
   User,
   GraduationCap,
-  Copy
+  Copy,
+  Check,
+  BookMarked
 } from 'lucide-react';
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';
@@ -27,8 +29,8 @@ import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../components/common/Toast';
 import { resolveDOI, searchOpenAlex, searchSemanticScholar, type AcademicSearchResult } from '../../services/academicApis';
 import { auditSourceMetadata } from '../../utils/antiHallucination';
-import { formatFullReference } from '../../utils/citationEngine';
-import type { Source, VerificationStatus, Idea, Paraphrase, Work, Author } from '../../types';
+import { formatFullReference, formatInTextParenthetical, formatInTextNarrative } from '../../utils/citationEngine';
+import type { Source, VerificationStatus, Idea, Paraphrase, Work, Author, CitationStyle } from '../../types';
 
 export interface ResearchViewProps {
   onOpenQuickCapture: (tab?: 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task') => void;
@@ -51,6 +53,8 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
   const [librarySearchQuery, setLibrarySearchQuery] = useState('');
   const [libraryWorkFilter, setLibraryWorkFilter] = useState<string>('ALL');
   const [inspectedSource, setInspectedSource] = useState<Source | null>(null);
+  const [modalStyle, setModalStyle] = useState<CitationStyle>('APA_7');
+  const [modalCopiedKey, setModalCopiedKey] = useState<string | null>(null);
 
   // New Idea & Paraphrase form state in modal
   const [newQuote, setNewQuote] = useState('');
@@ -460,28 +464,142 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
           maxWidth="xl"
         >
           <div className="space-y-4">
-            {/* APA 7 Canonical Reference */}
-            <div className="p-4 rounded-2xl bg-[#FDF2F0] border border-[#E8A598]/60 space-y-2">
+            {/* Citation Style Switcher & Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-2xl bg-[#FAF8F5] border border-[#EBE5DF]">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#8C3A32]">
+                <BookMarked className="w-4 h-4" />
+                <span>Formato de Cita & Referencia:</span>
+              </div>
+              <div className="flex items-center gap-1 bg-white border border-[#EBE5DF] p-1 rounded-xl shadow-2xs overflow-x-auto no-scrollbar">
+                {(['APA_7', 'MLA_9', 'IEEE', 'CHICAGO_AUTHOR_DATE', 'VANCOUVER'] as const).map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setModalStyle(st)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer select-none shrink-0 ${
+                      modalStyle === st
+                        ? 'bg-[#E8A598] text-[#2B2D42] shadow-2xs'
+                        : 'text-[#5A6275] hover:bg-[#F5F1EB]'
+                    }`}
+                  >
+                    {st === 'APA_7'
+                      ? 'APA 7'
+                      : st === 'MLA_9'
+                      ? 'MLA 9'
+                      : st === 'IEEE'
+                      ? 'IEEE'
+                      : st === 'CHICAGO_AUTHOR_DATE'
+                      ? 'Chicago'
+                      : 'Vancouver'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* In-Text Citations Grid (Parenthetical & Narrative) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+              {/* Parenthetical */}
+              <div className="p-3 rounded-xl bg-white border border-[#EBE5DF] flex items-center justify-between gap-2 shadow-2xs">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-bold text-[#8C3A32] uppercase">
+                      Cita Parentética
+                    </span>
+                    <span className="text-[10px] text-[#8D99AE]">(Al final)</span>
+                  </div>
+                  <code className="text-xs font-mono font-bold text-[#2B2D42] block mt-0.5 break-words [overflow-wrap:anywhere]">
+                    {formatInTextParenthetical(inspectedSource, modalStyle)}
+                  </code>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cite = formatInTextParenthetical(inspectedSource, modalStyle);
+                    navigator.clipboard.writeText(cite);
+                    setModalCopiedKey('modal-parenthetical');
+                    showToast('Cita copiada', 'Cita parentética lista para pegar.', 'success');
+                    setTimeout(() => setModalCopiedKey(null), 2000);
+                  }}
+                  className="p-2 rounded-xl text-[#5A6275] hover:text-[#8C3A32] hover:bg-[#F5F1EB] transition-colors cursor-pointer shrink-0 border border-[#EBE5DF]"
+                  title="Copiar cita parentética"
+                >
+                  {modalCopiedKey === 'modal-parenthetical' ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
+
+              {/* Narrative */}
+              <div className="p-3 rounded-xl bg-white border border-[#EBE5DF] flex items-center justify-between gap-2 shadow-2xs">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-bold text-[#8C3A32] uppercase">
+                      Cita Narrativa
+                    </span>
+                    <span className="text-[10px] text-[#8D99AE]">(En la oración)</span>
+                  </div>
+                  <code className="text-xs font-mono font-bold text-[#2B2D42] block mt-0.5 break-words [overflow-wrap:anywhere]">
+                    {formatInTextNarrative(inspectedSource, modalStyle)}
+                  </code>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cite = formatInTextNarrative(inspectedSource, modalStyle);
+                    navigator.clipboard.writeText(cite);
+                    setModalCopiedKey('modal-narrative');
+                    showToast('Cita copiada', 'Cita narrativa lista para pegar.', 'success');
+                    setTimeout(() => setModalCopiedKey(null), 2000);
+                  }}
+                  className="p-2 rounded-xl text-[#5A6275] hover:text-[#8C3A32] hover:bg-[#F5F1EB] transition-colors cursor-pointer shrink-0 border border-[#EBE5DF]"
+                  title="Copiar cita narrativa"
+                >
+                  {modalCopiedKey === 'modal-narrative' ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Canonical Reference with French Indentation */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-[#FDF2F0] to-white border border-[#E8A598]/60 space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C3A32] flex items-center gap-1.5">
                   <BookOpen className="w-3.5 h-3.5 text-[#D98880]" />
-                  <span>Referencia en Normas APA 7</span>
+                  <span>Referencia Bibliográfica Final (Sangría Francesa)</span>
                 </span>
                 <button
                   type="button"
                   onClick={() => {
-                    const ref = formatFullReference(inspectedSource, 'APA_7');
+                    const ref = formatFullReference(inspectedSource, modalStyle);
                     navigator.clipboard.writeText(ref);
-                    showToast('Referencia copiada', 'Copiada al portapapeles en formato APA 7.', 'success');
+                    setModalCopiedKey('modal-ref');
+                    showToast('Referencia copiada', `Copiada en formato ${modalStyle}.`, 'success');
+                    setTimeout(() => setModalCopiedKey(null), 2000);
                   }}
-                  className="px-3 py-1 rounded-xl bg-white hover:bg-[#F5F1EB] border border-[#E8A598]/60 text-[11px] font-bold text-[#8C3A32] flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs shrink-0"
+                  className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#F5F1EB] border border-[#E8A598]/60 text-[11px] font-bold text-[#8C3A32] flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs shrink-0"
                 >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>Copiar Referencia</span>
+                  {modalCopiedKey === 'modal-ref' ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>¡Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copiar Referencia</span>
+                    </>
+                  )}
                 </button>
               </div>
-              <p className="text-xs text-[#2B2D42] font-serif leading-relaxed pl-1 border-l-2 border-[#D98880]/60">
-                {formatFullReference(inspectedSource, 'APA_7')}
+              <p
+                className="text-xs text-[#2B2D42] font-serif leading-relaxed break-words [overflow-wrap:anywhere]"
+                style={{ paddingLeft: '1.5rem', textIndent: '-1.5rem' }}
+              >
+                {formatFullReference(inspectedSource, modalStyle)}
               </p>
             </div>
 
@@ -578,64 +696,54 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
 
               {works.length === 0 ? (
                 <p className="text-xs text-[#8D99AE] italic py-2">
-                  No tienes proyectos de trabajo creados aún.
+                  No tienes trabajos activos creados aún.
                 </p>
               ) : (
-                <div className="space-y-2">
-                  {works.map((w) => {
-                    const isLinked = (inspectedSource.workIds || []).includes(w.id);
-                    const course = coursesMap.get(w.courseId);
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {works.map((work) => {
+                    const isLinked = (inspectedSource.workIds || []).includes(work.id);
+                    const course = coursesMap.get(work.courseId);
+
                     return (
                       <div
-                        key={w.id}
+                        key={work.id}
                         onClick={async () => {
                           const currentIds = inspectedSource.workIds || [];
-                          const updatedIds = isLinked
-                            ? currentIds.filter((id) => id !== w.id)
-                            : [...currentIds, w.id];
+                          const updatedWorkIds = isLinked
+                            ? currentIds.filter((id) => id !== work.id)
+                            : [...currentIds, work.id];
 
                           await db.sources.update(inspectedSource.id, {
-                            workIds: updatedIds,
+                            workIds: updatedWorkIds,
                             updatedAt: Date.now()
                           });
+
                           setInspectedSource({
                             ...inspectedSource,
-                            workIds: updatedIds
+                            workIds: updatedWorkIds
                           });
+
                           showToast(
-                            isLinked ? 'Desvinculado' : 'Vinculado',
-                            isLinked
-                              ? `Fuente removida de "${w.title}".`
-                              : `Fuente vinculada a "${w.title}".`,
-                            'success'
+                            isLinked ? 'Trabajo desvinculado' : 'Trabajo vinculado',
+                            `${work.title}`,
+                            'info'
                           );
                         }}
-                        className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                        className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs transition-all cursor-pointer select-none ${
                           isLinked
-                            ? 'bg-[#FDF2F0] border-[#E8A598] shadow-2xs'
-                            : 'bg-white border-[#EBE5DF] hover:border-[#CBD5E1] hover:bg-white/90'
+                            ? 'bg-[#FDF2F0] border-[#E8A598] text-[#2B2D42] shadow-2xs font-semibold'
+                            : 'bg-white border-[#EBE5DF] text-[#5A6275] hover:bg-[#F5F1EB]'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className="flex items-center gap-2 min-w-0">
                           <div
-                            className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border transition-colors ${
-                              isLinked
-                                ? 'bg-[#D98880] border-[#D98880] text-white'
-                                : 'border-[#CBD5E1] bg-white'
+                            className={`w-4 h-4 rounded-md flex items-center justify-center text-[10px] shrink-0 ${
+                              isLinked ? 'bg-[#D98880] text-white' : 'border border-[#CBD5E1]'
                             }`}
                           >
-                            {isLinked && <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />}
+                            {isLinked && '✓'}
                           </div>
-                          <div className="min-w-0 flex-1 text-left">
-                            <p className={`text-xs font-bold truncate ${isLinked ? 'text-[#8C3A32]' : 'text-[#2B2D42]'}`}>
-                              {w.title}
-                            </p>
-                            {course && (
-                              <p className="text-[10px] text-[#5A6275] truncate mt-0.5">
-                                {course.name}
-                              </p>
-                            )}
-                          </div>
+                          <span className="truncate">{work.title}</span>
                         </div>
 
                         {course && (
@@ -658,17 +766,22 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
 
             {/* Symmetrical Extract New Idea & Paraphrase Section */}
             <div className="p-4 rounded-2xl bg-white border border-[#EBE5DF] space-y-3.5 shadow-2xs">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-[#FFF8E1] text-[#FFA000] flex items-center justify-center">
-                  <Quote className="w-3.5 h-3.5" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-[#FFF8E1] text-[#FFA000] flex items-center justify-center">
+                    <Quote className="w-3.5 h-3.5" />
+                  </div>
+                  <h5 className="font-bold text-xs text-[#2B2D42] uppercase tracking-wider">
+                    Guardar Cita Textual & Paráfrasis Propia
+                  </h5>
                 </div>
-                <h5 className="font-bold text-xs text-[#2B2D42] uppercase tracking-wider">
-                  Guardar Cita Textual & Paráfrasis Propia
-                </h5>
+                <span className="text-[10px] font-bold text-[#8D99AE] bg-[#FAF8F5] px-2 py-0.5 rounded-md">
+                  Paso a Paso
+                </span>
               </div>
 
               <TextArea
-                label="Texto Original del Libro o Paper (Cita Textual)"
+                label="1. Texto Original del Libro o Paper (Cita Textual) *"
                 placeholder="Pega aquí el fragmento del autor que quieres citar..."
                 rows={2}
                 value={newQuote}
@@ -677,8 +790,8 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input
-                  label="Página del Libro / Paper"
-                  placeholder="e.g. p. 45 o p. 855"
+                  label="2. Página del Libro / Paper"
+                  placeholder="e.g. p. 45 o pp. 120-121"
                   value={newPageLoc}
                   onChange={(e) => setNewPageLoc(e.target.value)}
                 />
@@ -691,12 +804,31 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
               </div>
 
               <TextArea
-                label="Tu Explicación (Con tus propias palabras para evitar plagio)"
-                placeholder="Explica la idea con tus propias palabras..."
+                label="3. Tu Explicación (Con tus propias palabras para evitar plagio) *"
+                placeholder="Explica la idea con tus propias palabras tal como la usarás en tu texto..."
                 rows={2}
                 value={newParaphraseText}
                 onChange={(e) => setNewParaphraseText(e.target.value)}
               />
+
+              {/* Live Citation Preview */}
+              {(newQuote.trim() || newPageLoc.trim()) && (
+                <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#EBE5DF] text-xs space-y-1 animate-fade-in">
+                  <span className="text-[10px] font-bold text-[#8C3A32] uppercase block">
+                    Previsualización de la cita generada:
+                  </span>
+                  <div className="flex items-center gap-3 flex-wrap text-xs font-mono">
+                    <span className="text-[#5A6275]">Parentética:</span>
+                    <code className="text-[#8C3A32] font-bold">
+                      {formatInTextParenthetical(inspectedSource, modalStyle, newPageLoc.trim() || undefined)}
+                    </code>
+                    <span className="text-[#5A6275]">Narrativa:</span>
+                    <code className="text-[#2B2D42] font-bold">
+                      {formatInTextNarrative(inspectedSource, modalStyle)}
+                    </code>
+                  </div>
+                </div>
+              )}
 
               <div className="flex justify-end pt-1">
                 <Button

@@ -22,7 +22,9 @@ import {
   Maximize2,
   Link2,
   Edit3,
-  Layout
+  Layout,
+  BookMarked,
+  Check
 } from 'lucide-react';
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';
@@ -906,6 +908,47 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                 </div>
               )}
 
+              {/* Quick Citation Bar for Drafting */}
+              {workSources.length > 0 && (
+                <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#EBE5DF] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-[#8C3A32] uppercase tracking-wider flex items-center gap-1">
+                      <BookMarked className="w-3.5 h-3.5" />
+                      <span>Citas Rápidas de tus Fuentes (Haz clic para insertar en el borrador)</span>
+                    </span>
+                    <span className="text-[10px] text-[#8D99AE]">
+                      Estilo {work.citationStyle.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 tab-scroll-pc scroll-touch touch-pan-x flex-nowrap">
+                    {workSources.map((s) => {
+                      const parenthetical = formatInTextParenthetical(s, work.citationStyle);
+                      const narrative = formatInTextNarrative(s, work.citationStyle);
+                      return (
+                        <div key={s.id} className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-[#EBE5DF] shadow-2xs">
+                          <button
+                            type="button"
+                            onClick={() => handleInsertCitation(s, 'parenthetical')}
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold text-[#8C3A32] bg-[#FDF2F0] hover:bg-[#E8A598]/40 transition-colors cursor-pointer"
+                            title={`Insertar al final: ${parenthetical}`}
+                          >
+                            + {parenthetical}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleInsertCitation(s, 'narrative')}
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold text-[#2B2D42] bg-[#F5F1EB] hover:bg-[#EBE5DF] transition-colors cursor-pointer"
+                            title={`Insertar en redacción: ${narrative}`}
+                          >
+                            + {narrative}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <TextArea
                 rows={16}
                 value={draftText}
@@ -914,8 +957,53 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                   setHasUnsavedDraft(true);
                 }}
                 className="font-serif leading-relaxed text-sm"
-                placeholder="Comienza a redactar tu ensayo o trabajo aquí. Puedes insertar citas directamente desde el panel de fuentes..."
+                placeholder="Comienza a redactar tu ensayo o trabajo aquí. Puedes insertar citas directamente desde la barra superior de fuentes..."
               />
+
+              {/* Live Canonical References Section (French Indentation) */}
+              {workSources.length > 0 && (
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-[#FDF2F0] via-white to-white border border-[#E8A598]/60 space-y-3 shadow-2xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-[#D98880]" />
+                      <h5 className="font-extrabold text-xs text-[#2B2D42] uppercase tracking-wider">
+                        Lista de Referencias Generada ({work.citationStyle.replace('_', ' ')})
+                      </h5>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        const allRefs = workSources
+                          .map((s) => formatFullReference(s, work.citationStyle))
+                          .sort()
+                          .join('\n\n');
+                        navigator.clipboard.writeText(allRefs);
+                        showToast('Referencias copiadas', 'Lista completa copiada al portapapeles.', 'success');
+                      }}
+                      icon={<Copy className="w-3.5 h-3.5" />}
+                      className="font-bold text-xs self-start sm:self-center"
+                    >
+                      Copiar Todas las Referencias
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2.5 pt-1">
+                    {workSources
+                      .map((s) => formatFullReference(s, work.citationStyle))
+                      .sort()
+                      .map((refText, idx) => (
+                        <p
+                          key={idx}
+                          className="text-xs text-[#2B2D42] font-serif leading-relaxed break-words [overflow-wrap:anywhere]"
+                          style={{ paddingLeft: '1.5rem', textIndent: '-1.5rem' }}
+                        >
+                          {refText}
+                        </p>
+                      ))}
+                  </div>
+                </div>
+              )}
             </Card>
           )}
 
