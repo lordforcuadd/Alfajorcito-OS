@@ -103,6 +103,14 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
       return;
     }
 
+    const updatedSlug = editTitle
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '') || note.slug;
+
     const parsedTags = editTags
       .split(',')
       .map((t) => t.trim())
@@ -110,8 +118,9 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
       .map((t) => (t.startsWith('#') ? t : `#${t}`));
 
     const updatedData = {
+      slug: updatedSlug,
       title: editTitle.trim(),
-      content: editContent,
+      content: editContent.trim(),
       paraCategory: editCategory,
       courseId: editCourseId || undefined,
       tags: parsedTags,
