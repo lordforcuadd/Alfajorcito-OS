@@ -1,5 +1,5 @@
 import type { Work, Source, CitationStyle, UserProfile } from '../types';
-import { formatFullReference } from './citationEngine';
+import { formatFullReference, formatFullReferenceHTML } from './citationEngine';
 
 export function generateGoogleDocsRichHTML(
   work: Work,
@@ -9,7 +9,7 @@ export function generateGoogleDocsRichHTML(
   teacherName?: string
 ): string {
   const referencesHtml = sources.map(s => {
-    const ref = formatFullReference(s, work.citationStyle);
+    const ref = formatFullReferenceHTML(s, work.citationStyle);
     return `<p style="margin-left: 36pt; text-indent: -36pt; margin-bottom: 8pt; line-height: 2.0; font-family: 'Times New Roman', Georgia, serif; font-size: 12pt;">${ref}</p>`;
   }).join('\n');
 

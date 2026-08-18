@@ -35,7 +35,13 @@ import { Modal } from '../../components/common/Modal';
 import { Input, TextArea, Select } from '../../components/common/Input';
 import { useToast } from '../../components/common/Toast';
 import { validateSourceAge } from '../../utils/sourceAgeValidator';
-import { formatFullReference, formatInTextParenthetical, formatInTextNarrative } from '../../utils/citationEngine';
+import {
+  formatFullReference,
+  formatFullReferenceHTML,
+  formatInTextParenthetical,
+  formatInTextNarrative,
+  copyRichReference
+} from '../../utils/citationEngine';
 import { generateGoogleDocsRichHTML, generateGoogleCalendarUrl, generateICSFile } from '../../utils/googleExporter';
 import { formulateQuestionForTeacher, analyzeInstructionsOffline } from '../../services/aiService';
 import type { Work, Course, Source, Task, InquiryToTeacher, Citation, Paraphrase, Idea, UserProfile, TaskPriority } from '../../types';
@@ -1027,13 +1033,17 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => {
+                      onClick={async () => {
                         const allRefs = workSources
                           .map((s) => formatFullReference(s, work.citationStyle))
                           .sort()
                           .join('\n\n');
-                        navigator.clipboard.writeText(allRefs);
-                        showToast('Referencias copiadas', 'Lista completa copiada al portapapeles.', 'success');
+                        const allRefsHtml = workSources
+                          .map((s) => `<p style="padding-left:1.5rem;text-indent:-1.5rem;margin-bottom:8pt;">${formatFullReferenceHTML(s, work.citationStyle)}</p>`)
+                          .sort()
+                          .join('\n');
+                        await copyRichReference(allRefs, allRefsHtml);
+                        showToast('Referencias copiadas', 'Lista completa con formato cursiva copiada al portapapeles.', 'success');
                       }}
                       icon={<Copy className="w-3.5 h-3.5" />}
                       className="font-bold text-xs self-start sm:self-center"

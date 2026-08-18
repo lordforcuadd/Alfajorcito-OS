@@ -21,7 +21,13 @@ import { Button } from '../../components/common/Button';
 import { Badge, VerificationBadge } from '../../components/common/Badge';
 import { useToast } from '../../components/common/Toast';
 import { checkParaphraseFidelity } from '../../services/aiService';
-import { formatFullReference, formatInTextParenthetical, formatInTextNarrative } from '../../utils/citationEngine';
+import {
+  formatFullReference,
+  formatFullReferenceHTML,
+  formatInTextParenthetical,
+  formatInTextNarrative,
+  copyRichReference
+} from '../../utils/citationEngine';
 import type { CitationStyle, Source, Idea, Paraphrase, Work } from '../../types';
 
 export const PipelineView: React.FC = () => {
@@ -69,8 +75,12 @@ export const PipelineView: React.FC = () => {
   };
 
   // Copy Citation to clipboard with temporary feedback icon
-  const handleCopyCitation = (text: string, label: string, key: string) => {
-    navigator.clipboard.writeText(text);
+  const handleCopyCitation = async (text: string, label: string, key: string, htmlText?: string) => {
+    if (htmlText) {
+      await copyRichReference(text, htmlText);
+    } else {
+      await navigator.clipboard.writeText(text);
+    }
     setCopiedKey(key);
     showToast('Copiado', `${label} listo para pegar en tu documento.`, 'success');
     setTimeout(() => {
@@ -462,7 +472,10 @@ export const PipelineView: React.FC = () => {
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => handleCopyCitation(fullRef, 'Referencia bibliográfica', keyRef)}
+                      onClick={() => {
+                        const fullRefHtml = `<p style="padding-left:1.5rem;text-indent:-1.5rem;">${formatFullReferenceHTML(source, selectedStyle)}</p>`;
+                        handleCopyCitation(fullRef, 'Referencia bibliográfica', keyRef, fullRefHtml);
+                      }}
                       icon={
                         copiedKey === keyRef ? (
                           <Check className="w-3.5 h-3.5 text-emerald-600" />

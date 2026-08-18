@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   formatFullReference,
+  formatFullReferenceHTML,
   formatInTextParenthetical,
   formatInTextNarrative,
   formatAuthorNamesAPA
@@ -152,5 +153,29 @@ describe('Citation Engine Extended Suite — Strict Academic APA 7 & Multi-style
     expect(authorNamesStr).toContain('... Autor22, N.');
     expect(authorNamesStr).not.toContain('Autor20, N.');
     expect(authorNamesStr).not.toContain('Autor21, N.');
+  });
+
+  it('formats full references with rich HTML italics for journals and books', () => {
+    const journalSource: Source = {
+      id: 'src-journal',
+      workIds: ['work-1'],
+      title: 'Regulación emocional y estrés académico en universitarios',
+      authors: [{ firstName: 'Saory', lastName: 'García' }],
+      year: 2024,
+      type: 'JOURNAL_ARTICLE',
+      publication: 'Revista Peruana de Psicología',
+      volume: '15',
+      issue: '2',
+      pages: '45-58',
+      accessedAt: Date.now(),
+      verificationStatus: 'VERIFIED',
+      verificationProvider: 'MANUAL',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    const html = formatFullReferenceHTML(journalSource, 'APA_7');
+    expect(html).toContain('<i>Revista Peruana de Psicología</i>');
+    expect(html).toContain('<i>15</i>');
   });
 });

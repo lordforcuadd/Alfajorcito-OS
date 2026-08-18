@@ -29,7 +29,13 @@ import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../components/common/Toast';
 import { resolveDOI, searchOpenAlex, searchSemanticScholar, type AcademicSearchResult } from '../../services/academicApis';
 import { auditSourceMetadata } from '../../utils/antiHallucination';
-import { formatFullReference, formatInTextParenthetical, formatInTextNarrative } from '../../utils/citationEngine';
+import {
+  formatFullReference,
+  formatFullReferenceHTML,
+  formatInTextParenthetical,
+  formatInTextNarrative,
+  copyRichReference
+} from '../../utils/citationEngine';
 import type { Source, VerificationStatus, Idea, Paraphrase, Work, Author, CitationStyle } from '../../types';
 
 export interface ResearchViewProps {
@@ -575,14 +581,17 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                 </span>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     const ref = formatFullReference(inspectedSource, modalStyle);
-                    navigator.clipboard.writeText(ref);
+                    const refHtml = `<p style="padding-left:1.5rem;text-indent:-1.5rem;">${formatFullReferenceHTML(inspectedSource, modalStyle)}</p>`;
+                    await copyRichReference(ref, refHtml);
                     setModalCopiedKey('modal-ref');
-                    showToast('Referencia copiada', `Copiada en formato ${modalStyle}.`, 'success');
+                    showToast('Referencia copiada', `Copiada en formato ${modalStyle} con cursivas.`, 'success');
                     setTimeout(() => setModalCopiedKey(null), 2000);
                   }}
                   className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#F5F1EB] border border-[#E8A598]/60 text-[11px] font-bold text-[#8C3A32] flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs shrink-0"
+                  title="Copiar referencia bibliográfica con cursiva"
+                  aria-label="Copiar referencia bibliográfica"
                 >
                   {modalCopiedKey === 'modal-ref' ? (
                     <>

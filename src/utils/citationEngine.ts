@@ -199,6 +199,83 @@ export function formatFullReference(source: Source, style: CitationStyle = 'APA_
   }
 }
 
+export function formatFullReferenceHTML(source: Source, style: CitationStyle = 'APA_7'): string {
+  const year = source.year || 's.f.';
+  const title = source.title || 'Título desconocido';
+  const doi = source.doi ? (source.doi.startsWith('http') ? source.doi : `https://doi.org/${source.doi}`) : '';
+  const url = source.url || doi;
+
+  switch (style) {
+    case 'APA_7': {
+      const authors = formatAuthorNamesAPA(source.authors);
+      if (source.type === 'JOURNAL_ARTICLE') {
+        const pub = source.publication ? ` <i>${source.publication}</i>` : '';
+        const vol = source.volume ? `, <i>${source.volume}</i>` : '';
+        const iss = source.issue ? `(${source.issue})` : '';
+        const pgs = source.pages ? `, ${source.pages}` : '';
+        const doiPart = url ? ` ${url}` : '';
+        return `${authors} (${year}). ${title}.${pub}${vol}${iss}${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
+      } else if (source.type === 'BOOK' || source.type === 'THESIS') {
+        const italicTitle = `<i>${title}</i>`;
+        const pub = source.publication ? ` ${source.publication}.` : '';
+        const doiPart = url ? ` ${url}` : '';
+        return `${authors} (${year}). ${italicTitle}.${pub}${doiPart}`.replace(/\.\./g, '.').trim();
+      } else {
+        const italicTitle = `<i>${title}</i>`;
+        const pub = source.publication ? ` ${source.publication}.` : '';
+        const doiPart = url ? ` ${url}` : '';
+        return `${authors} (${year}). ${italicTitle}.${pub}${doiPart}`.replace(/\.\./g, '.').trim();
+      }
+    }
+
+    case 'MLA_9': {
+      let authorStr = 'Anon.';
+      if (source.authors && source.authors.length > 0) {
+        if (source.authors.length === 1) {
+          authorStr = `${source.authors[0].lastName}, ${source.authors[0].firstName}.`;
+        } else if (source.authors.length === 2) {
+          authorStr = `${source.authors[0].lastName}, ${source.authors[0].firstName}, and ${source.authors[1].firstName} ${source.authors[1].lastName}.`;
+        } else {
+          authorStr = `${source.authors[0].lastName}, ${source.authors[0].firstName}, et al.`;
+        }
+      }
+      const pub = source.publication ? ` <i>${source.publication}</i>,` : '';
+      const vol = source.volume ? ` vol. ${source.volume},` : '';
+      const iss = source.issue ? ` no. ${source.issue},` : '';
+      const pgs = source.pages ? ` pp. ${source.pages},` : '';
+      const doiPart = url ? ` ${url}.` : '.';
+      return `${authorStr} "${title}."${pub}${vol}${iss} ${year},${pgs}${doiPart}`.replace(/\s+/g, ' ').replace(/\.\./g, '.').trim();
+    }
+
+    case 'CHICAGO_AUTHOR_DATE': {
+      const authors = formatAuthorNamesAPA(source.authors).replace(/&/g, 'and');
+      const pub = source.publication ? ` <i>${source.publication}</i>` : '';
+      const vol = source.volume ? ` ${source.volume}` : '';
+      const iss = source.issue ? `, no. ${source.issue}` : '';
+      const pgs = source.pages ? `: ${source.pages}` : '';
+      const doiPart = url ? ` ${url}` : '';
+      return `${authors}. ${year}. "${title}."${pub}${vol}${iss}${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
+    }
+
+    default:
+      return formatFullReference(source, style);
+  }
+}
+
+export async function copyRichReference(plainText: string, htmlText: string): Promise<void> {
+  try {
+    if (typeof ClipboardItem !== 'undefined' && navigator.clipboard && navigator.clipboard.write) {
+      const blobHtml = new Blob([htmlText], { type: 'text/html' });
+      const blobText = new Blob([plainText], { type: 'text/plain' });
+      await navigator.clipboard.write([new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })]);
+      return;
+    }
+  } catch {
+    // Fallback to standard clipboard
+  }
+  await navigator.clipboard.writeText(plainText);
+}
+
 export function generateBibTeX(source: Source): string {
   const citeKey = `${(source.authors?.[0]?.lastName || 'source').toLowerCase()}${source.year || 'nodate'}`;
   const authorsStr = (source.authors || []).map(a => `${a.lastName}, ${a.firstName}`).join(' and ');
