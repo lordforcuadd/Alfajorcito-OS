@@ -979,20 +979,22 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                           <button
                             type="button"
                             onClick={() => handleInsertCitation(s, 'parenthetical')}
-                            className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold text-[#8C3A32] bg-[#FDF2F0] hover:bg-[#E8A598]/40 transition-colors cursor-pointer"
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold text-[#8C3A32] bg-[#FDF2F0] hover:bg-[#E8A598]/40 transition-colors cursor-pointer flex items-center gap-1"
                             title={`Insertar al final: ${parenthetical}`}
                             aria-label={`Insertar cita parentética: ${parenthetical}`}
                           >
-                            + {parenthetical}
+                            <Plus className="w-3 h-3 shrink-0 stroke-[2.5]" />
+                            <span>{parenthetical}</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => handleInsertCitation(s, 'narrative')}
-                            className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold text-[#2B2D42] bg-[#F5F1EB] hover:bg-[#EBE5DF] transition-colors cursor-pointer"
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold text-[#2B2D42] bg-[#F5F1EB] hover:bg-[#EBE5DF] transition-colors cursor-pointer flex items-center gap-1"
                             title={`Insertar en redacción: ${narrative}`}
                             aria-label={`Insertar cita narrativa: ${narrative}`}
                           >
-                            + {narrative}
+                            <Plus className="w-3 h-3 shrink-0 stroke-[2.5]" />
+                            <span>{narrative}</span>
                           </button>
                         </div>
                       );

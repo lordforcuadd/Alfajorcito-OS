@@ -42,7 +42,9 @@ export function formatInTextNarrative(
   const year = source.year || 's.f.';
   
   if (authors.length === 0) {
-    const shortTitle = source.title ? `"${source.title.slice(0, 25)}..."` : 'Anónimo';
+    const shortTitle = source.title
+      ? `"${source.title.length > 25 ? source.title.slice(0, 25) + '...' : source.title}"`
+      : 'Anónimo';
     return `${shortTitle} (${year})`;
   }
 
@@ -76,7 +78,9 @@ export function formatInTextParenthetical(
   const pageStr = pageOrLocation ? `, ${pageOrLocation}` : '';
 
   if (authors.length === 0) {
-    const shortTitle = source.title ? `"${source.title.slice(0, 25)}..."` : 'Anónimo';
+    const shortTitle = source.title
+      ? `"${source.title.length > 25 ? source.title.slice(0, 25) + '...' : source.title}"`
+      : 'Anónimo';
     return `(${shortTitle}, ${year}${pageStr})`;
   }
 

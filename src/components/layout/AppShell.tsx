@@ -142,6 +142,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             onClick={onOpenSettings}
             className="w-full flex items-center justify-between p-2.5 rounded-2xl bg-[#F5F1EB]/60 hover:bg-[#F5F1EB] border border-[#EBE5DF] transition-all cursor-pointer group"
             title="Configuración de Perfil e IA"
+            aria-label="Configuración de Perfil e IA"
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-xl bg-white border border-[#EBE5DF] flex items-center justify-center text-xs font-bold text-[#8C3A32] shrink-0">
@@ -178,6 +179,8 @@ export const AppShell: React.FC<AppShellProps> = ({
           <button
             onClick={onOpenSearch}
             className="flex-1 max-w-md flex items-center gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white border border-[#EBE5DF] text-xs sm:text-sm text-[#8D99AE] hover:border-[#E8A598] hover:shadow-2xs transition-all cursor-pointer select-none"
+            title="Abrir buscador global"
+            aria-label="Abrir buscador global"
           >
             <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8D99AE] shrink-0" />
             <span className="truncate">Buscar<span className="hidden sm:inline"> tesis, DSM-5-TR, fuentes, notas, APA 7...</span></span>
@@ -198,6 +201,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               onClick={onOpenSettings}
               className="md:hidden p-1.5 rounded-xl text-[#5A6275] hover:bg-white hover:border-[#EBE5DF] border border-transparent transition-all cursor-pointer"
               title="Configuración & Perfil"
+              aria-label="Configuración y Perfil"
             >
               <Settings className="w-4 h-4" />
             </button>

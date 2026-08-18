@@ -309,7 +309,10 @@ export const PipelineView: React.FC = () => {
 
             if (!source || !idea) return null;
 
-            const refNum = sources.findIndex((s) => s.id === source.id) + 1 || 1;
+            const workSources = para.workId
+              ? sources.filter((s) => s.workIds.includes(para.workId!))
+              : sources;
+            const refNum = workSources.findIndex((s) => s.id === source.id) + 1 || 1;
             const parentheticalCite = formatInTextParenthetical(source, selectedStyle, idea.pageOrLocation, refNum);
             const narrativeCite = formatInTextNarrative(source, selectedStyle, refNum);
             const fullRef = formatFullReference(source, selectedStyle);
@@ -402,6 +405,7 @@ export const PipelineView: React.FC = () => {
                         onClick={() => handleCopyCitation(parentheticalCite, 'Cita parentética', keyParenthetical)}
                         className="p-2 rounded-xl text-[#5A6275] hover:text-[#8C3A32] hover:bg-white transition-all cursor-pointer shrink-0 shadow-2xs border border-[#EBE5DF]"
                         title="Copiar cita parentética"
+                        aria-label="Copiar cita parentética"
                       >
                         {copiedKey === keyParenthetical ? (
                           <Check className="w-4 h-4 text-emerald-600" />
@@ -428,6 +432,7 @@ export const PipelineView: React.FC = () => {
                         onClick={() => handleCopyCitation(narrativeCite, 'Cita narrativa', keyNarrative)}
                         className="p-2 rounded-xl text-[#5A6275] hover:text-[#8C3A32] hover:bg-white transition-all cursor-pointer shrink-0 shadow-2xs border border-[#EBE5DF]"
                         title="Copiar cita narrativa"
+                        aria-label="Copiar cita narrativa"
                       >
                         {copiedKey === keyNarrative ? (
                           <Check className="w-4 h-4 text-emerald-600" />

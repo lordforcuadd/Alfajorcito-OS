@@ -242,6 +242,7 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
                       : 'bg-[#F5F1EB] text-[#2B2D42] border border-[#EBE5DF] hover:bg-[#E8A598]/20 hover:border-[#E8A598]'
                   }`}
                   title={isEnrolled ? 'Click para quitar de tus cursos' : 'Click para agregar a tus cursos'}
+                  aria-label={isEnrolled ? `Quitar ${course.name} de mis cursos` : `Matricular ${course.name} en mis cursos`}
                 >
                   {isEnrolled ? (
                     <>

@@ -156,6 +156,7 @@ export const WorksView: React.FC<WorksViewProps> = ({
                 }}
                 className="p-1 hover:bg-white/60 text-[#8D99AE] hover:text-[#2B2D42] rounded-lg transition-colors cursor-pointer"
                 title={`Editar curso: ${c.name}`}
+                aria-label={`Editar curso: ${c.name}`}
               >
                 <Edit2 className="w-3 h-3" />
               </button>

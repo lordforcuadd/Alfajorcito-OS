@@ -22,6 +22,7 @@ export function Tabs<T extends string>({
 }: TabsProps<T>) {
   return (
     <div
+      role="tablist"
       onWheel={(e) => {
         if (e.deltaY !== 0) {
           e.currentTarget.scrollLeft += e.deltaY;
@@ -34,6 +35,8 @@ export function Tabs<T extends string>({
         return (
           <button
             key={tab.id}
+            role="tab"
+            aria-selected={isActive}
             onClick={() => onChange(tab.id)}
             className={`flex items-center gap-2 px-3.5 py-2.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 whitespace-nowrap cursor-pointer select-none shrink-0 active:scale-[0.98] ${
               isActive

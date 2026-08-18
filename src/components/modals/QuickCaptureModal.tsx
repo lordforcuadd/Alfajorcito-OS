@@ -714,6 +714,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
                   }`}
                   style={{ backgroundColor: c }}
                   title={`Color ${c}`}
+                  aria-label={`Seleccionar color ${c}`}
                 />
               ))}
             </div>

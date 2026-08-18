@@ -189,6 +189,8 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
                   ? 'bg-white text-[#2B2D42] shadow-2xs'
                   : 'text-[#5A6275] hover:text-[#2B2D42]'
               }`}
+              title="Modo Lectura"
+              aria-label="Modo de solo lectura"
             >
               <Eye className="w-3.5 h-3.5" />
               <span>Lectura</span>
@@ -200,6 +202,8 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
                   ? 'bg-white text-[#2B2D42] shadow-2xs'
                   : 'text-[#5A6275] hover:text-[#2B2D42]'
               }`}
+              title="Modo Edición"
+              aria-label="Modo de edición"
             >
               <Edit3 className="w-3.5 h-3.5" />
               <span>Editar</span>
@@ -354,6 +358,8 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
                   type="button"
                   onClick={() => insertText('[[Nombre de otra Nota]]')}
                   className="px-2 py-1 bg-white hover:bg-[#FDF2F0] rounded-lg text-xs font-bold text-[#8C3A32] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer"
+                  title="Insertar Enlace Wiki"
+                  aria-label="Insertar enlace wiki"
                 >
                   [[Enlace Wiki]]
                 </button>
@@ -361,6 +367,8 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
                   type="button"
                   onClick={() => insertText('**Texto en Negrita**')}
                   className="px-2 py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer"
+                  title="Insertar Texto en Negrita"
+                  aria-label="Insertar texto en negrita"
                 >
                   **Negrita**
                 </button>
@@ -368,6 +376,8 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
                   type="button"
                   onClick={() => insertText('## Subtítulo')}
                   className="px-2 py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer"
+                  title="Insertar Título de Nivel 2"
+                  aria-label="Insertar subtítulo"
                 >
                   ## Título
                 </button>
@@ -375,6 +385,8 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
                   type="button"
                   onClick={() => insertText('- Elemento de lista')}
                   className="px-2 py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer"
+                  title="Insertar Elemento de Lista"
+                  aria-label="Insertar elemento de lista"
                 >
                   - Lista
                 </button>
@@ -382,6 +394,8 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
                   type="button"
                   onClick={() => insertText('#psicologia #usmp #tesis')}
                   className="px-2 py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer"
+                  title="Insertar Etiquetas de Ejemplo"
+                  aria-label="Insertar etiquetas de ejemplo"
                 >
                   #Tags
                 </button>
