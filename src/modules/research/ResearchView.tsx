@@ -521,6 +521,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                   }}
                   className="p-2 rounded-xl text-[#5A6275] hover:text-[#8C3A32] hover:bg-[#F5F1EB] transition-colors cursor-pointer shrink-0 border border-[#EBE5DF]"
                   title="Copiar cita parentética"
+                  aria-label="Copiar cita parentética"
                 >
                   {modalCopiedKey === 'modal-parenthetical' ? (
                     <Check className="w-3.5 h-3.5 text-emerald-600" />
@@ -554,6 +555,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                   }}
                   className="p-2 rounded-xl text-[#5A6275] hover:text-[#8C3A32] hover:bg-[#F5F1EB] transition-colors cursor-pointer shrink-0 border border-[#EBE5DF]"
                   title="Copiar cita narrativa"
+                  aria-label="Copiar cita narrativa"
                 >
                   {modalCopiedKey === 'modal-narrative' ? (
                     <Check className="w-3.5 h-3.5 text-emerald-600" />

@@ -16,10 +16,20 @@ import {
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { Badge, CitationStyleBadge } from '../../components/common/Badge';
+import { Badge, CitationStyleBadge, type BadgeVariant } from '../../components/common/Badge';
 import { CourseModal } from '../../components/modals/CourseModal';
 import { WorkWorkspace } from './WorkWorkspace';
 import type { Work, Course, WorkStatus } from '../../types';
+
+const WORK_STATUS_META: Record<WorkStatus, { label: string; variant: BadgeVariant }> = {
+  PLANIFICACION: { label: 'Planificación', variant: 'amber' },
+  INVESTIGACION: { label: 'Investigando', variant: 'lavender' },
+  REDACTANDO: { label: 'Redactando', variant: 'rose' },
+  EN_REVISION: { label: 'En Revisión', variant: 'amber' },
+  CORRECCION: { label: 'En Corrección', variant: 'rose' },
+  ENTREGADO: { label: 'Entregado', variant: 'mint' },
+  ARCHIVADO: { label: 'Archivado', variant: 'default' }
+};
 
 export interface WorksViewProps {
   selectedWorkId?: string | null;
@@ -182,31 +192,8 @@ export const WorksView: React.FC<WorksViewProps> = ({
                     </span>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <CitationStyleBadge style={work.citationStyle} />
-                      <Badge
-                        variant={
-                          work.status === 'ENTREGADO'
-                            ? 'mint'
-                            : work.status === 'INVESTIGACION'
-                            ? 'lavender'
-                            : work.status === 'PLANIFICACION'
-                            ? 'amber'
-                            : 'rose'
-                        }
-                        size="sm"
-                      >
-                        {work.status === 'ENTREGADO'
-                          ? 'Entregado'
-                          : work.status === 'INVESTIGACION'
-                          ? 'Investigando'
-                          : work.status === 'PLANIFICACION'
-                          ? 'Planificación'
-                          : work.status === 'REDACTANDO'
-                          ? 'Redactando'
-                          : work.status === 'EN_REVISION'
-                          ? 'En Revisión'
-                          : work.status === 'CORRECCION'
-                          ? 'En Corrección'
-                          : work.status}
+                      <Badge variant={WORK_STATUS_META[work.status]?.variant || 'default'} size="sm">
+                        {WORK_STATUS_META[work.status]?.label || work.status}
                       </Badge>
                     </div>
                   </div>

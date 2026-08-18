@@ -112,8 +112,9 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
     return () => clearTimeout(timer);
   }, [draftText, hasUnsavedDraft, workId]);
 
-  // Keyboard shortcut Ctrl+S
+  // Keyboard shortcut Ctrl+S (Scoped to draft editor tab)
   useEffect(() => {
+    if (activeTab !== 'draft') return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
@@ -122,7 +123,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [draftText, workId]);
+  }, [draftText, workId, activeTab]);
 
   if (!work) {
     return (
@@ -154,9 +155,10 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
 
   // Insert Citation into Draft
   const handleInsertCitation = (source: Source, type: 'parenthetical' | 'narrative') => {
+    const refNum = workSources.findIndex((ws) => ws.id === source.id) + 1;
     const citeText = type === 'parenthetical'
-      ? formatInTextParenthetical(source, work.citationStyle)
-      : formatInTextNarrative(source, work.citationStyle);
+      ? formatInTextParenthetical(source, work.citationStyle, undefined, refNum || 1)
+      : formatInTextNarrative(source, work.citationStyle, refNum || 1);
 
     setDraftText((prev) => `${prev} ${citeText}`);
     setHasUnsavedDraft(true);
@@ -833,7 +835,12 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                                 Cita Parentética
                               </span>
                               <code className="text-[11px] font-mono text-[#2B2D42] truncate block">
-                                {formatInTextParenthetical(source, work.citationStyle)}
+                                {formatInTextParenthetical(
+                                  source,
+                                  work.citationStyle,
+                                  undefined,
+                                  workSources.findIndex((ws) => ws.id === source.id) + 1 || 1
+                                )}
                               </code>
                             </div>
                             <Button
@@ -855,7 +862,11 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                                 Cita Narrativa
                               </span>
                               <code className="text-[11px] font-mono text-[#2B2D42] truncate block">
-                                {formatInTextNarrative(source, work.citationStyle)}
+                                {formatInTextNarrative(
+                                  source,
+                                  work.citationStyle,
+                                  workSources.findIndex((ws) => ws.id === source.id) + 1 || 1
+                                )}
                               </code>
                             </div>
                             <Button
@@ -959,9 +970,10 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                     </span>
                   </div>
                   <div className="flex items-center gap-2 overflow-x-auto pb-1 tab-scroll-pc scroll-touch touch-pan-x flex-nowrap">
-                    {workSources.map((s) => {
-                      const parenthetical = formatInTextParenthetical(s, work.citationStyle);
-                      const narrative = formatInTextNarrative(s, work.citationStyle);
+                    {workSources.map((s, idx) => {
+                      const refNum = idx + 1;
+                      const parenthetical = formatInTextParenthetical(s, work.citationStyle, undefined, refNum);
+                      const narrative = formatInTextNarrative(s, work.citationStyle, refNum);
                       return (
                         <div key={s.id} className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-[#EBE5DF] shadow-2xs">
                           <button
@@ -969,6 +981,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                             onClick={() => handleInsertCitation(s, 'parenthetical')}
                             className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold text-[#8C3A32] bg-[#FDF2F0] hover:bg-[#E8A598]/40 transition-colors cursor-pointer"
                             title={`Insertar al final: ${parenthetical}`}
+                            aria-label={`Insertar cita parentética: ${parenthetical}`}
                           >
                             + {parenthetical}
                           </button>
@@ -977,6 +990,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                             onClick={() => handleInsertCitation(s, 'narrative')}
                             className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold text-[#2B2D42] bg-[#F5F1EB] hover:bg-[#EBE5DF] transition-colors cursor-pointer"
                             title={`Insertar en redacción: ${narrative}`}
+                            aria-label={`Insertar cita narrativa: ${narrative}`}
                           >
                             + {narrative}
                           </button>

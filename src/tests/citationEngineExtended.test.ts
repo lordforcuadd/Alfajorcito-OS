@@ -113,7 +113,7 @@ describe('Citation Engine Extended Suite — Strict Academic APA 7 & Multi-style
     expect(inText).toBe('(Beck 2021, p. 45)');
   });
 
-  it('formats Vancouver and IEEE numbered citation correctly', () => {
+  it('formats Vancouver and IEEE numbered citation correctly with custom referenceNumber', () => {
     const source: Source = {
       id: 'src-vancouver',
       workIds: ['work-1'],
@@ -129,10 +129,28 @@ describe('Citation Engine Extended Suite — Strict Academic APA 7 & Multi-style
       updatedAt: Date.now()
     };
 
-    const inTextVancouver = formatInTextParenthetical(source, 'VANCOUVER');
-    expect(inTextVancouver).toBe('[1]');
+    const inTextVancouver = formatInTextParenthetical(source, 'VANCOUVER', undefined, 4);
+    expect(inTextVancouver).toBe('[4]');
 
-    const inTextIEEE = formatInTextParenthetical(source, 'IEEE');
-    expect(inTextIEEE).toBe('[1]');
+    const inTextIEEE = formatInTextParenthetical(source, 'IEEE', undefined, 7);
+    expect(inTextIEEE).toBe('[7]');
+
+    const narrativeIEEE = formatInTextNarrative(source, 'IEEE', 3);
+    expect(narrativeIEEE).toBe('Merino-Soto [3]');
+  });
+
+  it('formats 21 or more authors according to APA 7 rules (first 19, ellipsis, last author)', () => {
+    const authors = Array.from({ length: 22 }, (_, idx) => ({
+      firstName: `Nombre${idx + 1}`,
+      lastName: `Autor${idx + 1}`
+    }));
+
+    const authorNamesStr = formatAuthorNamesAPA(authors);
+    // Should have Autor1 through Autor19, then ellipsis '...', then Autor22
+    expect(authorNamesStr).toContain('Autor1, N.');
+    expect(authorNamesStr).toContain('Autor19, N.');
+    expect(authorNamesStr).toContain('... Autor22, N.');
+    expect(authorNamesStr).not.toContain('Autor20, N.');
+    expect(authorNamesStr).not.toContain('Autor21, N.');
   });
 });

@@ -2,9 +2,22 @@ import React from 'react';
 import { CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react';
 import type { VerificationStatus, CitationStyle } from '../../types';
 
+export type BadgeVariant =
+  | 'default'
+  | 'verified'
+  | 'partially_verified'
+  | 'unverified'
+  | 'age_ok'
+  | 'age_review'
+  | 'age_bad'
+  | 'rose'
+  | 'lavender'
+  | 'mint'
+  | 'amber';
+
 export interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'default' | 'verified' | 'partially_verified' | 'unverified' | 'age_ok' | 'age_review' | 'age_bad' | 'rose' | 'lavender' | 'mint' | 'amber';
+  variant?: BadgeVariant;
   size?: 'sm' | 'md';
   className?: string;
   icon?: React.ReactNode;

@@ -175,7 +175,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
                 : 'Archivo'}
             </span>
             {currentWork && (
-              <span className="text-[11px] font-bold text-[#2B2D42] bg-[#F5F1EB] px-2.5 py-1 rounded-xl border border-[#EBE5DF] truncate max-w-[200px]">
+              <span className="text-[11px] font-bold text-[#2B2D42] bg-[#F5F1EB] px-2.5 py-1 rounded-xl border border-[#EBE5DF] break-words leading-snug max-w-[220px]">
                 {currentWork.title}
               </span>
             )}

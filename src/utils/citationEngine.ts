@@ -12,8 +12,17 @@ export function formatAuthorNamesAPA(authors: Author[]): string {
     const a2 = `${authors[1].lastName}, ${authors[1].firstName ? authors[1].firstName.trim().charAt(0) + '.' : ''}`.trim();
     return `${a1}, & ${a2}`;
   }
-  // Up to 20 authors in APA 7: show all with comma and & before the last one
-  const formatted = authors.slice(0, 20).map((a, i) => {
+  if (authors.length > 20) {
+    // APA 7: primeros 19 autores, "...", y el último autor
+    const first19 = authors.slice(0, 19).map((a) => {
+      const initial = a.firstName ? `${a.firstName.trim().charAt(0)}.` : '';
+      return `${a.lastName}, ${initial}`.trim();
+    });
+    const last = authors[authors.length - 1];
+    const lastInitial = last.firstName ? `${last.firstName.trim().charAt(0)}.` : '';
+    return `${first19.join(', ')}, ... ${last.lastName}, ${lastInitial}`.trim();
+  }
+  const formatted = authors.map((a, i) => {
     const initial = a.firstName ? `${a.firstName.trim().charAt(0)}.` : '';
     const name = `${a.lastName}, ${initial}`.trim();
     if (i === authors.length - 1 && authors.length > 1) {
@@ -24,7 +33,11 @@ export function formatAuthorNamesAPA(authors: Author[]): string {
   return formatted.join(', ');
 }
 
-export function formatInTextNarrative(source: Source, style: CitationStyle): string {
+export function formatInTextNarrative(
+  source: Source,
+  style: CitationStyle,
+  referenceNumber?: number
+): string {
   const authors = source.authors || [];
   const year = source.year || 's.f.';
   
@@ -46,13 +59,18 @@ export function formatInTextNarrative(source: Source, style: CitationStyle): str
   }
 
   if (style === 'IEEE' || style === 'VANCOUVER') {
-    return `${authors[0].lastName} [1]`;
+    return `${authors[0].lastName} [${referenceNumber ?? '1'}]`;
   }
 
   return `${authors[0].lastName} (${year})`;
 }
 
-export function formatInTextParenthetical(source: Source, style: CitationStyle, pageOrLocation?: string): string {
+export function formatInTextParenthetical(
+  source: Source,
+  style: CitationStyle,
+  pageOrLocation?: string,
+  referenceNumber?: number
+): string {
   const authors = source.authors || [];
   const year = source.year || 's.f.';
   const pageStr = pageOrLocation ? `, ${pageOrLocation}` : '';
@@ -78,7 +96,7 @@ export function formatInTextParenthetical(source: Source, style: CitationStyle, 
   }
 
   if (style === 'IEEE' || style === 'VANCOUVER') {
-    return `[1]`;
+    return `[${referenceNumber ?? '1'}]`;
   }
 
   if (style === 'CHICAGO_AUTHOR_DATE') {

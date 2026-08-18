@@ -876,6 +876,8 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
               <button
                 onClick={() => setSearchQuery('')}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#0F172A] cursor-pointer"
+                title="Limpiar búsqueda"
+                aria-label="Limpiar búsqueda"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -901,6 +903,8 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
                 setIsMobileSearchOpen(false);
               }}
               className="p-1 hover:bg-[#F1F5F9] rounded-xl text-[#64748B] hover:text-[#0F172A] cursor-pointer shrink-0"
+              title="Cerrar búsqueda"
+              aria-label="Cerrar búsqueda"
             >
               <X className="w-4 h-4" />
             </button>
@@ -914,6 +918,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
                 searchQuery ? 'text-[#7C3AED] border-[#7C3AED]' : 'text-[#475569]'
               }`}
               title="Buscar en el grafo"
+              aria-label="Buscar en el grafo"
             >
               <Search className="w-3.5 h-3.5" />
             </button>
@@ -933,6 +938,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
             onClick={() => setZoom((prev) => Math.min(3, prev * 1.2))}
             className="p-1.5 hover:bg-[#F1F5F9] rounded-xl text-[#475569] hover:text-[#0F172A] transition-colors cursor-pointer"
             title="Acercar (Zoom In)"
+            aria-label="Acercar zoom del grafo"
           >
             <ZoomIn className="w-3.5 h-3.5" />
           </button>
@@ -942,6 +948,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
             onClick={() => setZoom((prev) => Math.max(0.35, prev * 0.8))}
             className="p-1.5 hover:bg-[#F1F5F9] rounded-xl text-[#475569] hover:text-[#0F172A] transition-colors cursor-pointer"
             title="Alejar (Zoom Out)"
+            aria-label="Alejar zoom del grafo"
           >
             <ZoomOut className="w-3.5 h-3.5" />
           </button>
@@ -951,6 +958,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
             onClick={handleResetView}
             className="p-1.5 hover:bg-[#F1F5F9] rounded-xl text-[#475569] hover:text-[#0F172A] transition-colors cursor-pointer"
             title="Centrar Vista"
+            aria-label="Centrar vista del grafo"
           >
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
@@ -964,6 +972,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
               isPhysicsRunning ? 'text-[#7C3AED] bg-[#F5F3FF]' : 'text-[#475569] hover:bg-[#F1F5F9]'
             }`}
             title={isPhysicsRunning ? 'Pausar Física' : 'Reanudar Física'}
+            aria-label={isPhysicsRunning ? 'Pausar simulación física' : 'Reanudar simulación física'}
           >
             {isPhysicsRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
           </button>
@@ -973,6 +982,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
             onClick={() => setIsFullscreen(!isFullscreen)}
             className="p-1.5 hover:bg-[#F1F5F9] rounded-xl text-[#475569] hover:text-[#0F172A] transition-colors cursor-pointer"
             title={isFullscreen ? 'Salir de pantalla completa' : 'Ver en pantalla completa'}
+            aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Ver en pantalla completa'}
           >
             {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
@@ -1070,6 +1080,8 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
             <button
               onClick={() => setSelectedNode(null)}
               className="p-1 hover:bg-[#F1F5F9] rounded-xl text-[#64748B] hover:text-[#0F172A] transition-colors cursor-pointer shrink-0"
+              title="Cerrar detalles del nodo"
+              aria-label="Cerrar detalles del nodo"
             >
               <X className="w-4 h-4" />
             </button>

@@ -309,8 +309,9 @@ export const PipelineView: React.FC = () => {
 
             if (!source || !idea) return null;
 
-            const parentheticalCite = formatInTextParenthetical(source, selectedStyle, idea.pageOrLocation);
-            const narrativeCite = formatInTextNarrative(source, selectedStyle);
+            const refNum = sources.findIndex((s) => s.id === source.id) + 1 || 1;
+            const parentheticalCite = formatInTextParenthetical(source, selectedStyle, idea.pageOrLocation, refNum);
+            const narrativeCite = formatInTextNarrative(source, selectedStyle, refNum);
             const fullRef = formatFullReference(source, selectedStyle);
 
             const keyParenthetical = `parenthetical-${para.id}`;

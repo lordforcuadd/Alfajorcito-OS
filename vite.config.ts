@@ -36,11 +36,29 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-db': ['dexie', 'dexie-react-hooks'],
-          'vendor-icons': ['lucide-react'],
-          'vendor-utils': ['jszip', 'canvas-confetti', 'clsx', 'tailwind-merge']
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (
+              id.includes('react-dom') ||
+              id.includes('/react/') ||
+              id.includes('\\react\\') ||
+              id.includes('scheduler') ||
+              id.includes('react/jsx-runtime') ||
+              id.includes('react\\jsx-runtime')
+            ) {
+              return 'vendor-react';
+            }
+            if (id.includes('dexie')) return 'vendor-db';
+            if (id.includes('lucide-react')) return 'vendor-icons';
+            if (
+              id.includes('jszip') ||
+              id.includes('canvas-confetti') ||
+              id.includes('clsx') ||
+              id.includes('tailwind-merge')
+            ) {
+              return 'vendor-utils';
+            }
+          }
         }
       }
     }
