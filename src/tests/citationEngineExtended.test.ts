@@ -155,7 +155,7 @@ describe('Citation Engine Extended Suite — Strict Academic APA 7 & Multi-style
     expect(authorNamesStr).not.toContain('Autor21, N.');
   });
 
-  it('formats full references with rich HTML italics for journals and books', () => {
+  it('formats full references with rich HTML italics for journals and books across all 5 styles', () => {
     const journalSource: Source = {
       id: 'src-journal',
       workIds: ['work-1'],
@@ -167,6 +167,7 @@ describe('Citation Engine Extended Suite — Strict Academic APA 7 & Multi-style
       volume: '15',
       issue: '2',
       pages: '45-58',
+      doi: '10.1016/j.rpsic.2024.01.002',
       accessedAt: Date.now(),
       verificationStatus: 'VERIFIED',
       verificationProvider: 'MANUAL',
@@ -174,8 +175,50 @@ describe('Citation Engine Extended Suite — Strict Academic APA 7 & Multi-style
       updatedAt: Date.now()
     };
 
-    const html = formatFullReferenceHTML(journalSource, 'APA_7');
-    expect(html).toContain('<i>Revista Peruana de Psicología</i>');
-    expect(html).toContain('<i>15</i>');
+    const bookSource: Source = {
+      id: 'src-book',
+      workIds: ['work-1'],
+      title: 'Manual de psicoterapia cognitiva',
+      authors: [{ firstName: 'Aaron', lastName: 'Beck' }],
+      year: 2020,
+      type: 'BOOK',
+      publication: 'Editorial Paidós',
+      accessedAt: Date.now(),
+      verificationStatus: 'VERIFIED',
+      verificationProvider: 'MANUAL',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    // 1. APA 7
+    const apaHtml = formatFullReferenceHTML(journalSource, 'APA_7');
+    expect(apaHtml).toContain('<i>Revista Peruana de Psicología</i>');
+    expect(apaHtml).toContain('<i>15</i>');
+
+    const apaBookHtml = formatFullReferenceHTML(bookSource, 'APA_7');
+    expect(apaBookHtml).toContain('<i>Manual de psicoterapia cognitiva</i>');
+
+    // 2. IEEE
+    const ieeeJournalHtml = formatFullReferenceHTML(journalSource, 'IEEE');
+    expect(ieeeJournalHtml).toContain('<i>Revista Peruana de Psicología</i>');
+    expect(ieeeJournalHtml).toContain('doi: <a href="https://doi.org/10.1016/j.rpsic.2024.01.002">10.1016/j.rpsic.2024.01.002</a>');
+
+    const ieeeBookHtml = formatFullReferenceHTML(bookSource, 'IEEE');
+    expect(ieeeBookHtml).toContain('<i>Manual de psicoterapia cognitiva</i>');
+
+    // 3. Vancouver
+    const vancouverJournalHtml = formatFullReferenceHTML(journalSource, 'VANCOUVER');
+    expect(vancouverJournalHtml).toContain('<i>Revista Peruana de Psicología</i>');
+
+    const vancouverBookHtml = formatFullReferenceHTML(bookSource, 'VANCOUVER');
+    expect(vancouverBookHtml).toContain('<i>Manual de psicoterapia cognitiva</i>');
+
+    // 4. MLA 9
+    const mlaHtml = formatFullReferenceHTML(journalSource, 'MLA_9');
+    expect(mlaHtml).toContain('<i>Revista Peruana de Psicología</i>');
+
+    // 5. Chicago Author-Date
+    const chicagoHtml = formatFullReferenceHTML(journalSource, 'CHICAGO_AUTHOR_DATE');
+    expect(chicagoHtml).toContain('<i>Revista Peruana de Psicología</i>');
   });
 });

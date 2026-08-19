@@ -215,11 +215,6 @@ export function formatFullReferenceHTML(source: Source, style: CitationStyle = '
         const pgs = source.pages ? `, ${source.pages}` : '';
         const doiPart = url ? ` ${url}` : '';
         return `${authors} (${year}). ${title}.${pub}${vol}${iss}${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
-      } else if (source.type === 'BOOK' || source.type === 'THESIS') {
-        const italicTitle = `<i>${title}</i>`;
-        const pub = source.publication ? ` ${source.publication}.` : '';
-        const doiPart = url ? ` ${url}` : '';
-        return `${authors} (${year}). ${italicTitle}.${pub}${doiPart}`.replace(/\.\./g, '.').trim();
       } else {
         const italicTitle = `<i>${title}</i>`;
         const pub = source.publication ? ` ${source.publication}.` : '';
@@ -247,6 +242,25 @@ export function formatFullReferenceHTML(source: Source, style: CitationStyle = '
       return `${authorStr} "${title}."${pub}${vol}${iss} ${year},${pgs}${doiPart}`.replace(/\s+/g, ' ').replace(/\.\./g, '.').trim();
     }
 
+    case 'IEEE': {
+      let authorStr = 'Anon.';
+      if (source.authors && source.authors.length > 0) {
+        authorStr = source.authors.map(a => `${a.firstName ? a.firstName.charAt(0) + '. ' : ''}${a.lastName}`).join(', ');
+      }
+      if (source.type === 'JOURNAL_ARTICLE') {
+        const pub = source.publication ? `, <i>${source.publication}</i>` : '';
+        const vol = source.volume ? `, vol. ${source.volume}` : '';
+        const iss = source.issue ? `, no. ${source.issue}` : '';
+        const pgs = source.pages ? `, pp. ${source.pages}` : '';
+        const doiPart = url ? `, doi: <a href="${url}">${source.doi || url}</a>` : '';
+        return `${authorStr}, "${title}"${pub}${vol}${iss}${pgs}, ${year}${doiPart}.`.replace(/\s+/g, ' ').trim();
+      } else {
+        const pub = source.publication ? `, ${source.publication}` : '';
+        const doiPart = url ? `, <a href="${url}">${url}</a>` : '';
+        return `${authorStr}, <i>${title}</i>${pub}, ${year}${doiPart}.`.replace(/\s+/g, ' ').trim();
+      }
+    }
+
     case 'CHICAGO_AUTHOR_DATE': {
       const authors = formatAuthorNamesAPA(source.authors).replace(/&/g, 'and');
       const pub = source.publication ? ` <i>${source.publication}</i>` : '';
@@ -255,6 +269,23 @@ export function formatFullReferenceHTML(source: Source, style: CitationStyle = '
       const pgs = source.pages ? `: ${source.pages}` : '';
       const doiPart = url ? ` ${url}` : '';
       return `${authors}. ${year}. "${title}."${pub}${vol}${iss}${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
+    }
+
+    case 'VANCOUVER': {
+      let authorStr = 'Anon';
+      if (source.authors && source.authors.length > 0) {
+        authorStr = source.authors.map(a => `${a.lastName} ${a.firstName ? a.firstName.charAt(0) : ''}`).join(', ');
+      }
+      if (source.type === 'JOURNAL_ARTICLE') {
+        const pub = source.publication ? ` <i>${source.publication}</i>.` : '';
+        const vol = source.volume ? `;${source.volume}` : '';
+        const iss = source.issue ? `(${source.issue})` : '';
+        const pgs = source.pages ? `:${source.pages}` : '';
+        return `${authorStr}. ${title}.${pub} ${year}${vol}${iss}${pgs}.`.replace(/\s+/g, ' ').replace(/\.\./g, '.').trim();
+      } else {
+        const pub = source.publication ? ` ${source.publication};` : '';
+        return `${authorStr}. <i>${title}</i>.${pub} ${year}.`.replace(/\s+/g, ' ').replace(/\.\./g, '.').trim();
+      }
     }
 
     default:
