@@ -129,10 +129,6 @@ export function formatFullReference(source: Source, style: CitationStyle = 'APA_
         const pgs = source.pages ? `, ${source.pages}` : '';
         const doiPart = url ? ` ${url}` : '';
         return `${authors} (${year}). ${title}.${pub}${vol}${iss}${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
-      } else if (source.type === 'BOOK') {
-        const pub = source.publication ? ` ${source.publication}.` : '';
-        const doiPart = url ? ` ${url}` : '';
-        return `${authors} (${year}). ${title}.${pub}${doiPart}`.replace(/\.\./g, '.').trim();
       } else {
         const pub = source.publication ? ` ${source.publication}.` : '';
         const doiPart = url ? ` ${url}` : '';
