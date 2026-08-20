@@ -79,7 +79,7 @@ describe('Exporters Suite', () => {
     expect(md).toContain('course: "[[Metodología de la Investigación]]"');
     expect(md).toContain('work: "[[Ensayo sobre Epistemología]]"');
     expect(md).toContain('sources:\n  - "[[Test Article]]"');
-    expect(md).toContain('tags:\n  - "#educacion"\n  - "#epistemologia"');
+    expect(md).toContain('tags:\n  - "educacion"\n  - "epistemologia"');
     expect(md).toContain('Contenido de la nota con [[Metodología de la Investigación]].');
   });
 

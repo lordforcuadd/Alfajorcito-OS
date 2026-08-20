@@ -1,6 +1,16 @@
 import type { Work, Source, CitationStyle, UserProfile } from '../types';
 import { formatFullReference, formatFullReferenceHTML } from './citationEngine';
 
+function escapeHtml(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export function generateGoogleDocsRichHTML(
   work: Work,
   sources: Source[],
@@ -14,19 +24,22 @@ export function generateGoogleDocsRichHTML(
   }).join('\n');
 
   // APA 7 Official Cover Page Header (Dynamic from UserProfile)
-  const institutionName = profile?.institution || 'Universidad de San Martín de Porres (USMP)';
-  const facultyName = profile?.faculty || 'Facultad de Ciencias de la Comunicación, Turismo y Psicología';
-  const studentName = profile?.name || 'Saory';
-  const cycleInfo = profile?.currentCycle || 'VIII Ciclo (8vo Ciclo)';
+  const institutionName = escapeHtml(profile?.institution || 'Universidad de San Martín de Porres (USMP)');
+  const facultyName = escapeHtml(profile?.faculty || 'Facultad de Ciencias de la Comunicación, Turismo y Psicología');
+  const studentName = escapeHtml(profile?.name || 'Saory');
+  const cycleInfo = escapeHtml(String(profile?.currentCycle || 'VIII Ciclo (8vo Ciclo)'));
+  const safeWorkTitle = escapeHtml(work.title);
+  const safeCourseName = escapeHtml(courseName || 'Asignatura');
+  const safeTeacherName = teacherName ? escapeHtml(teacherName) : '';
 
   const coverPageHtml = `
     <div style="text-align: center; margin-bottom: 48pt; font-family: 'Times New Roman', Georgia, serif;">
-      <h1 style="font-size: 16pt; font-weight: bold; margin-bottom: 12pt;">${work.title}</h1>
+      <h1 style="font-size: 16pt; font-weight: bold; margin-bottom: 12pt;">${safeWorkTitle}</h1>
       <p style="font-size: 12pt; margin: 4pt 0;"><strong>${studentName}</strong></p>
       <p style="font-size: 12pt; margin: 4pt 0;">${facultyName}</p>
       <p style="font-size: 12pt; margin: 4pt 0;">${institutionName}</p>
-      <p style="font-size: 12pt; margin: 4pt 0;">${courseName || 'Asignatura'} (${cycleInfo})</p>
-      ${teacherName ? `<p style="font-size: 12pt; margin: 4pt 0;">Docente: ${teacherName}</p>` : ''}
+      <p style="font-size: 12pt; margin: 4pt 0;">${safeCourseName} (${cycleInfo})</p>
+      ${safeTeacherName ? `<p style="font-size: 12pt; margin: 4pt 0;">Docente: ${safeTeacherName}</p>` : ''}
       <p style="font-size: 12pt; margin: 4pt 0;">${new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
     </div>
     <hr style="border: none; border-top: 1px solid #ccc; margin: 24pt 0;" />
@@ -35,16 +48,17 @@ export function generateGoogleDocsRichHTML(
   const draftHtml = (work.draftContent || '')
     .split('\n\n')
     .map(para => {
-      if (para.startsWith('# ')) {
-        return `<h1 style="font-family: 'Times New Roman', Georgia, serif; font-size: 16pt; font-weight: bold; margin-top: 18pt; margin-bottom: 12pt; text-align: center;">${para.replace('# ', '')}</h1>`;
+      const trimmed = para.trim();
+      if (trimmed.startsWith('# ')) {
+        return `<h1 style="font-family: 'Times New Roman', Georgia, serif; font-size: 16pt; font-weight: bold; margin-top: 18pt; margin-bottom: 12pt; text-align: center;">${escapeHtml(trimmed.replace('# ', ''))}</h1>`;
       }
-      if (para.startsWith('## ')) {
-        return `<h2 style="font-family: 'Times New Roman', Georgia, serif; font-size: 14pt; font-weight: bold; margin-top: 14pt; margin-bottom: 8pt;">${para.replace('## ', '')}</h2>`;
+      if (trimmed.startsWith('## ')) {
+        return `<h2 style="font-family: 'Times New Roman', Georgia, serif; font-size: 14pt; font-weight: bold; margin-top: 14pt; margin-bottom: 8pt;">${escapeHtml(trimmed.replace('## ', ''))}</h2>`;
       }
-      if (para.startsWith('### ')) {
-        return `<h3 style="font-family: 'Times New Roman', Georgia, serif; font-size: 12pt; font-weight: bold; font-style: italic; margin-top: 10pt; margin-bottom: 6pt;">${para.replace('### ', '')}</h3>`;
+      if (trimmed.startsWith('### ')) {
+        return `<h3 style="font-family: 'Times New Roman', Georgia, serif; font-size: 12pt; font-weight: bold; font-style: italic; margin-top: 10pt; margin-bottom: 6pt;">${escapeHtml(trimmed.replace('### ', ''))}</h3>`;
       }
-      return `<p style="font-family: 'Times New Roman', Georgia, serif; font-size: 12pt; line-height: 2.0; text-indent: 36pt; margin-bottom: 0pt;">${para}</p>`;
+      return `<p style="font-family: 'Times New Roman', Georgia, serif; font-size: 12pt; line-height: 2.0; text-indent: 36pt; margin-bottom: 0pt;">${escapeHtml(trimmed)}</p>`;
     })
     .join('\n');
 
@@ -53,7 +67,7 @@ export function generateGoogleDocsRichHTML(
 <html>
 <head>
 <meta charset="utf-8">
-<title>${work.title}</title>
+<title>${safeWorkTitle}</title>
 </head>
 <body style="font-family: 'Times New Roman', Georgia, serif; color: #000000; padding: 20px;">
   ${coverPageHtml}

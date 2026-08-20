@@ -7,20 +7,26 @@ Alfajorcito OS implementa una suite de pruebas multi-nivel para asegurar la fiab
 
 ## 2. Niveles de Pruebas
 
-### 2.1. Pruebas Unitarias (Vitest)
-- **Motor de Citación**:
-  - Verificación de formato APA 7 (artículo con 1, 2 y >3 autores, libro, capítulo de libro con DOI).
-  - Verificación de formato MLA 9 (autores invertidos, contenedor, páginas).
-  - Verificación de formato IEEE (estilo numérico).
-  - Verificación de formato Chicago y Vancouver.
-- **Validador de Antigüedad de Fuentes**:
-  - Detección de fuentes mayores a $N$ años respecto a la fecha del trabajo.
-  - Comportamiento de excepciones para fuentes marcadas con contexto histórico aprobado.
-- **Normalizador de Metadatos y Anti-Alucinación**:
-  - Marcado de campos vacíos con `DATO NO VERIFICADO`.
-  - Conversión de CSL-JSON a entidades internas de Alfajorcito OS.
-- **Generador de Vault de Obsidian**:
-  - Verificación de YAML frontmatter, estructura PARA y wikilinks bidireccionales.
+### 2.1. Suites de Pruebas Unitarias Automatizadas (Vitest)
+1. **`src/tests/citationEngine.test.ts`**:
+   - Verificación de formateo básico APA 7, MLA 9, IEEE, Chicago y Vancouver.
+2. **`src/tests/citationEngineExtended.test.ts`**:
+   - Pruebas rigurosas de 1, 2, 3+ y 21+ autores (regla elipsis APA 7).
+   - Manejo de fuentes sin año (`s.f.`).
+   - Citas numeradas IEEE y Vancouver con `referenceNumber` dinámico.
+   - Formato enriquecido HTML con cursivas para libros y revistas en los 5 estilos.
+   - Soporte para `BOOK_CHAPTER` ("En *Libro*, pp. X-Y") y `CHICAGO_NOTES`.
+3. **`src/tests/antiHallucination.test.ts`**:
+   - Auditoría de metadatos científicos (`VERIFIED`, `PARTIALLY_VERIFIED`, `UNVERIFIED`).
+   - Regla estricta anti-alucinación y sanitización de texto académico.
+4. **`src/tests/instructionAnalyzer.test.ts`**:
+   - Análisis heurístico de consignas de trabajos y detección de estructura de rúbricas.
+5. **`src/tests/exporters.test.ts`**:
+   - Exportación de Vault estructurado para Obsidian con YAML frontmatter y sanitización de tags.
+   - Exportación HTML enriquecida para Google Docs con portada oficial USMP y escape seguro.
+6. **`src/tests/securityAndResilience.test.ts`**:
+   - Validación de esquema estricto en importación de copias de seguridad JSON.
+   - Escape de inyecciones HTML/XSS en títulos, resúmenes y autores.
 
 ### 2.2. Pruebas de Integración y Base de Datos (Dexie Mock / In-Memory IndexedDB)
 - Creación en cascada y trazabilidad: `Source -> Idea -> Paraphrase -> Citation -> Reference -> Work`.

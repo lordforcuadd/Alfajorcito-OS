@@ -33,27 +33,25 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
   const handleLinkClick = (rawTarget: string) => {
     const target = rawTarget.trim();
     const targetLower = target.toLowerCase();
-
     // 1. Check matching note by title or slug
-    const matchedNote = notes.find(
-      (n) =>
-        n.title.toLowerCase() === targetLower ||
-        n.title.toLowerCase().includes(targetLower) ||
-        targetLower.includes(n.title.toLowerCase()) ||
-        n.slug.toLowerCase() === targetLower
-    );
+    const matchedNote = notes.find((n) => {
+      const nt = n.title.toLowerCase();
+      if (nt === targetLower || n.slug.toLowerCase() === targetLower) return true;
+      if (targetLower.length >= 3 && (nt.includes(targetLower) || (nt.length >= 3 && targetLower.includes(nt)))) return true;
+      return false;
+    });
     if (matchedNote) {
       onNavigateToNote(matchedNote);
       return;
     }
 
     // 2. Check matching concept
-    const matchedConcept = concepts.find(
-      (c) =>
-        c.name.toLowerCase() === targetLower ||
-        c.name.toLowerCase().includes(targetLower) ||
-        targetLower.includes(c.name.toLowerCase())
-    );
+    const matchedConcept = concepts.find((c) => {
+      const cn = c.name.toLowerCase();
+      if (cn === targetLower) return true;
+      if (targetLower.length >= 3 && (cn.includes(targetLower) || (cn.length >= 3 && targetLower.includes(cn)))) return true;
+      return false;
+    });
     if (matchedConcept) {
       // Find any note linked to this concept
       const conceptNote = notes.find((n) => (n.conceptIds || []).includes(matchedConcept.id));
@@ -64,12 +62,12 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
     }
 
     // 3. Check matching work / thesis
-    const matchedWork = works.find(
-      (w) =>
-        w.title.toLowerCase() === targetLower ||
-        w.title.toLowerCase().includes(targetLower) ||
-        targetLower.includes(w.title.toLowerCase())
-    );
+    const matchedWork = works.find((w) => {
+      const wt = w.title.toLowerCase();
+      if (wt === targetLower) return true;
+      if (targetLower.length >= 3 && (wt.includes(targetLower) || (wt.length >= 3 && targetLower.includes(wt)))) return true;
+      return false;
+    });
     if (matchedWork && onNavigateToWork) {
       onNavigateToWork(matchedWork.id);
       return;
@@ -84,6 +82,12 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
   // Helper to parse inline markdown (bold, italic, tags, and [[wiki-links]])
   const renderInlineText = (text: string, keyPrefix: string) => {
     // Regex matching [[wiki-links]] or #tags
+    const targetSet = new Set([
+      ...notes.map(n => n.title.toLowerCase()),
+      ...notes.map(n => n.slug.toLowerCase()),
+      ...concepts.map(c => c.name.toLowerCase()),
+      ...works.map(w => w.title.toLowerCase())
+    ]);
     const parts = text.split(/(\[\[.*?\]\]|#[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ_]+)/g);
 
     return parts.map((part, index) => {
@@ -92,21 +96,14 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
       // 1. Is [[Wiki-Link]]
       if (part.startsWith('[[') && part.endsWith(']]')) {
         const linkTitle = part.slice(2, -2).trim();
-        const targetLower = linkTitle.toLowerCase();
+        const exists = targetSet.has(linkTitle.toLowerCase());
+        const isConcept = concepts.some((c) => c.name.toLowerCase() === linkTitle.toLowerCase());
+        const isWork = works.some((w) => w.title.toLowerCase() === linkTitle.toLowerCase());
 
-        // Check node type for badge color/icon
-        const isNote = notes.some(
-          (n) => n.title.toLowerCase() === targetLower || n.title.toLowerCase().includes(targetLower)
-        );
-        const isConcept = concepts.some(
-          (c) => c.name.toLowerCase() === targetLower || c.name.toLowerCase().includes(targetLower)
-        );
-        const isWork = works.some(
-          (w) => w.title.toLowerCase() === targetLower || w.title.toLowerCase().includes(targetLower)
-        );
-
-        let badgeStyle = 'bg-[#FDF2F0] text-[#8C3A32] border-[#E8A598]/60 hover:bg-[#FCE3DF]';
-        let Icon = FileText;
+        let badgeStyle = exists
+          ? 'bg-[#FAF8F5] text-[#8C3A32] border-[#E8A598]/60 hover:bg-[#FDF2F0]'
+          : 'bg-[#F5F1EB]/80 text-[#5A6275] border-dashed border-[#8D99AE]/50 hover:bg-white';
+        let Icon = exists ? FileText : Plus;
 
         if (isConcept) {
           badgeStyle = 'bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100';
@@ -128,7 +125,7 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
             title={`Clic para saltar a: "${linkTitle}"`}
           >
             <Icon className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate max-w-[200px]">{linkTitle}</span>
+            <span className="truncate max-w-[180px] sm:max-w-[280px]">{linkTitle}</span>
           </button>
         );
       }

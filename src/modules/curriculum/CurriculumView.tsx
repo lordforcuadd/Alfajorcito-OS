@@ -51,6 +51,8 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
     return rec?.value as UserProfile | undefined;
   });
 
+  const [unenrollTarget, setUnenrollTarget] = useState<{ course: CurriculumCourse; existingId: string } | null>(null);
+
   const coursesByCycle = USMP_PSYCHOLOGY_CURRICULUM.filter((c) => c.cycle === selectedCycle);
 
   const getAreaBadge = (area: CurriculumCourse['area']) => {
@@ -62,7 +64,11 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
       case 'DEONTOLOGIA':
         return <Badge variant="amber" size="sm">Ética & Deontología</Badge>;
       case 'SALUD_PUBLICA':
-        return <Badge variant="mint" size="sm">Salud Comunitaria / Organizacional</Badge>;
+        return <Badge variant="mint" size="sm">Salud Pública</Badge>;
+      case 'EDUCATIVA':
+        return <Badge variant="amber" size="sm">Psicología Educativa</Badge>;
+      case 'ORGANIZACIONAL':
+        return <Badge variant="mint" size="sm">Psicología Organizacional</Badge>;
       default:
         return <Badge variant="default" size="sm">{area}</Badge>;
     }
@@ -77,11 +83,8 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
     );
 
     if (existingCourse) {
-      // Unenroll
-      const confirmRemove = window.confirm(`¿Deseas desmatricularte de "${curriculumCourse.name}"?`);
-      if (!confirmRemove) return;
-      await db.courses.delete(existingCourse.id);
-      showToast('Asignatura retirada', `${curriculumCourse.name} se eliminó de tus cursos activos.`, 'info');
+      // Open custom confirmation modal instead of window.confirm
+      setUnenrollTarget({ course: curriculumCourse, existingId: existingCourse.id });
     } else {
       // Enroll
       const colors = ['#D98880', '#B39DDB', '#80CBC4', '#FFCC80', '#90CAF9'];
@@ -318,6 +321,31 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
               </ul>
             </div>
 
+            {/* Related Works in this Course */}
+            {(() => {
+              const matching = userCourses.find(
+                (c) => c.code === inspectedCourse.code || c.name.toLowerCase() === inspectedCourse.name.toLowerCase()
+              );
+              const worksInCourse = matching ? userWorks.filter((w) => w.courseId === matching.id) : [];
+              if (worksInCourse.length === 0) return null;
+
+              return (
+                <div className="p-3.5 rounded-2xl bg-white border border-[#EBE5DF] space-y-2">
+                  <span className="font-bold text-xs text-[#8C3A32] block uppercase tracking-wider text-[10px]">
+                    Trabajos y Tesis en este curso ({worksInCourse.length})
+                  </span>
+                  <div className="space-y-1.5">
+                    {worksInCourse.map((w) => (
+                      <div key={w.id} className="flex items-center justify-between text-xs p-2 rounded-xl bg-[#FAF8F5] border border-[#EBE5DF]">
+                        <span className="font-bold text-[#2B2D42] truncate">{w.title}</span>
+                        <Badge variant="rose" size="sm">{w.status}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Action Buttons with Responsive Flex Grouping */}
             <div className="pt-3 border-t border-[#EBE5DF] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5">
               <Button variant="ghost" onClick={() => setInspectedCourse(null)} className="w-full sm:w-auto">
@@ -369,6 +397,37 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
                   Crear Trabajo
                 </Button>
               </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Unenroll Confirmation Modal */}
+      {unenrollTarget && (
+        <Modal
+          isOpen={!!unenrollTarget}
+          onClose={() => setUnenrollTarget(null)}
+          title={`¿Desmatricularte de ${unenrollTarget.course.name}?`}
+          maxWidth="md"
+        >
+          <div className="space-y-4">
+            <p className="text-xs sm:text-sm text-[#5A6275] leading-relaxed">
+              La asignatura se quitará de tus cursos activos. Los trabajos y notas vinculados se mantendrán en el sistema.
+            </p>
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#EBE5DF]">
+              <Button variant="ghost" onClick={() => setUnenrollTarget(null)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                onClick={async () => {
+                  await db.courses.delete(unenrollTarget.existingId);
+                  showToast('Asignatura retirada', `${unenrollTarget.course.name} se eliminó de tus cursos activos.`, 'info');
+                  setUnenrollTarget(null);
+                }}
+              >
+                Sí, retirar asignatura
+              </Button>
             </div>
           </div>
         </Modal>

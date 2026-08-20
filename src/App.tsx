@@ -86,7 +86,7 @@ function MainApp() {
       onOpenSearch={() => setIsSearchOpen(true)}
       onOpenSettings={() => setIsSettingsOpen(true)}
     >
-      <ErrorBoundary fallbackTitle="Error al cargar la sección">
+      <ErrorBoundary key={currentTab} fallbackTitle="Error al cargar la sección">
         {/* 1. Dashboard Tab */}
         {currentTab === 'dashboard' && (
           <DashboardView

@@ -237,9 +237,9 @@
 
 ---
 
-### 11. `settings` (Configuración Local & Tokens Seguros)
-- `key` (string, Primary Key, e.g. `'ai_config'`, `'user_profile'`, `'obsidian_config'`)
-- `value` (object con llaves encriptadas localmente o flags)
+### 11. `settings` (Configuración Local & Tokens)
+- `key` (string, Primary Key, e.g. `'ai_settings'`, `'user_profile'`, `'obsidian_settings'`)
+- `value` (object con configuraciones de IA, perfil académico de Saory USMP, tokens y flags locales)
 - `updatedAt` (number, timestamp ms)
 
 *Índices Dexie*: `&key`

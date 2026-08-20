@@ -68,7 +68,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
       PLANIFICACION: 'Planificación',
       INVESTIGACION: 'Investigando',
       REDACTANDO: 'Redactando',
-      REVISION: 'En Revisión',
+      EN_REVISION: 'En Revisión',
+      CORRECCION: 'En Corrección',
       ENTREGADO: 'Entregado',
       ARCHIVADO: 'Archivado'
     };
@@ -190,7 +191,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
             id: inq.id,
             title: inq.topic,
             subtitle: inq.teacherAnswer
-              ? `Respuesta: "${inq.teacherAnswer.slice(0, 60)}..."`
+              ? `Respuesta: "${inq.teacherAnswer.length > 60 ? inq.teacherAnswer.slice(0, 60) + '...' : inq.teacherAnswer}"`
               : 'Pendiente de respuesta',
             category: 'INQUIRIES',
             icon: <HelpCircle className="w-4 h-4 text-[#FFCC80]" />,

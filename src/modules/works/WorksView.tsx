@@ -165,6 +165,39 @@ export const WorksView: React.FC<WorksViewProps> = ({
         })}
       </div>
 
+      {/* Status Filter Pills */}
+      <div
+        onWheel={(e) => {
+          if (e.deltaY !== 0) {
+            e.currentTarget.scrollLeft += e.deltaY;
+          }
+        }}
+        className="flex items-center gap-1.5 overflow-x-auto pb-1 tab-scroll-pc scroll-touch touch-pan-x flex-nowrap"
+      >
+        {[
+          { id: 'ALL', label: `Todos los Estados (${works.length})` },
+          { id: 'PLANIFICACION', label: `Planificación (${works.filter((w) => w.status === 'PLANIFICACION').length})` },
+          { id: 'INVESTIGACION', label: `Investigando (${works.filter((w) => w.status === 'INVESTIGACION').length})` },
+          { id: 'REDACTANDO', label: `Redactando (${works.filter((w) => w.status === 'REDACTANDO').length})` },
+          { id: 'EN_REVISION', label: `En Revisión (${works.filter((w) => w.status === 'EN_REVISION').length})` },
+          { id: 'CORRECCION', label: `En Corrección (${works.filter((w) => w.status === 'CORRECCION').length})` },
+          { id: 'ENTREGADO', label: `Entregados (${works.filter((w) => w.status === 'ENTREGADO').length})` },
+          { id: 'ARCHIVADO', label: `Archivados (${works.filter((w) => w.status === 'ARCHIVADO').length})` }
+        ].map((st) => (
+          <button
+            key={st.id}
+            onClick={() => setSelectedStatusFilter(st.id)}
+            className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer select-none shrink-0 ${
+              selectedStatusFilter === st.id
+                ? 'bg-[#2B2D42] text-white shadow-2xs'
+                : 'bg-white text-[#5A6275] border border-[#EBE5DF] hover:bg-[#F5F1EB]'
+            }`}
+          >
+            {st.label}
+          </button>
+        ))}
+      </div>
+
       {/* Works Grid */}
       {filteredWorks.length === 0 ? (
         <Card variant="subtle" className="text-center py-12">

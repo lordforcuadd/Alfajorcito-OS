@@ -44,6 +44,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   // Obsidian State
   const [obsidianRestApi, setObsidianRestApi] = useState(false);
   const [obsidianToken, setObsidianToken] = useState('');
+  const [obsidianEndpoint, setObsidianEndpoint] = useState('http://127.0.0.1:27124');
+  const [obsidianFolder, setObsidianFolder] = useState('Alfajorcito OS/Notes');
+
+  // Confirmation States
+  const [isConfirmClearOpen, setIsConfirmClearOpen] = useState(false);
+  const [isConfirmSeedOpen, setIsConfirmSeedOpen] = useState(false);
 
   // Profile State (USMP Psicología)
   const [userName, setUserName] = useState('Saory');
@@ -101,6 +107,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       if (obs) {
         setObsidianRestApi(obs.restApiEnabled || false);
         setObsidianToken(obs.restApiToken || '');
+        setObsidianEndpoint(obs.restApiEndpoint || 'http://127.0.0.1:27124');
+        setObsidianFolder(obs.defaultParaFolder || 'Alfajorcito OS/Notes');
       }
 
       const prof = settingsRecords.find((s) => s.key === 'user_profile')?.value as UserProfile | undefined;
@@ -118,8 +126,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     }
   }, [settingsRecords]);
 
-  // Save Profile Settings
+  // Save Profile
   const handleSaveProfile = async () => {
+    if (!userName.trim()) {
+      showToast('Nombre requerido', 'Ingresa tu nombre para los encabezados.', 'warning');
+      return;
+    }
     await db.settings.put({
       key: 'user_profile',
       value: {
@@ -127,7 +139,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         institution: userInstitution.trim(),
         faculty: userFaculty.trim(),
         major: userMajor.trim(),
-        currentCycle: userCycle.trim(),
+        currentCycle: userCycle,
         specialty: userSpecialty,
         thesisTitle: userThesis.trim(),
         internshipSite: userInternship.trim(),
@@ -135,7 +147,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       } as UserProfile,
       updatedAt: Date.now()
     });
-    showToast('Perfil actualizado', 'Datos de la estudiante y configuración guardados.', 'success');
+    showToast('Perfil actualizado', 'Datos de portada y encabezados APA 7 guardados.', 'success');
     onClose();
   };
 
@@ -161,7 +173,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       key: 'obsidian_settings',
       value: {
         restApiEnabled: obsidianRestApi,
-        restApiToken: obsidianToken.trim()
+        restApiToken: obsidianToken.trim(),
+        restApiEndpoint: obsidianEndpoint.trim() || 'http://127.0.0.1:27124',
+        defaultParaFolder: obsidianFolder.trim() || 'Alfajorcito OS/Notes'
       } as ObsidianSettings,
       updatedAt: Date.now()
     });
@@ -197,7 +211,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     showToast('Copia generada', 'Archivo JSON descargado exitosamente.', 'success');
   };
 
-  // Import JSON Backup
+  // Import JSON Backup with Strict Schema Validation
   const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -206,22 +220,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       const text = await file.text();
       const data = JSON.parse(text);
 
-      if (Array.isArray(data.courses)) await db.courses.bulkPut(data.courses);
-      if (Array.isArray(data.works)) await db.works.bulkPut(data.works);
-      if (Array.isArray(data.sources)) await db.sources.bulkPut(data.sources);
-      if (Array.isArray(data.ideas)) await db.ideas.bulkPut(data.ideas);
-      if (Array.isArray(data.paraphrases)) await db.paraphrases.bulkPut(data.paraphrases);
-      if (Array.isArray(data.citations)) await db.citations.bulkPut(data.citations);
-      if (Array.isArray(data.notes)) await db.notes.bulkPut(data.notes);
-      if (Array.isArray(data.concepts)) await db.concepts.bulkPut(data.concepts);
-      if (Array.isArray(data.tasks)) await db.tasks.bulkPut(data.tasks);
-      if (Array.isArray(data.inquiries)) await db.inquiries.bulkPut(data.inquiries);
-      if (Array.isArray(data.settings)) await db.settings.bulkPut(data.settings);
+      if (typeof data !== 'object' || data === null) {
+        throw new Error('Formato inválido');
+      }
+
+      const isValidEntityArray = <T extends { id: string }>(arr: unknown): arr is T[] =>
+        Array.isArray(arr) && arr.every(item => item && typeof item === 'object' && typeof (item as Record<string, unknown>).id === 'string');
+
+      if (isValidEntityArray(data.courses)) await db.courses.bulkPut(data.courses);
+      if (isValidEntityArray(data.works)) await db.works.bulkPut(data.works);
+      if (isValidEntityArray(data.sources)) await db.sources.bulkPut(data.sources);
+      if (isValidEntityArray(data.ideas)) await db.ideas.bulkPut(data.ideas);
+      if (isValidEntityArray(data.paraphrases)) await db.paraphrases.bulkPut(data.paraphrases);
+      if (isValidEntityArray(data.citations)) await db.citations.bulkPut(data.citations);
+      if (isValidEntityArray(data.notes)) await db.notes.bulkPut(data.notes);
+      if (isValidEntityArray(data.concepts)) await db.concepts.bulkPut(data.concepts);
+      if (isValidEntityArray(data.tasks)) await db.tasks.bulkPut(data.tasks);
+      if (isValidEntityArray(data.inquiries)) await db.inquiries.bulkPut(data.inquiries);
+      if (Array.isArray(data.settings) && data.settings.every((s: unknown) => s && typeof s === 'object' && typeof (s as Record<string, unknown>).key === 'string')) {
+        await db.settings.bulkPut(data.settings);
+      }
 
       showToast('Copia restaurada', 'Todos los datos se han importado correctamente.', 'success');
       onClose();
     } catch {
-      showToast('Error de importación', 'El archivo no tiene un formato válido.', 'error');
+      showToast('Error de importación', 'El archivo no contiene un esquema de datos válido.', 'error');
     }
   };
 
@@ -485,8 +508,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             <div>
               <h4 className="font-bold text-sm text-[#2B2D42]">Obsidian Local REST API (Avanzado)</h4>
               <p className="text-xs text-[#5A6275] mt-0.5">
-                Sincronización en tiempo real si tienes instalado el plugin 'Local REST API' en tu Obsidian local (puerto 27124).
+                Sincronización en tiempo real con el plugin 'Local REST API' de Obsidian.
               </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Endpoint Local"
+                placeholder="http://127.0.0.1:27124"
+                value={obsidianEndpoint}
+                onChange={(e) => setObsidianEndpoint(e.target.value)}
+              />
+              <Input
+                label="Carpeta Destino en el Vault"
+                placeholder="Alfajorcito OS/Notes"
+                value={obsidianFolder}
+                onChange={(e) => setObsidianFolder(e.target.value)}
+              />
             </div>
             <Input
               label="Token de Autorización de Obsidian"
@@ -495,6 +532,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               value={obsidianToken}
               onChange={(e) => setObsidianToken(e.target.value)}
             />
+            <div className="pt-2 flex justify-end">
+              <Button variant="primary" size="sm" onClick={handleSaveObsidianSettings} className="font-bold">
+                Guardar Ajustes de Obsidian
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -553,11 +595,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               <Button
                 variant="danger"
                 size="sm"
-                onClick={async () => {
-                  await clearAllDatabaseData();
-                  showToast('Base vaciada', 'Se han eliminado todos los datos. La aplicación está lista en blanco.', 'info');
-                  onClose();
-                }}
+                onClick={() => setIsConfirmClearOpen(true)}
                 icon={<Trash2 className="w-3.5 h-3.5" />}
               >
                 Limpiar Todo (Dejar en Blanco)
@@ -578,12 +616,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={async () => {
-                  await clearAllDatabaseData();
-                  await initializeDatabaseSeed(true);
-                  showToast('Semillas restauradas', 'Datos de ejemplo de psicología USMP cargados.', 'success');
-                  onClose();
-                }}
+                onClick={() => setIsConfirmSeedOpen(true)}
                 icon={<RefreshCw className="w-3.5 h-3.5" />}
               >
                 Recargar Semillas USMP
@@ -591,6 +624,71 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             </div>
           </div>
         </div>
+      )}
+
+      {/* Confirmation Modal for Clear All */}
+      {isConfirmClearOpen && (
+        <Modal
+          isOpen={isConfirmClearOpen}
+          onClose={() => setIsConfirmClearOpen(false)}
+          title="¿Confirmar vaciado total de la base de datos?"
+          maxWidth="md"
+        >
+          <div className="space-y-4">
+            <p className="text-xs sm:text-sm text-[#5A6275] leading-relaxed">
+              Esta acción eliminará de forma irreversible todas las notas, trabajos, fuentes y tareas registradas localmente en este navegador.
+            </p>
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#EBE5DF]">
+              <Button variant="ghost" onClick={() => setIsConfirmClearOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                onClick={async () => {
+                  await clearAllDatabaseData();
+                  setIsConfirmClearOpen(false);
+                  showToast('Base vaciada', 'Se han eliminado todos los datos. La aplicación está lista en blanco.', 'info');
+                  onClose();
+                }}
+              >
+                Sí, vaciar base de datos
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Confirmation Modal for Reload Seeds */}
+      {isConfirmSeedOpen && (
+        <Modal
+          isOpen={isConfirmSeedOpen}
+          onClose={() => setIsConfirmSeedOpen(false)}
+          title="¿Recargar datos de ejemplo de Psicología USMP?"
+          maxWidth="md"
+        >
+          <div className="space-y-4">
+            <p className="text-xs sm:text-sm text-[#5A6275] leading-relaxed">
+              Se restaurarán las materias de VIII Ciclo, la tesis de prueba y fuentes de psicología de la USMP. Los datos actuales no guardados se sobrescribirán.
+            </p>
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#EBE5DF]">
+              <Button variant="ghost" onClick={() => setIsConfirmSeedOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={async () => {
+                  await clearAllDatabaseData();
+                  await initializeDatabaseSeed(true);
+                  setIsConfirmSeedOpen(false);
+                  showToast('Semillas restauradas', 'Datos de ejemplo de psicología USMP cargados.', 'success');
+                  onClose();
+                }}
+              >
+                Sí, recargar semillas
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </Modal>
   );

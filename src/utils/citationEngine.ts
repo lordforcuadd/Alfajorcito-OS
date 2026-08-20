@@ -54,6 +54,10 @@ export function formatInTextNarrative(
     return `${authors[0].lastName} et al. (${year})`;
   }
 
+  if (style === 'CHICAGO_NOTES') {
+    return `${authors[0].lastName}`;
+  }
+
   if (style === 'MLA_9') {
     if (authors.length === 1) return `${authors[0].lastName}`;
     if (authors.length === 2) return `${authors[0].lastName} y ${authors[1].lastName}`;
@@ -110,6 +114,11 @@ export function formatInTextParenthetical(
     return `(${authorStr} ${year}${pageStr})`;
   }
 
+  if (style === 'CHICAGO_NOTES') {
+    const authorStr = authors[0].lastName;
+    return `${authorStr}, "${source.title || 'Título'}"${pageStr ? `, ${pageOrLocation}` : ''}`;
+  }
+
   return `(${authors[0].lastName}, ${year}${pageStr})`;
 }
 
@@ -129,6 +138,11 @@ export function formatFullReference(source: Source, style: CitationStyle = 'APA_
         const pgs = source.pages ? `, ${source.pages}` : '';
         const doiPart = url ? ` ${url}` : '';
         return `${authors} (${year}). ${title}.${pub}${vol}${iss}${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
+      } else if (source.type === 'BOOK_CHAPTER') {
+        const book = source.publication ? ` En ${source.publication}` : '';
+        const pgs = source.pages ? ` (pp. ${source.pages})` : '';
+        const doiPart = url ? ` ${url}` : '';
+        return `${authors} (${year}). ${title}.${book}${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
       } else {
         const pub = source.publication ? ` ${source.publication}.` : '';
         const doiPart = url ? ` ${url}` : '';
@@ -160,12 +174,23 @@ export function formatFullReference(source: Source, style: CitationStyle = 'APA_
       if (source.authors && source.authors.length > 0) {
         authorStr = source.authors.map(a => `${a.firstName ? a.firstName.charAt(0) + '. ' : ''}${a.lastName}`).join(', ');
       }
-      const pub = source.publication ? `, ${source.publication}` : '';
-      const vol = source.volume ? `, vol. ${source.volume}` : '';
-      const iss = source.issue ? `, no. ${source.issue}` : '';
-      const pgs = source.pages ? `, pp. ${source.pages}` : '';
-      const doiPart = url ? `, doi: ${source.doi || url}` : '';
-      return `${authorStr}, "${title}"${pub}${vol}${iss}${pgs}, ${year}${doiPart}.`.replace(/\s+/g, ' ').trim();
+      if (source.type === 'JOURNAL_ARTICLE') {
+        const pub = source.publication ? `, ${source.publication}` : '';
+        const vol = source.volume ? `, vol. ${source.volume}` : '';
+        const iss = source.issue ? `, no. ${source.issue}` : '';
+        const pgs = source.pages ? `, pp. ${source.pages}` : '';
+        const doiPart = url ? `, doi: ${source.doi || url}` : '';
+        return `${authorStr}, "${title}"${pub}${vol}${iss}${pgs}, ${year}${doiPart}.`.replace(/\s+/g, ' ').trim();
+      } else if (source.type === 'BOOK_CHAPTER') {
+        const pub = source.publication ? ` en ${source.publication}` : '';
+        const pgs = source.pages ? `, pp. ${source.pages}` : '';
+        const doiPart = url ? `, doi: ${source.doi || url}` : '';
+        return `${authorStr}, "${title}"${pub}${pgs}, ${year}${doiPart}.`.replace(/\s+/g, ' ').trim();
+      } else {
+        const pub = source.publication ? `, ${source.publication}` : '';
+        const doiPart = url ? `, ${url}` : '';
+        return `${authorStr}, ${title}${pub}, ${year}${doiPart}.`.replace(/\s+/g, ' ').trim();
+      }
     }
 
     case 'CHICAGO_AUTHOR_DATE': {
@@ -178,16 +203,36 @@ export function formatFullReference(source: Source, style: CitationStyle = 'APA_
       return `${authors}. ${year}. "${title}."${pub}${vol}${iss}${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
     }
 
+    case 'CHICAGO_NOTES': {
+      let authorStr = 'Anon.';
+      if (source.authors && source.authors.length > 0) {
+        if (source.authors.length === 1) {
+          authorStr = `${source.authors[0].lastName}, ${source.authors[0].firstName}.`;
+        } else {
+          authorStr = `${source.authors[0].lastName}, ${source.authors[0].firstName}, et al.`;
+        }
+      }
+      const pub = source.publication ? ` ${source.publication}` : '';
+      const pgs = source.pages ? `, ${source.pages}` : '';
+      const doiPart = url ? ` ${url}` : '';
+      return `${authorStr} "${title}."${pub} (${year})${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
+    }
+
     case 'VANCOUVER': {
       let authorStr = 'Anon';
       if (source.authors && source.authors.length > 0) {
         authorStr = source.authors.map(a => `${a.lastName} ${a.firstName ? a.firstName.charAt(0) : ''}`).join(', ');
       }
-      const pub = source.publication ? ` ${source.publication}.` : '';
-      const vol = source.volume ? `;${source.volume}` : '';
-      const iss = source.issue ? `(${source.issue})` : '';
-      const pgs = source.pages ? `:${source.pages}` : '';
-      return `${authorStr}. ${title}.${pub} ${year}${vol}${iss}${pgs}.`.replace(/\s+/g, ' ').replace(/\.\./g, '.').trim();
+      if (source.type === 'JOURNAL_ARTICLE') {
+        const pub = source.publication ? ` ${source.publication}.` : '';
+        const vol = source.volume ? `;${source.volume}` : '';
+        const iss = source.issue ? `(${source.issue})` : '';
+        const pgs = source.pages ? `:${source.pages}` : '';
+        return `${authorStr}. ${title}.${pub} ${year}${vol}${iss}${pgs}.`.replace(/\s+/g, ' ').replace(/\.\./g, '.').trim();
+      } else {
+        const pub = source.publication ? ` ${source.publication};` : '';
+        return `${authorStr}. ${title}.${pub} ${year}.`.replace(/\s+/g, ' ').replace(/\.\./g, '.').trim();
+      }
     }
 
     default:
@@ -211,6 +256,11 @@ export function formatFullReferenceHTML(source: Source, style: CitationStyle = '
         const pgs = source.pages ? `, ${source.pages}` : '';
         const doiPart = url ? ` ${url}` : '';
         return `${authors} (${year}). ${title}.${pub}${vol}${iss}${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
+      } else if (source.type === 'BOOK_CHAPTER') {
+        const book = source.publication ? ` En <i>${source.publication}</i>` : '';
+        const pgs = source.pages ? ` (pp. ${source.pages})` : '';
+        const doiPart = url ? ` <a href="${url}">${url}</a>` : '';
+        return `${authors} (${year}). ${title}.${book}${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
       } else {
         const italicTitle = `<i>${title}</i>`;
         const pub = source.publication ? ` ${source.publication}.` : '';
@@ -250,6 +300,11 @@ export function formatFullReferenceHTML(source: Source, style: CitationStyle = '
         const pgs = source.pages ? `, pp. ${source.pages}` : '';
         const doiPart = url ? `, doi: <a href="${url}">${source.doi || url}</a>` : '';
         return `${authorStr}, "${title}"${pub}${vol}${iss}${pgs}, ${year}${doiPart}.`.replace(/\s+/g, ' ').trim();
+      } else if (source.type === 'BOOK_CHAPTER') {
+        const pub = source.publication ? ` en <i>${source.publication}</i>` : '';
+        const pgs = source.pages ? `, pp. ${source.pages}` : '';
+        const doiPart = url ? `, doi: <a href="${url}">${source.doi || url}</a>` : '';
+        return `${authorStr}, "${title}"${pub}${pgs}, ${year}${doiPart}.`.replace(/\s+/g, ' ').trim();
       } else {
         const pub = source.publication ? `, ${source.publication}` : '';
         const doiPart = url ? `, <a href="${url}">${url}</a>` : '';
@@ -265,6 +320,21 @@ export function formatFullReferenceHTML(source: Source, style: CitationStyle = '
       const pgs = source.pages ? `: ${source.pages}` : '';
       const doiPart = url ? ` ${url}` : '';
       return `${authors}. ${year}. "${title}."${pub}${vol}${iss}${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
+    }
+
+    case 'CHICAGO_NOTES': {
+      let authorStr = 'Anon.';
+      if (source.authors && source.authors.length > 0) {
+        if (source.authors.length === 1) {
+          authorStr = `${source.authors[0].lastName}, ${source.authors[0].firstName}.`;
+        } else {
+          authorStr = `${source.authors[0].lastName}, ${source.authors[0].firstName}, et al.`;
+        }
+      }
+      const pub = source.publication ? ` <i>${source.publication}</i>` : '';
+      const pgs = source.pages ? `, ${source.pages}` : '';
+      const doiPart = url ? ` <a href="${url}">${url}</a>` : '';
+      return `${authorStr} "${title}."${pub} (${year})${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
     }
 
     case 'VANCOUVER': {

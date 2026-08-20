@@ -50,7 +50,11 @@ export const Button: React.FC<ButtonProps> = ({
       ) : icon ? (
         <span className="shrink-0 flex items-center justify-center">{icon}</span>
       ) : null}
-      <span className="truncate">{children}</span>
+      {typeof children === 'string' ? (
+        <span className="truncate">{children}</span>
+      ) : (
+        children
+      )}
     </button>
   );
 };

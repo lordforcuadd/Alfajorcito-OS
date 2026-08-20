@@ -779,6 +779,14 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     setIsPanning(false);
   };
 
+  useEffect(() => {
+    const handleGlobalPointerUp = () => {
+      handleMouseUp();
+    };
+    window.addEventListener('pointerup', handleGlobalPointerUp);
+    return () => window.removeEventListener('pointerup', handleGlobalPointerUp);
+  }, [draggedNode]);
+
   // Touch Handlers for Mobile & Tablet
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     if (e.touches.length === 1) {
@@ -1032,6 +1040,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

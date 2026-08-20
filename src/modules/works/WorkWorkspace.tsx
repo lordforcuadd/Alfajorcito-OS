@@ -29,7 +29,7 @@ import {
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { Badge, CitationStyleBadge, VerificationBadge } from '../../components/common/Badge';
+import { Badge, CitationStyleBadge, VerificationBadge, type BadgeVariant } from '../../components/common/Badge';
 import { Tabs } from '../../components/common/Tabs';
 import { Modal } from '../../components/common/Modal';
 import { Input, TextArea, Select } from '../../components/common/Input';
@@ -44,7 +44,17 @@ import {
 } from '../../utils/citationEngine';
 import { generateGoogleDocsRichHTML, generateGoogleCalendarUrl, generateICSFile } from '../../utils/googleExporter';
 import { formulateQuestionForTeacher, analyzeInstructionsOffline } from '../../services/aiService';
-import type { Work, Course, Source, Task, InquiryToTeacher, Citation, Paraphrase, Idea, UserProfile, TaskPriority } from '../../types';
+import type { Work, Course, Source, Task, InquiryToTeacher, Citation, Paraphrase, Idea, UserProfile, TaskPriority, WorkStatus } from '../../types';
+
+const WORK_STATUS_META: Record<WorkStatus, { label: string; variant: BadgeVariant }> = {
+  PLANIFICACION: { label: 'Planificación', variant: 'amber' },
+  INVESTIGACION: { label: 'Investigando', variant: 'lavender' },
+  REDACTANDO: { label: 'Redactando', variant: 'rose' },
+  EN_REVISION: { label: 'En Revisión', variant: 'amber' },
+  CORRECCION: { label: 'En Corrección', variant: 'rose' },
+  ENTREGADO: { label: 'Entregado', variant: 'mint' },
+  ARCHIVADO: { label: 'Archivado', variant: 'default' }
+};
 
 export interface WorkWorkspaceProps {
   workId: string;
@@ -211,8 +221,8 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-[#8C3A32] uppercase">{course?.name || 'Materia'}</span>
               <CitationStyleBadge style={work.citationStyle} />
-              <Badge variant={work.status === 'ENTREGADO' ? 'mint' : 'rose'} size="sm">
-                {work.status}
+              <Badge variant={WORK_STATUS_META[work.status]?.variant || 'default'} size="sm">
+                {WORK_STATUS_META[work.status]?.label || work.status}
               </Badge>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-[#2B2D42] mt-0.5">{work.title}</h2>
@@ -1142,14 +1152,15 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                     <VerificationBadge status={s.verificationStatus} />
                   </div>
                   <p className="text-[#5A6275] line-clamp-2">{s.abstract || 'Sin resumen disponible.'}</p>
-                  <div className="flex justify-end gap-1.5 pt-1">
-                    <button
-                      onClick={() => handleInsertCitation(s, 'parenthetical')}
-                      className="text-[11px] font-bold text-[#D98880] hover:underline"
-                    >
-                      + Citar
-                    </button>
-                  </div>
+                    <div className="flex justify-end gap-1.5 pt-1">
+                      <button
+                        onClick={() => handleInsertCitation(s, 'parenthetical')}
+                        className="text-[11px] font-bold text-[#8C3A32] hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3 stroke-[2.5]" />
+                        <span>Citar</span>
+                      </button>
+                    </div>
                 </div>
               ))}
             </div>

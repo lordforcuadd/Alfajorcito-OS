@@ -183,9 +183,8 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
 
       const parsedTags = noteTags
         .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean)
-        .map((t) => (t.startsWith('#') ? t : `#${t}`));
+        .map((t) => t.replace(/^#+/, '').trim())
+        .filter(Boolean);
 
       await db.notes.add({
         id: `note-${Math.random().toString(36).substring(2, 9)}`,
@@ -209,6 +208,8 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       setNoteContent('');
       setNoteTags('');
       onClose();
+    } catch {
+      showToast('Error', 'No se pudo guardar la nota en la base de datos.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -260,6 +261,8 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       setWorkGoogleDocUrl('');
       setWorkCanvaUrl('');
       onClose();
+    } catch {
+      showToast('Error', 'No se pudo guardar el trabajo en la base de datos.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -299,6 +302,8 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       setCourseTeacherEmail('');
       setCourseSyllabusUrl('');
       onClose();
+    } catch {
+      showToast('Error', 'No se pudo guardar el curso en la base de datos.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -350,6 +355,8 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       setSourcePublication('');
       setSourceDoiOrSearch('');
       onClose();
+    } catch {
+      showToast('Error', 'No se pudo guardar la fuente en la base de datos.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -394,6 +401,8 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       setInquiryRawQuestion('');
       setInquiryFormalPreview('');
       onClose();
+    } catch {
+      showToast('Error', 'No se pudo guardar la consulta en la base de datos.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -434,6 +443,8 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       setTaskPriority('MEDIUM');
       setTaskWorkId('');
       onClose();
+    } catch {
+      showToast('Error', 'No se pudo guardar la tarea en la base de datos.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -592,7 +603,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
               <option value="ENSAYO">Ensayo</option>
               <option value="MONOGRAFIA">Monografía</option>
               <option value="INFORME">Informe de Caso / Psicodiagnóstico</option>
-              <option value="ARTICULO">Artículo Científico</option>
+              <option value="PROYECTO">Proyecto de Investigación / Artículo</option>
             </Select>
 
             <Select

@@ -16,7 +16,7 @@ describe('Citation Engine Extended Suite — Strict Academic APA 7 & Multi-style
       title: 'Emotion regulation: Conceptual and empirical foundations',
       authors: [{ firstName: 'James', lastName: 'Gross' }],
       year: 2015,
-      type: 'BOOK_CHAPTER',
+      type: 'BOOK',
       publication: 'Handbook of Emotion Regulation (2nd ed., pp. 3-20). The Guilford Press',
       doi: '10.1002/9781118993811.ch1',
       accessedAt: Date.now(),
@@ -220,5 +220,40 @@ describe('Citation Engine Extended Suite — Strict Academic APA 7 & Multi-style
     // 5. Chicago Author-Date
     const chicagoHtml = formatFullReferenceHTML(journalSource, 'CHICAGO_AUTHOR_DATE');
     expect(chicagoHtml).toContain('<i>Revista Peruana de Psicología</i>');
+  });
+
+  it('formats BOOK_CHAPTER and CHICAGO_NOTES citations correctly', () => {
+    const chapterSource: Source = {
+      id: 'src-chapter',
+      workIds: ['work-1'],
+      title: 'Terapia de Aceptación y Compromiso en Contextos Académicos',
+      authors: [{ firstName: 'Steven', lastName: 'Hayes' }],
+      year: 2021,
+      type: 'BOOK_CHAPTER',
+      publication: 'Avances en Terapias Contextuales',
+      pages: '120-145',
+      accessedAt: Date.now(),
+      verificationStatus: 'VERIFIED',
+      verificationProvider: 'MANUAL',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    // APA 7 Chapter
+    const apaFull = formatFullReference(chapterSource, 'APA_7');
+    expect(apaFull).toContain('En Avances en Terapias Contextuales (pp. 120-145)');
+
+    const apaHtml = formatFullReferenceHTML(chapterSource, 'APA_7');
+    expect(apaHtml).toContain('En <i>Avances en Terapias Contextuales</i> (pp. 120-145)');
+
+    // Chicago Notes
+    const chicagoNotesNarrative = formatInTextNarrative(chapterSource, 'CHICAGO_NOTES');
+    expect(chicagoNotesNarrative).toBe('Hayes');
+
+    const chicagoNotesParenthetical = formatInTextParenthetical(chapterSource, 'CHICAGO_NOTES', 'p. 130');
+    expect(chicagoNotesParenthetical).toContain('Hayes, "Terapia de Aceptación y Compromiso en Contextos Académicos", p. 130');
+
+    const chicagoNotesRef = formatFullReference(chapterSource, 'CHICAGO_NOTES');
+    expect(chicagoNotesRef).toContain('Hayes, Steven. "Terapia de Aceptación y Compromiso en Contextos Académicos." Avances en Terapias Contextuales (2021), 120-145.');
   });
 });

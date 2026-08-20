@@ -37,7 +37,7 @@ export function generateNoteMarkdown(
     work ? `work: "[[${work}]]"` : null,
     sources.length > 0 ? `sources:\n${sources.map(s => `  - "[[${s}]]"`).join('\n')}` : null,
     concepts.length > 0 ? `concepts:\n${concepts.map(c => `  - "[[${c}]]"`).join('\n')}` : null,
-    note.tags.length > 0 ? `tags:\n${note.tags.map(t => `  - "${t}"`).join('\n')}` : null,
+    note.tags.length > 0 ? `tags:\n${note.tags.map(t => `  - "${t.replace(/^#+/, '')}"`).join('\n')}` : null,
     `created: "${new Date(note.createdAt).toISOString().split('T')[0]}"`,
     `updated: "${new Date(note.updatedAt).toISOString().split('T')[0]}"`,
     '---',
@@ -78,7 +78,7 @@ created: "${new Date(source.createdAt).toISOString().split('T')[0]}"
 ${source.abstract || '*Sin resumen registrado.*'}
 
 ## Palabras Clave
-${(source.keywords || []).map(k => `- #${k}`).join('\n') || '*Sin etiquetas.*'}
+${(source.keywords || []).map(k => `- #${k.replace(/^#+/, '')}`).join('\n') || '*Sin etiquetas.*'}
 `;
 }
 
@@ -178,7 +178,11 @@ ${w.draftContent || '*Borrador vacío.*'}
         break;
       case 'ATOMIC':
       default:
-        atomicFolder?.file(fileName, md);
+        if (!n.courseId && !n.workId) {
+          inboxFolder?.file(fileName, md);
+        } else {
+          atomicFolder?.file(fileName, md);
+        }
         break;
     }
   });

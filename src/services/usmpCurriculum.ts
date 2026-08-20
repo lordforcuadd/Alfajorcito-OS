@@ -187,6 +187,3 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     ]
   }
 ];
-
-// Re-export alias for compatibility
-export const UNMSM_PSYCHOLOGY_CURRICULUM = USMP_PSYCHOLOGY_CURRICULUM;

@@ -258,9 +258,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {overdueTasks.map((task) => (
                     <div
                       key={task.id}
-                      className="flex items-center justify-between p-2.5 rounded-xl bg-rose-50/70 border border-rose-200 transition-all gap-2"
+                      onClick={() => {
+                        if (task.workId) onOpenWork(task.workId);
+                      }}
+                      className={`flex items-center justify-between p-2.5 rounded-xl bg-rose-50/70 border border-rose-200 transition-all gap-2 ${
+                        task.workId ? 'cursor-pointer hover:bg-rose-100/70' : ''
+                      }`}
+                      title={task.workId ? 'Clic para abrir el trabajo vinculado' : undefined}
                     >
-                      <span className="text-xs text-rose-900 truncate min-w-0 flex-1">{task.title}</span>
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await db.tasks.update(task.id, { isCompleted: true, updatedAt: Date.now() });
+                          }}
+                          className="text-rose-400 hover:text-emerald-600 transition-colors cursor-pointer shrink-0"
+                          title="Marcar como completada"
+                          aria-label="Marcar tarea como completada"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-xs text-rose-900 truncate">{task.title}</span>
+                      </div>
                       <span className="text-[10px] font-bold text-rose-800 bg-rose-100 px-2 py-0.5 rounded-full shrink-0">
                         Tarea vencida
                       </span>

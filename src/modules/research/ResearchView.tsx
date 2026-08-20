@@ -23,18 +23,20 @@ import {
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { Input, TextArea } from '../../components/common/Input';
+import { Input, TextArea, Select } from '../../components/common/Input';
 import { Badge, VerificationBadge, CitationStyleBadge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../components/common/Toast';
 import { resolveDOI, searchOpenAlex, searchSemanticScholar, type AcademicSearchResult } from '../../services/academicApis';
 import { auditSourceMetadata } from '../../utils/antiHallucination';
+import { validateSourceAge } from '../../utils/sourceAgeValidator';
 import {
   formatFullReference,
   formatFullReferenceHTML,
   formatInTextParenthetical,
   formatInTextNarrative,
-  copyRichReference
+  copyRichReference,
+  generateBibTeX
 } from '../../utils/citationEngine';
 import type { Source, VerificationStatus, Idea, Paraphrase, Work, Author, CitationStyle } from '../../types';
 
@@ -76,6 +78,18 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
 
   const worksMap = React.useMemo(() => new Map(works.map((w) => [w.id, w])), [works]);
   const coursesMap = React.useMemo(() => new Map(courses.map((c) => [c.id, c])), [courses]);
+
+  const sourceRefNum = React.useMemo(() => {
+    if (!inspectedSource) return 1;
+    const primaryWorkId = inspectedSource.workIds?.[0];
+    if (primaryWorkId) {
+      const workSources = sources.filter((s) => (s.workIds || []).includes(primaryWorkId));
+      const idx = workSources.findIndex((s) => s.id === inspectedSource.id);
+      return idx !== -1 ? idx + 1 : 1;
+    }
+    const globalIdx = sources.findIndex((s) => s.id === inspectedSource.id);
+    return globalIdx !== -1 ? globalIdx + 1 : 1;
+  }, [inspectedSource, sources]);
 
   // Execute Academic Search
   const handleExecuteSearch = async () => {
@@ -133,8 +147,12 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
       updatedAt: Date.now()
     };
 
-    await db.sources.add(newSource);
-    showToast('Fuente guardada', 'Guardada en tu biblioteca de libros y papers.', 'success');
+    try {
+      await db.sources.add(newSource);
+      showToast('Fuente guardada', 'Guardada en tu biblioteca de libros y papers.', 'success');
+    } catch {
+      showToast('Error', 'No se pudo guardar la fuente en la base de datos.', 'error');
+    }
   };
 
   const filteredSources = sources.filter((s) => {
@@ -354,10 +372,9 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
               />
             </div>
             <div>
-              <select
+              <Select
                 value={libraryWorkFilter}
                 onChange={(e) => setLibraryWorkFilter(e.target.value)}
-                className="w-full px-3 py-2 bg-white rounded-xl border border-[#EBE5DF] text-xs sm:text-sm text-[#2B2D42] focus:outline-none focus:ring-2 focus:ring-[#E8A598] cursor-pointer"
               >
                 <option value="ALL">Todos los Proyectos / Tesis</option>
                 {works.map((w) => {
@@ -368,7 +385,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                     </option>
                   );
                 })}
-              </select>
+              </Select>
             </div>
           </div>
 
@@ -385,72 +402,71 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
               { id: 'ALL', label: `Todas (${sources.length})` },
               { id: 'VERIFIED', label: `Verificadas (${sources.filter((s) => s.verificationStatus === 'VERIFIED').length})` },
               { id: 'PARTIALLY_VERIFIED', label: `Parciales (${sources.filter((s) => s.verificationStatus === 'PARTIALLY_VERIFIED').length})` },
-              { id: 'UNVERIFIED', label: `Por Verificar (${sources.filter((s) => s.verificationStatus === 'UNVERIFIED').length})` }
-            ].map((f) => (
+              { id: 'UNVERIFIED', label: `Sin Verificar (${sources.filter((s) => s.verificationStatus === 'UNVERIFIED').length})` }
+            ].map((tab) => (
               <button
-                key={f.id}
-                onClick={() => setVerificationFilter(f.id as VerificationStatus | 'ALL')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer select-none shrink-0 ${
-                  verificationFilter === f.id
+                key={tab.id}
+                onClick={() => setVerificationFilter(tab.id as VerificationStatus | 'ALL')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer select-none shrink-0 ${
+                  verificationFilter === tab.id
                     ? 'bg-[#E8A598] text-[#2B2D42] shadow-2xs'
                     : 'bg-[#F5F1EB] text-[#5A6275] hover:bg-[#EBE5DF]'
                 }`}
               >
-                {f.label}
+                {tab.label}
               </button>
             ))}
           </div>
 
-          {/* Sources Grid */}
+          {/* Source Cards Grid */}
           {filteredSources.length === 0 ? (
             <Card variant="subtle" className="text-center py-12">
-              <p className="text-sm text-[#8D99AE]">No hay fuentes en esta categoría.</p>
+              <p className="text-sm text-[#8D99AE]">No se encontraron fuentes con los filtros seleccionados.</p>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredSources.map((source) => {
-                const sourceIdeas = ideas.filter((i) => i.sourceId === source.id);
-                const isSeminal = source.historicalContextApproved;
+                const isSelected = selectedSourceId === source.id;
+                const authorNames = (source.authors || []).map((a) => a.lastName).join(', ') || 'Autor Desconocido';
+                const linkedWork = source.workIds?.[0] ? worksMap.get(source.workIds[0]) : undefined;
+                const ageValidation = validateSourceAge(source, linkedWork);
 
                 return (
                   <Card
                     key={source.id}
-                    variant="interactive"
-                    onClick={() => setInspectedSource(source)}
-                    className="space-y-3 flex flex-col justify-between"
+                    variant={isSelected ? 'elevated' : 'interactive'}
+                    onClick={() => {
+                      setInspectedSource(source);
+                      if (onSelectSource) onSelectSource(source.id);
+                    }}
+                    className={`space-y-3 flex flex-col justify-between ${
+                      isSelected ? 'ring-2 ring-[#E8A598]' : ''
+                    }`}
                   >
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-                        <span className="text-xs font-bold text-[#8C3A32] bg-[#FDF2F0] px-2 py-0.5 rounded-lg border border-[#E8A598]/40">
-                          {source.year}
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-[11px] font-bold text-[#8C3A32] uppercase tracking-wider line-clamp-1">
+                          {source.publication || 'Publicación Científica'}
                         </span>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {isSeminal && <Badge variant="amber" size="sm">Libro Clásico</Badge>}
-                          <VerificationBadge status={source.verificationStatus} />
-                        </div>
+                        <VerificationBadge status={source.verificationStatus} />
                       </div>
 
-                      <h4 className="font-extrabold text-sm sm:text-base text-[#2B2D42] leading-snug">
+                      <h4 className="text-sm font-extrabold text-[#2B2D42] leading-snug line-clamp-2">
                         {source.title}
                       </h4>
 
-                      <p className="text-xs text-[#5A6275] line-clamp-1">
-                        {source.authors?.map((a) => `${a.lastName}, ${a.firstName}`).join('; ') || 'Autor por registrar'}
-                      </p>
-
-                      <p className="text-[11px] text-[#8D99AE] italic truncate">
-                        {source.publication || 'Revista o Editorial'}
+                      <p className="text-xs text-[#5A6275] line-clamp-2">
+                        {source.abstract || 'Sin resumen registrado en metadatos.'}
                       </p>
                     </div>
 
-                    <div className="pt-3 border-t border-[#EBE5DF] flex items-center justify-between text-xs text-[#5A6275]">
-                      <span className="flex items-center gap-1 font-medium">
-                        <Quote className="w-3.5 h-3.5 text-[#D98880]" />
-                        <span>{sourceIdeas.length} citas extraídas</span>
-                      </span>
-                      <span className="text-[11px] font-bold text-[#8C3A32]">
-                        Ver Detalles →
-                      </span>
+                    <div className="pt-2 border-t border-[#EBE5DF] flex items-center justify-between text-[11px] text-[#8D99AE]">
+                      <span className="font-semibold text-[#2B2D42]">{authorNames} ({source.year || 's.f.'})</span>
+                      {ageValidation.status !== 'COMPLIANT' && (
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${ageValidation.badgeColor}`}>
+                          {ageValidation.status === 'NON_COMPLIANT' ? `> ${linkedWork?.maxSourceAgeYears || 5} años` : 'Año s.f.'}
+                        </span>
+                      )}
                     </div>
                   </Card>
                 );
@@ -460,14 +476,14 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
         </div>
       )}
 
-      {/* 3. SOURCE METADATA & EXTRACTION MODAL */}
+      {/* 3. INSPECTION MODAL (Detailed Citations, Paraphrase, & Traceability) */}
       {inspectedSource && (
         <Modal
           isOpen={!!inspectedSource}
           onClose={() => setInspectedSource(null)}
-          title="Detalles de la Fuente y Citas"
-          subtitle={inspectedSource.title}
-          maxWidth="xl"
+          title={inspectedSource.title}
+          subtitle={`Año ${inspectedSource.year || 's.f.'} • ${(inspectedSource.authors || []).map((a) => `${a.lastName} ${a.firstName ? a.firstName.charAt(0) + '.' : ''}`).join(', ') || 'Autor'}`}
+          maxWidth="2xl"
         >
           <div className="space-y-4">
             {/* Citation Style Switcher & Header */}
@@ -831,11 +847,11 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                   <div className="flex items-center gap-3 flex-wrap text-xs font-mono">
                     <span className="text-[#5A6275]">Parentética:</span>
                     <code className="text-[#8C3A32] font-bold">
-                      {formatInTextParenthetical(inspectedSource, modalStyle, newPageLoc.trim() || undefined)}
+                      {formatInTextParenthetical(inspectedSource, modalStyle, newPageLoc.trim() || undefined, sourceRefNum)}
                     </code>
                     <span className="text-[#5A6275]">Narrativa:</span>
                     <code className="text-[#2B2D42] font-bold">
-                      {formatInTextNarrative(inspectedSource, modalStyle)}
+                      {formatInTextNarrative(inspectedSource, modalStyle, sourceRefNum)}
                     </code>
                   </div>
                 </div>
@@ -854,10 +870,12 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
 
                     const now = Date.now();
                     const ideaId = `idea-${Math.random().toString(36).substring(2, 9)}`;
+                    const assignedWorkId = inspectedSource.workIds?.[0] || (libraryWorkFilter !== 'ALL' ? libraryWorkFilter : undefined);
 
                     await db.ideas.add({
                       id: ideaId,
                       sourceId: inspectedSource.id,
+                      workId: assignedWorkId,
                       rawQuote: newQuote.trim(),
                       pageOrLocation: newPageLoc.trim(),
                       extractedCoreIdea: newCoreIdea.trim() || 'Idea extraída',
@@ -870,9 +888,10 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                       id: `para-${Math.random().toString(36).substring(2, 9)}`,
                       ideaId,
                       sourceId: inspectedSource.id,
+                      workId: assignedWorkId,
                       ownInterpretation: newCoreIdea.trim(),
                       finalParaphrase: newParaphraseText.trim(),
-                      fidelityReviewStatus: 'CONFIRMED_FAITHFUL',
+                      fidelityReviewStatus: 'PENDING_REVIEW',
                       createdAt: now,
                       updatedAt: now
                     });

@@ -38,6 +38,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   const [syllabusUrl, setSyllabusUrl] = useState('');
   const [color, setColor] = useState(PASTEL_COLORS[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (courseToEdit) {
@@ -111,121 +112,145 @@ export const CourseModal: React.FC<CourseModalProps> = ({
 
   const handleDeleteCourse = async () => {
     if (!courseToEdit) return;
-    const confirmDelete = window.confirm(`¿Estás seguro de eliminar el curso "${courseToEdit.name}"? Los trabajos ya creados mantendrán su información.`);
-    if (!confirmDelete) return;
-
     await db.courses.delete(courseToEdit.id);
     showToast('Curso eliminado', 'El curso se eliminó de tu lista.', 'info');
+    setIsConfirmDeleteOpen(false);
     onClose();
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={courseToEdit ? 'Editar Curso' : 'Nuevo Curso'}
-      subtitle="Configura tus materias matriculadas para este ciclo"
-      maxWidth="md"
-    >
-      <div className="space-y-4">
-        <Input
-          label="Nombre del Curso *"
-          placeholder="e.g. Psicoterapia Cognitivo-Conductual"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          leftIcon={<BookOpen className="w-4 h-4" />}
-        />
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={courseToEdit ? 'Editar Curso' : 'Nuevo Curso'}
+        subtitle="Configura tus materias matriculadas para este ciclo"
+        maxWidth="md"
+      >
+        <div className="space-y-4">
           <Input
-            label="Código (Opcional)"
-            placeholder="e.g. PSI-802"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
+            label="Nombre del Curso *"
+            placeholder="e.g. Psicoterapia Cognitivo-Conductual"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            leftIcon={<BookOpen className="w-4 h-4" />}
           />
-          <Input
-            label="Ciclo o Semestre"
-            placeholder="e.g. 2026-II (8vo Ciclo)"
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-            leftIcon={<Calendar className="w-4 h-4" />}
-          />
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input
-            label="Docente / Profesor(a)"
-            placeholder="e.g. Dr. César Merino"
-            value={teacherName}
-            onChange={(e) => setTeacherName(e.target.value)}
-            leftIcon={<User className="w-4 h-4" />}
-          />
-          <Input
-            label="Correo del Docente"
-            placeholder="docente@usmp.pe"
-            value={teacherEmail}
-            onChange={(e) => setTeacherEmail(e.target.value)}
-            leftIcon={<Mail className="w-4 h-4" />}
-          />
-        </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              label="Código de Asignatura"
+              placeholder="e.g. PSI-801"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+            />
+            <Input
+              label="Periodo / Ciclo"
+              placeholder="2026-II (8vo Ciclo)"
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              leftIcon={<Calendar className="w-4 h-4" />}
+            />
+          </div>
 
-        <Input
-          label="Enlace al Sílabo o Aula Virtual"
-          placeholder="https://fcctp.usmp.edu.pe/... o Classroom"
-          value={syllabusUrl}
-          onChange={(e) => setSyllabusUrl(e.target.value)}
-          leftIcon={<LinkIcon className="w-4 h-4" />}
-        />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              label="Nombre del Docente"
+              placeholder="e.g. Dr. Manuel Rodríguez"
+              value={teacherName}
+              onChange={(e) => setTeacherName(e.target.value)}
+              leftIcon={<User className="w-4 h-4" />}
+            />
+            <Input
+              label="Correo del Docente"
+              placeholder="docente@usmp.pe"
+              value={teacherEmail}
+              onChange={(e) => setTeacherEmail(e.target.value)}
+              leftIcon={<Mail className="w-4 h-4" />}
+            />
+          </div>
 
-        {/* Color Palette Selector */}
-        <div>
-          <label className="block text-xs font-bold text-[#5A6275] uppercase tracking-wider mb-1.5 flex items-center gap-1">
-            <Palette className="w-3.5 h-3.5 text-[#D98880]" />
-            <span>Color para Identificar el Curso</span>
-          </label>
-          <div className="flex items-center gap-2 flex-wrap">
-            {PASTEL_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setColor(c)}
-                className={`w-7 h-7 rounded-full border-2 transition-all cursor-pointer ${
-                  color === c ? 'border-[#2B2D42] scale-110 shadow-xs' : 'border-white hover:scale-105'
-                }`}
-                style={{ backgroundColor: c }}
-                title={`Color ${c}`}
-                aria-label={`Seleccionar color ${c}`}
-              />
-            ))}
+          <Input
+            label="Enlace al Sílabo (Google Drive / PDF)"
+            placeholder="https://drive.google.com/..."
+            value={syllabusUrl}
+            onChange={(e) => setSyllabusUrl(e.target.value)}
+            leftIcon={<LinkIcon className="w-4 h-4" />}
+          />
+
+          {/* Color Palette Selector */}
+          <div>
+            <label className="block text-xs font-bold text-[#5A6275] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+              <Palette className="w-3.5 h-3.5 text-[#D98880]" />
+              <span>Color para Identificar el Curso</span>
+            </label>
+            <div className="flex items-center gap-2 flex-wrap">
+              {PASTEL_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  className={`w-7 h-7 rounded-full border-2 transition-all cursor-pointer ${
+                    color === c ? 'border-[#2B2D42] scale-110 shadow-xs' : 'border-white hover:scale-105'
+                  }`}
+                  style={{ backgroundColor: c }}
+                  title={`Color ${c}`}
+                  aria-label={`Seleccionar color ${c}`}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="pt-3 border-t border-[#EBE5DF] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2">
+            {courseToEdit ? (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setIsConfirmDeleteOpen(true)}
+                icon={<Trash2 className="w-4 h-4" />}
+                className="w-full sm:w-auto"
+              >
+                Eliminar Curso
+              </Button>
+            ) : (
+              <div />
+            )}
+
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="ghost" onClick={onClose} className="w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <Button variant="primary" onClick={handleSaveCourse} isLoading={isSubmitting} className="w-full sm:w-auto">
+                {courseToEdit ? 'Guardar Cambios' : 'Guardar Curso'}
+              </Button>
+            </div>
           </div>
         </div>
+      </Modal>
 
-        {/* Actions */}
-        <div className="pt-3 border-t border-[#EBE5DF] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2">
-          {courseToEdit ? (
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={handleDeleteCourse}
-              icon={<Trash2 className="w-4 h-4" />}
-              className="w-full sm:w-auto"
-            >
-              Eliminar Curso
-            </Button>
-          ) : (
-            <div />
-          )}
-
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button variant="ghost" onClick={onClose} className="w-full sm:w-auto">
-              Cancelar
-            </Button>
-            <Button variant="primary" onClick={handleSaveCourse} isLoading={isSubmitting} className="w-full sm:w-auto">
-              {courseToEdit ? 'Guardar Cambios' : 'Guardar Curso'}
-            </Button>
+      {/* Confirmation Modal for Delete */}
+      {isConfirmDeleteOpen && (
+        <Modal
+          isOpen={isConfirmDeleteOpen}
+          onClose={() => setIsConfirmDeleteOpen(false)}
+          title={`¿Eliminar curso "${courseToEdit?.name}"?`}
+          maxWidth="md"
+        >
+          <div className="space-y-4">
+            <p className="text-xs sm:text-sm text-[#5A6275] leading-relaxed">
+              Esta acción eliminará el curso de tu lista. Los trabajos y tareas asociados no se borrarán.
+            </p>
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#EBE5DF]">
+              <Button variant="ghost" onClick={() => setIsConfirmDeleteOpen(false)}>
+                Cancelar
+              </Button>
+              <Button variant="danger" onClick={handleDeleteCourse}>
+                Sí, eliminar curso
+              </Button>
+            </div>
           </div>
-        </div>
-      </div>
-    </Modal>
+        </Modal>
+      )}
+    </>
   );
 };
