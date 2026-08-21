@@ -73,7 +73,61 @@ export async function testAIConnection(settings: AISettings): Promise<{ success:
   }
 }
 
-// 2. Offline Heuristic Instruction Analyzer (100% offline, zero tokens)
+// 2. Intelligent Instruction & Rubric Analyzer (LLM + Offline fallback)
+export async function analyzeInstructionsWithAI(
+  instructionsText: string,
+  explicitSettings?: AISettings
+): Promise<InstructionAnalysis> {
+  const effectiveSettings = await getEffectiveAISettings(explicitSettings);
+
+  if (effectiveSettings?.apiKey && effectiveSettings.provider !== 'offline_heuristics') {
+    try {
+      const prompt = `Eres un asistente experto en metodología de investigación y rúbricas universitarias (Psicología USMP / APA 7).
+Analiza las siguientes indicaciones dadas por el docente para un trabajo académico:
+
+Consigna del docente:
+"""
+${instructionsText}
+"""
+
+Extrae y estructura la información en formato JSON EXACTO con las siguientes claves:
+{
+  "explicitRequirements": ["Lista de requisitos formales explícitos y oficiales que el docente exige (e.g. extensión, estilo, fuentes)"],
+  "aiInferences": ["Sugerencias metodológicas, estructura recomendada y consideraciones de rigor académico"],
+  "deliverableFormat": "Documento académico (PDF/Word)",
+  "wordCountTarget": 1500,
+  "citationStyleExpected": "APA_7",
+  "maxSourceAgeYears": 5,
+  "detectedQuestionsForTeacher": ["1 o 2 preguntas clave para consultar al docente si hay ambigüedad"]
+}
+
+Devuelve ÚNICAMENTE el objeto JSON sin bloques de texto adicionales.`;
+
+      const res = await callLLM(prompt, effectiveSettings);
+      if (res) {
+        const jsonMatch = res.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return {
+            explicitRequirements: parsed.explicitRequirements || [],
+            aiInferences: parsed.aiInferences || [],
+            deliverableFormat: parsed.deliverableFormat || 'Documento académico (PDF/Word)',
+            wordCountTarget: typeof parsed.wordCountTarget === 'number' ? parsed.wordCountTarget : undefined,
+            citationStyleExpected: parsed.citationStyleExpected || 'APA_7',
+            maxSourceAgeYears: typeof parsed.maxSourceAgeYears === 'number' ? parsed.maxSourceAgeYears : 5,
+            detectedQuestionsForTeacher: parsed.detectedQuestionsForTeacher || []
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Error analyzing instructions with LLM, falling back to offline:', err);
+    }
+  }
+
+  return analyzeInstructionsOffline(instructionsText);
+}
+
+// 2b. Offline Heuristic Instruction Analyzer (100% offline, zero tokens)
 export function analyzeInstructionsOffline(instructionsText: string): InstructionAnalysis {
   const lines = instructionsText.split('\n').map((l) => l.trim()).filter(Boolean);
   const explicitRequirements: string[] = [];
@@ -273,19 +327,25 @@ export async function checkParaphraseFidelity(
 
   if (effectiveSettings?.apiKey && effectiveSettings.provider !== 'offline_heuristics') {
     try {
-      const prompt = `Eres un auditor de integridad académica y epistemología. Evalúa la siguiente paráfrasis con respecto al texto original.
-Texto original: "${originalQuote}"
-Paráfrasis propuesta: "${paraphraseText}"
+      const prompt = `Eres un auditor académico experto en integridad epistemológica y normas APA 7 en Psicología.
+Evalúa con máximo rigor científico si la siguiente paráfrasis cumple con los estándares universitarios de fidelidad conceptual y prevención de plagio.
 
-Determina si:
-1. Conserva fielmente la idea y sentido del autor original sin tergiversar.
-2. Está formulada con vocabulario propio evitando el plagio de estructura o léxico.
+Texto original de la fuente académica:
+"${originalQuote}"
 
-Responde en formato JSON exacto:
+Paráfrasis propuesta por la estudiante:
+"${paraphraseText}"
+
+Criterios de evaluación:
+1. Fidelidad Semántica: ¿Conserva con exactitud la idea central y los hallazgos del autor sin distorsionar ni inventar conceptos?
+2. Prevención de Plagio Léxico & Estructural: ¿Está formulada con vocabulario técnico propio y estructura sintáctica original, sin copiar frases textuales consecutivas ni calcar la sintaxis original?
+
+Devuelve ÚNICAMENTE un objeto JSON válido con este formato exacto:
 {
-  "status": "CONFIRMED_FAITHFUL" o "NEEDS_ADJUSTMENT",
-  "feedback": "Breve explicación de 1 o 2 oraciones."
-}`;
+  "status": "CONFIRMED_FAITHFUL",
+  "feedback": "Explicación académica clara en español de 1 a 2 oraciones."
+}
+(Si detectas plagio potencial, solapamiento excesivo o distorsión del sentido, usa "status": "NEEDS_ADJUSTMENT" con sugerencias específicas de mejora).`;
 
       const res = await callLLM(prompt, effectiveSettings);
       if (res) {
@@ -343,7 +403,11 @@ async function callLLM(prompt: string, settings: AISettings): Promise<string | n
 
   if (provider === 'gemini') {
     const key = apiKey;
-    const model = modelName || 'gemini-1.5-flash';
+    let model = (modelName || 'gemini-1.5-flash').trim();
+    // Normalize aliases and common user variants gracefully to official Google Gemini endpoints
+    if (model.includes('3.5') || model.includes('flash-lite') || model.includes('flash_lite')) {
+      model = 'gemini-1.5-flash';
+    }
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
     const res = await fetch(url, {
       method: 'POST',

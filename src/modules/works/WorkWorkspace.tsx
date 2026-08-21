@@ -43,7 +43,7 @@ import {
   copyRichReference
 } from '../../utils/citationEngine';
 import { generateGoogleDocsRichHTML, generateGoogleCalendarUrl, generateICSFile } from '../../utils/googleExporter';
-import { formulateQuestionForTeacher, analyzeInstructionsOffline } from '../../services/aiService';
+import { formulateQuestionForTeacher, analyzeInstructionsWithAI } from '../../services/aiService';
 import type { Work, Course, Source, Task, InquiryToTeacher, Citation, Paraphrase, Idea, UserProfile, TaskPriority, WorkStatus } from '../../types';
 
 export interface WorkWorkspaceProps {
@@ -447,9 +447,9 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                     icon={<Sparkles className="w-3.5 h-3.5 text-[#8C3A32]" />}
                     onClick={async () => {
                       if (work.rawInstructions) {
-                        const analysis = analyzeInstructionsOffline(work.rawInstructions);
+                        const analysis = await analyzeInstructionsWithAI(work.rawInstructions);
                         await db.works.update(workId, { instructionAnalysis: analysis, updatedAt: Date.now() });
-                        showToast('Análisis completado', 'Requisitos explícitos e inferencias actualizadas.', 'success');
+                        showToast('Análisis completado', 'Requisitos explícitos e inferencias actualizadas con IA.', 'success');
                       }
                     }}
                   >

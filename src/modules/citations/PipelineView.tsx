@@ -73,7 +73,8 @@ export const PipelineView: React.FC = () => {
       showToast(
         result.status === 'CONFIRMED_FAITHFUL' ? '¡Bien redactado!' : 'Sugerencia de mejora',
         result.feedback,
-        result.status === 'CONFIRMED_FAITHFUL' ? 'success' : 'warning'
+        result.status === 'CONFIRMED_FAITHFUL' ? 'success' : 'warning',
+        10000
       );
     } catch {
       showToast('Error', 'No se pudo revisar la paráfrasis.', 'error');

@@ -8,10 +8,11 @@ export interface ToastMessage {
   title: string;
   description?: string;
   type: ToastType;
+  duration?: number;
 }
 
 interface ToastContextType {
-  showToast: (title: string, description?: string, type?: ToastType) => void;
+  showToast: (title: string, description?: string, type?: ToastType, durationMs?: number) => void;
 }
 
 const ToastContext = createContext<ToastContextType | null>(null);
@@ -19,13 +20,13 @@ const ToastContext = createContext<ToastContextType | null>(null);
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const showToast = useCallback((title: string, description?: string, type: ToastType = 'success') => {
+  const showToast = useCallback((title: string, description?: string, type: ToastType = 'success', durationMs: number = 4000) => {
     const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, title, description, type }]);
+    setToasts((prev) => [...prev, { id, title, description, type, duration: durationMs }]);
 
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+    }, durationMs);
   }, []);
 
   const removeToast = (id: string) => {
