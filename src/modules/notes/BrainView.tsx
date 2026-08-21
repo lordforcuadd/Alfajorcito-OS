@@ -43,6 +43,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
   const { showToast } = useToast();
   const [activeView, setActiveView] = useState<'notes' | 'graph'>('notes');
   const [paraFilter, setParaFilter] = useState<'ALL' | ParaCategory>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -83,60 +84,85 @@ export const BrainView: React.FC<BrainViewProps> = ({
   // Filtered Notes
   const filteredNotes = notes.filter((n) => {
     if (paraFilter !== 'ALL' && n.paraCategory !== paraFilter) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const matchTitle = n.title.toLowerCase().includes(q);
+      const matchContent = n.content.toLowerCase().includes(q);
+      const matchTags = (n.tags || []).some((t) => t.toLowerCase().includes(q));
+      if (!matchTitle && !matchContent && !matchTags) return false;
+    }
     return true;
   });
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-[#2B2D42]">
-            Segundo Cerebro & Ideas Conectadas
+    <div className="space-y-5 animate-fade-in">
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/40 shadow-xs">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#8C3A32] uppercase tracking-wider bg-[#FDF2F0] px-2.5 py-0.5 rounded-lg border border-[#E8A598]/50">
+            <Brain className="w-3.5 h-3.5 text-[#D98880]" />
+            <span>Gestión del Conocimiento</span>
+          </div>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-[#2B2D42] leading-tight">
+            Segundo Cerebro & Notas Conectadas
           </h2>
-          <p className="text-xs sm:text-sm text-[#5A6275] mt-0.5">
-            Tus notas de estudio, conceptos y resúmenes conectados entre sí con enlaces [[wiki]].
+          <p className="text-xs sm:text-sm text-[#5A6275]">
+            Tus notas de estudio, conceptos y resúmenes conectados con enlaces wiki [[concepto]].
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
           <Button
             variant="secondary"
-            size="sm"
-            onClick={() => setActiveView(activeView === 'notes' ? 'graph' : 'notes')}
-            icon={<Network className="w-4 h-4" />}
-            className="flex-1 sm:flex-none"
-          >
-            {activeView === 'notes' ? (
-              <span>Grafo<span className="hidden sm:inline"> de Conocimiento</span></span>
-            ) : (
-              <span><span className="hidden sm:inline">Lista de </span>Notas</span>
-            )}
-          </Button>
-          <Button
-            variant="lavender"
-            size="sm"
+            size="md"
             onClick={handleExportObsidian}
             isLoading={isExporting}
-            icon={<FolderDown className="w-4 h-4" />}
-            className="flex-1 sm:flex-none"
+            icon={<FolderDown className="w-4 h-4 text-[#8C3A32]" />}
+            className="w-full sm:w-auto font-bold"
             title="Descargar para Obsidian (.zip)"
           >
-            <span className="hidden sm:inline">Descargar para </span>Obsidian
+            Exportar Obsidian
           </Button>
+
           <Button
             variant="primary"
-            size="sm"
+            size="md"
             onClick={() => onOpenQuickCapture('note')}
             icon={<Plus className="w-4 h-4 stroke-[2.5]" />}
-            className="flex-1 sm:flex-none"
+            className="w-full sm:w-auto font-bold shadow-xs"
           >
-            <span className="hidden sm:inline">Nueva </span>Nota
+            Nueva Nota
           </Button>
         </div>
       </div>
 
-      {/* 1. KNOWLEDGE GRAPH VIEW (Interactive Graphify / Obsidian Style) */}
+      {/* Mode Switcher Segmented Tabs */}
+      <div className="grid grid-cols-2 p-1 bg-[#F5F1EB] rounded-2xl border border-[#EBE5DF] gap-1">
+        <button
+          onClick={() => setActiveView('notes')}
+          className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none ${
+            activeView === 'notes'
+              ? 'bg-white text-[#8C3A32] shadow-xs border border-[#E8A598]/40'
+              : 'text-[#5A6275] hover:text-[#2B2D42]'
+          }`}
+        >
+          <FileText className="w-4 h-4 text-[#D98880]" />
+          <span>Mis Notas ({notes.length})</span>
+        </button>
+        <button
+          onClick={() => setActiveView('graph')}
+          className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none ${
+            activeView === 'graph'
+              ? 'bg-white text-[#8C3A32] shadow-xs border border-[#E8A598]/40'
+              : 'text-[#5A6275] hover:text-[#2B2D42]'
+          }`}
+        >
+          <Network className="w-4 h-4 text-[#D98880]" />
+          <span>Grafo de Conocimiento</span>
+        </button>
+      </div>
+
+      {/* 1. KNOWLEDGE GRAPH VIEW */}
       {activeView === 'graph' && (
         <div className="space-y-3">
           <InteractiveGraph
@@ -153,27 +179,39 @@ export const BrainView: React.FC<BrainViewProps> = ({
       {/* 2. NOTES LIST VIEW */}
       {activeView === 'notes' && (
         <div className="space-y-4">
-          {/* Category Filter Pills with PC mouse wheel scroll */}
+          {/* Instant Search Bar */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-[#8D99AE] absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Buscar notas por título, etiqueta, contenido o enlace wiki..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3.5 py-2.5 bg-white rounded-xl border border-[#EBE5DF] text-xs sm:text-sm text-[#2B2D42] placeholder-[#8D99AE] focus:outline-none focus:ring-2 focus:ring-[#E8A598]"
+            />
+          </div>
+
+          {/* Category Filter Pills */}
           <div
             onWheel={(e) => {
               if (e.deltaY !== 0) {
                 e.currentTarget.scrollLeft += e.deltaY;
               }
             }}
-            className="flex items-center gap-1.5 tab-scroll-pc pb-1.5 flex-nowrap"
+            className="flex items-center gap-1.5 overflow-x-auto pb-1 tab-scroll-pc scroll-touch touch-pan-x flex-nowrap"
           >
             {[
-              { id: 'ALL', label: 'Todas las Notas' },
-              { id: 'ATOMIC', label: 'Ideas Rápidas' },
-              { id: 'PROJECT', label: 'Proyectos & Tesis' },
-              { id: 'AREA', label: 'Materias' },
-              { id: 'RESOURCE', label: 'Material de Estudio' },
-              { id: 'ARCHIVE', label: 'Archivadas' }
+              { id: 'ALL', label: `Todas (${notes.length})` },
+              { id: 'ATOMIC', label: `Ideas Rápidas (${notes.filter((n) => n.paraCategory === 'ATOMIC').length})` },
+              { id: 'PROJECT', label: `Proyectos & Tesis (${notes.filter((n) => n.paraCategory === 'PROJECT').length})` },
+              { id: 'AREA', label: `Materias (${notes.filter((n) => n.paraCategory === 'AREA').length})` },
+              { id: 'RESOURCE', label: `Recursos (${notes.filter((n) => n.paraCategory === 'RESOURCE').length})` },
+              { id: 'ARCHIVE', label: `Archivadas (${notes.filter((n) => n.paraCategory === 'ARCHIVE').length})` }
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setParaFilter(tab.id as ParaCategory | 'ALL')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer select-none shrink-0 ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer select-none shrink-0 ${
                   paraFilter === tab.id
                     ? 'bg-[#E8A598] text-[#2B2D42] shadow-2xs'
                     : 'bg-[#F5F1EB] text-[#5A6275] hover:bg-[#EBE5DF]'
@@ -186,25 +224,30 @@ export const BrainView: React.FC<BrainViewProps> = ({
 
           {/* Notes Grid */}
           {filteredNotes.length === 0 ? (
-            <Card variant="subtle" className="text-center py-12">
-              <p className="text-sm text-[#8D99AE]">No hay notas registradas en esta categoría.</p>
+            <Card variant="subtle" className="text-center py-12 px-4">
+              <FileText className="w-8 h-8 text-[#8D99AE] mx-auto mb-2 opacity-60" />
+              <p className="text-sm font-semibold text-[#5A6275]">No se encontraron notas con estos filtros.</p>
+              <p className="text-xs text-[#8D99AE] mt-0.5">Prueba a buscar con otro término o crea una nueva nota de estudio.</p>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {filteredNotes.map((note) => {
                 const course = courses.find((c) => c.id === note.courseId);
                 const work = works.find((w) => w.id === note.workId);
+
+                // Count wiki-links in content
+                const wikiLinkMatches = (note.content.match(/\[\[(.*?)\]\]/g) || []).length;
 
                 return (
                   <Card
                     key={note.id}
                     variant="interactive"
                     onClick={() => setEditingNote(note)}
-                    className="space-y-3 flex flex-col justify-between"
+                    className="p-4 rounded-2xl sm:rounded-3xl space-y-3 flex flex-col justify-between transition-all cursor-pointer"
                   >
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] font-bold text-[#8C3A32] uppercase tracking-wider bg-[#FDF2F0] px-2 py-0.5 rounded-md">
+                        <span className="text-[11px] font-bold text-[#8C3A32] bg-[#FDF2F0] px-2.5 py-0.5 rounded-lg border border-[#E8A598]/40 truncate max-w-[150px]">
                           {note.paraCategory === 'ATOMIC'
                             ? 'Idea Rápida'
                             : note.paraCategory === 'PROJECT'
@@ -216,30 +259,39 @@ export const BrainView: React.FC<BrainViewProps> = ({
                             : 'Archivo'}
                         </span>
                         {course && (
-                          <span className="text-[10px] font-medium text-[#5A6275] truncate max-w-[120px]">
-                            {course.name}
+                          <span className="text-[11px] font-semibold text-[#5A6275] bg-[#F5F1EB] px-2 py-0.5 rounded-lg border border-[#EBE5DF] truncate max-w-[140px]">
+                            {course.code || course.name}
                           </span>
                         )}
                       </div>
 
-                      <h3 className="font-extrabold text-sm text-[#2B2D42] leading-snug">
+                      <h3 className="font-extrabold text-sm sm:text-base text-[#2B2D42] leading-snug line-clamp-2">
                         {note.title}
                       </h3>
 
-                      <p className="text-xs text-[#5A6275] line-clamp-3 leading-relaxed font-mono">
+                      <p className="text-xs text-[#5A6275] line-clamp-3 leading-relaxed">
                         {note.content.replace(/#+\s/g, '').replace(/\[\[|\]\]/g, '')}
                       </p>
                     </div>
 
-                    <div className="pt-2 border-t border-[#EBE5DF] flex items-center justify-between text-xs text-[#8D99AE]">
-                      <div className="flex items-center gap-1 flex-wrap">
+                    <div className="pt-2.5 border-t border-[#EBE5DF] flex items-center justify-between gap-2 text-xs text-[#8D99AE]">
+                      <div className="flex items-center gap-1 flex-wrap min-w-0">
                         {note.tags.slice(0, 2).map((tag, i) => (
-                          <span key={i} className="text-[10px] bg-[#F5F1EB] px-1.5 py-0.5 rounded text-[#5A6275]">
-                            {tag}
+                          <span key={i} className="text-[10px] bg-[#F5F1EB] px-1.5 py-0.5 rounded-md text-[#5A6275] font-medium truncate max-w-[90px]">
+                            #{tag}
                           </span>
                         ))}
                       </div>
-                      <span className="text-[10px] font-mono text-[#8C3A32] font-semibold">[[enlace]]</span>
+
+                      {wikiLinkMatches > 0 ? (
+                        <span className="text-[11px] font-bold text-[#8C3A32] bg-[#FDF2F0] px-2 py-0.5 rounded-lg border border-[#E8A598]/40 shrink-0">
+                          {wikiLinkMatches} {wikiLinkMatches === 1 ? 'enlace' : 'enlaces'}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono text-[#8D99AE]">
+                          [[nota]]
+                        </span>
+                      )}
                     </div>
                   </Card>
                 );

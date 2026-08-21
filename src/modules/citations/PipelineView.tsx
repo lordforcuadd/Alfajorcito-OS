@@ -110,66 +110,66 @@ export const PipelineView: React.FC = () => {
     }
 
     return true;
-  });
-
-  return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-[#8C3A32] uppercase tracking-wider mb-1">
-            <BookMarked className="w-3.5 h-3.5" />
-            <span>Trazabilidad de Citas & Referencias</span>
+  });  return (
+    <div className="space-y-5 animate-fade-in">
+      {/* Header Banner */}
+      <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/40 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#8C3A32] uppercase tracking-wider bg-[#FDF2F0] px-2.5 py-0.5 rounded-lg border border-[#E8A598]/50">
+              <BookMarked className="w-3.5 h-3.5 text-[#D98880]" />
+              <span>Citas & Bibliografía</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-[#2B2D42] leading-tight">
+              Citas en el Texto & Referencias
+            </h2>
+            <p className="text-xs sm:text-sm text-[#5A6275]">
+              Genera citas parentéticas, narrativas y referencias canónicas oficiales sin plagio.
+            </p>
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-[#2B2D42]">
-            Citas en el Texto & Referencias Bibliográficas
-          </h2>
-          <p className="text-xs sm:text-sm text-[#5A6275] mt-0.5">
-            Convierte tus fuentes y citas textuales en citas parentéticas, narrativas y referencias canónicas sin plagio.
-          </p>
-        </div>
 
-        {/* Global Citation Style Selector */}
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowGuide(!showGuide)}
-            icon={<Info className="w-4 h-4 text-[#8C3A32]" />}
-            className="text-xs font-bold"
-          >
-            {showGuide ? 'Ocultar Guía' : '¿Cómo citar?'}
-          </Button>
+          {/* Global Citation Style Selector */}
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowGuide(!showGuide)}
+              icon={<Info className="w-4 h-4 text-[#8C3A32]" />}
+              className="text-xs font-bold shrink-0"
+            >
+              {showGuide ? 'Ocultar Guía' : '¿Cómo citar?'}
+            </Button>
 
-          <div className="grid grid-cols-3 sm:flex items-center gap-1.5 bg-white border border-[#EBE5DF] p-1 rounded-2xl shadow-xs">
-            {(['APA_7', 'MLA_9', 'IEEE', 'CHICAGO_AUTHOR_DATE', 'VANCOUVER'] as const).map((style) => (
-              <button
-                key={style}
-                onClick={() => setSelectedStyle(style)}
-                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer select-none text-center whitespace-nowrap ${
-                  selectedStyle === style
-                    ? 'bg-[#E8A598] text-[#2B2D42] shadow-2xs'
-                    : 'text-[#5A6275] hover:bg-[#F5F1EB]'
-                }`}
-              >
-                {style === 'APA_7'
-                  ? 'APA 7'
-                  : style === 'MLA_9'
-                  ? 'MLA 9'
-                  : style === 'IEEE'
-                  ? 'IEEE'
-                  : style === 'CHICAGO_AUTHOR_DATE'
-                  ? 'Chicago'
-                  : 'Vancouver'}
-              </button>
-            ))}
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar scroll-touch bg-white border border-[#EBE5DF] p-1 rounded-2xl shadow-xs">
+              {(['APA_7', 'MLA_9', 'IEEE', 'CHICAGO_AUTHOR_DATE', 'VANCOUVER'] as const).map((style) => (
+                <button
+                  key={style}
+                  onClick={() => setSelectedStyle(style)}
+                  className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer select-none text-center whitespace-nowrap ${
+                    selectedStyle === style
+                      ? 'bg-[#E8A598] text-[#2B2D42] shadow-2xs'
+                      : 'text-[#5A6275] hover:bg-[#F5F1EB]'
+                  }`}
+                >
+                  {style === 'APA_7'
+                    ? 'APA 7'
+                    : style === 'MLA_9'
+                    ? 'MLA 9'
+                    : style === 'IEEE'
+                    ? 'IEEE'
+                    : style === 'CHICAGO_AUTHOR_DATE'
+                    ? 'Chicago'
+                    : 'Vancouver'}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Educational Guide Card (Visual distinction for students) */}
       {showGuide && (
-        <Card variant="elevated" className="bg-gradient-to-br from-[#FDF2F0] via-white to-[#FFF8E1] border border-[#E8A598]/60 space-y-3 animate-fade-in">
+        <Card variant="elevated" className="bg-gradient-to-br from-[#FDF2F0] via-white to-[#FFF8E1] border border-[#E8A598]/60 space-y-3 animate-fade-in p-4 sm:p-5">
           <div className="flex items-center justify-between">
             <h4 className="font-extrabold text-sm text-[#8C3A32] flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-[#D98880]" />
@@ -185,10 +185,10 @@ export const PipelineView: React.FC = () => {
             <div className="p-3 rounded-2xl bg-white border border-[#EBE5DF] space-y-1.5 shadow-2xs">
               <div className="flex items-center gap-1.5 font-bold text-[#2B2D42]">
                 <span className="w-2 h-2 rounded-full bg-[#8C3A32]" />
-                <span>1. Cita Parentética (Al final)</span>
+                <span>1. Cita Parentética</span>
               </div>
               <p className="text-[#5A6275] leading-relaxed">
-                Se coloca al final de la oración cuando expones la idea primero y mencionas al autor y año entre paréntesis.
+                Al final de la oración con autor y año entre paréntesis.
               </p>
               <div className="p-2 rounded-xl bg-[#FAF8F5] border border-[#EBE5DF] font-mono text-[11px] text-[#8C3A32]">
                 (Gross, 2015, p. 14)
@@ -199,10 +199,10 @@ export const PipelineView: React.FC = () => {
             <div className="p-3 rounded-2xl bg-white border border-[#EBE5DF] space-y-1.5 shadow-2xs">
               <div className="flex items-center gap-1.5 font-bold text-[#2B2D42]">
                 <span className="w-2 h-2 rounded-full bg-[#80CBC4]" />
-                <span>2. Cita Narrativa (En el texto)</span>
+                <span>2. Cita Narrativa</span>
               </div>
               <p className="text-[#5A6275] leading-relaxed">
-                El apellido del autor forma parte natural de la redacción. El año va entre paréntesis inmediatamente después.
+                El autor forma parte del texto con el año entre paréntesis.
               </p>
               <div className="p-2 rounded-xl bg-[#FAF8F5] border border-[#EBE5DF] font-mono text-[11px] text-[#2B2D42]">
                 Gross (2015) plantea que...
@@ -213,10 +213,10 @@ export const PipelineView: React.FC = () => {
             <div className="p-3 rounded-2xl bg-white border border-[#EBE5DF] space-y-1.5 shadow-2xs">
               <div className="flex items-center gap-1.5 font-bold text-[#2B2D42]">
                 <span className="w-2 h-2 rounded-full bg-[#B39DDB]" />
-                <span>3. Referencia Final (Sangría Francesa)</span>
+                <span>3. Referencia Bibliográfica</span>
               </div>
               <p className="text-[#5A6275] leading-relaxed">
-                Va en la lista final con sangría francesa (la primera línea normal y las siguientes con sangría de 1.27 cm / 0.5 in).
+                Formato completo con sangría francesa al final de la tesis o trabajo.
               </p>
               <div className="p-2 rounded-xl bg-[#FAF8F5] border border-[#EBE5DF] font-serif text-[11px] text-[#2B2D42] italic">
                 Gross, J. (2015). Emotion regulation...
@@ -226,69 +226,25 @@ export const PipelineView: React.FC = () => {
         </Card>
       )}
 
-      {/* Visual Pipeline Stepper */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 p-3.5 sm:p-4 rounded-2xl bg-white border border-[#EBE5DF] text-xs font-bold shadow-xs">
-        <div className="flex items-center gap-2 text-[#2B2D42] min-w-0">
-          <div className="w-6 h-6 rounded-lg bg-[#E3F2FD] text-[#1976D2] flex items-center justify-center shrink-0">
-            <BookOpen className="w-3.5 h-3.5" />
-          </div>
-          <div className="truncate">
-            <span className="block text-[10px] text-[#8D99AE]">Paso 1</span>
-            <span className="truncate">Libro / Paper</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 text-[#2B2D42] min-w-0">
-          <div className="w-6 h-6 rounded-lg bg-[#FFF8E1] text-[#FFA000] flex items-center justify-center shrink-0">
-            <Quote className="w-3.5 h-3.5" />
-          </div>
-          <div className="truncate">
-            <span className="block text-[10px] text-[#8D99AE]">Paso 2</span>
-            <span className="truncate">Texto del Autor</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 text-[#2B2D42] min-w-0">
-          <div className="w-6 h-6 rounded-lg bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center shrink-0">
-            <FileText className="w-3.5 h-3.5" />
-          </div>
-          <div className="truncate">
-            <span className="block text-[10px] text-[#8D99AE]">Paso 3</span>
-            <span className="truncate">Tus Palabras</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 text-[#2B2D42] min-w-0">
-          <div className="w-6 h-6 rounded-lg bg-[#FDF2F0] text-[#8C3A32] flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-3.5 h-3.5" />
-          </div>
-          <div className="truncate">
-            <span className="block text-[10px] text-[#8D99AE]">Paso 4</span>
-            <span className="truncate">Cita & Referencia</span>
-          </div>
-        </div>
-      </div>
-
       {/* Search & Work Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="relative flex-1 min-w-0">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <div className="sm:col-span-2 relative min-w-0">
           <Search className="w-4 h-4 text-[#8D99AE] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Buscar citas por autor, título, palabras clave o paráfrasis..."
+            placeholder="Buscar por autor, cita textual, tema o paráfrasis..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-white border border-[#EBE5DF] text-xs text-[#2B2D42] placeholder-[#8D99AE] focus:outline-none focus:border-[#E8A598] shadow-xs"
+            className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-white border border-[#EBE5DF] text-xs sm:text-sm text-[#2B2D42] placeholder-[#8D99AE] focus:outline-none focus:ring-2 focus:ring-[#E8A598] shadow-xs"
           />
         </div>
 
         {works.length > 0 && (
-          <div className="flex items-center gap-2 shrink-0">
-            <Filter className="w-3.5 h-3.5 text-[#5A6275]" />
+          <div className="relative">
             <select
               value={workFilter}
               onChange={(e) => setWorkFilter(e.target.value)}
-              className="bg-white border border-[#EBE5DF] rounded-xl px-3 py-2 text-xs font-bold text-[#2B2D42] focus:outline-none focus:border-[#E8A598]"
+              className="w-full bg-white border border-[#EBE5DF] rounded-xl px-3 py-2.5 text-xs sm:text-sm font-bold text-[#2B2D42] focus:outline-none focus:ring-2 focus:ring-[#E8A598] shadow-xs cursor-pointer"
             >
               <option value="ALL">Todos los Trabajos ({paraphrases.length})</option>
               {works.map((w) => (
@@ -304,11 +260,11 @@ export const PipelineView: React.FC = () => {
       {/* Traceability Records List */}
       <div className="space-y-4">
         {filteredParaphrases.length === 0 ? (
-          <Card variant="subtle" className="text-center py-12 space-y-2">
+          <Card variant="subtle" className="text-center py-12 px-4 space-y-2">
             <BookMarked className="w-8 h-8 text-[#D98880] mx-auto opacity-70" />
             <h4 className="font-bold text-sm text-[#2B2D42]">No hay citas registradas</h4>
             <p className="text-xs text-[#5A6275] max-w-md mx-auto">
-              Ve a la sección <strong>"Fuentes & Papers"</strong> o usa <strong>Ctrl + J</strong> para registrar un artículo científico, extraer citas textuales y generar paráfrasis.
+              Ve a la sección <strong>"Fuentes & Papers"</strong> para registrar un artículo científico, extraer citas textuales y generar paráfrasis automáticas.
             </p>
           </Card>
         ) : (
@@ -332,9 +288,9 @@ export const PipelineView: React.FC = () => {
             const keyRef = `ref-${para.id}`;
 
             return (
-              <Card key={para.id} variant="elevated" className="space-y-4">
+              <Card key={para.id} variant="elevated" className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl space-y-4 shadow-xs">
                 {/* Header: Source and Work link */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-[#EBE5DF]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#EBE5DF]">
                   <div className="flex items-center gap-2 flex-wrap min-w-0 flex-1">
                     <span className="text-xs sm:text-sm font-extrabold text-[#2B2D42] break-words [overflow-wrap:anywhere]">
                       {source.title}
@@ -358,8 +314,8 @@ export const PipelineView: React.FC = () => {
                   {/* Original Author Text */}
                   <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EBE5DF] space-y-1.5">
                     <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#8D99AE] uppercase tracking-wider">
-                      <Quote className="w-3 h-3 text-[#FFA000]" />
-                      <span>Lo que dice el Autor (Texto Original):</span>
+                      <Quote className="w-3.5 h-3.5 text-[#FFA000]" />
+                      <span>Cita Textual del Autor:</span>
                     </div>
                     <p className="text-[#2B2D42] italic font-serif leading-relaxed break-words [overflow-wrap:anywhere]">
                       "{idea.rawQuote}"
@@ -370,8 +326,8 @@ export const PipelineView: React.FC = () => {
                   <div className="p-3.5 rounded-2xl bg-[#FDF2F0] border border-[#E8A598]/50 space-y-1.5">
                     <div className="flex items-center justify-between gap-1 flex-wrap">
                       <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#8C3A32] uppercase tracking-wider">
-                        <FileText className="w-3 h-3 text-[#D98880]" />
-                        <span>Explicado con tus Palabras (Paráfrasis):</span>
+                        <FileText className="w-3.5 h-3.5 text-[#D98880]" />
+                        <span>Tu Paráfrasis:</span>
                       </div>
                       <Badge
                         variant={para.fidelityReviewStatus === 'CONFIRMED_FAITHFUL' ? 'verified' : 'amber'}
@@ -386,121 +342,101 @@ export const PipelineView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Generated Citations Box */}
-                <div className="p-4 rounded-2xl bg-white border border-[#EBE5DF] space-y-3 shadow-2xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-[#5A6275] uppercase tracking-wider flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-[#D98880]" />
-                      <span>Citas Generadas ({selectedStyle.replace('_', ' ')})</span>
-                    </span>
-                    <span className="text-[10px] text-[#8D99AE]">Haz clic en copiar para usar en tu texto</span>
-                  </div>
-
-                  {/* In-Text Citations Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {/* 1. Parenthetical */}
-                    <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#EBE5DF] flex items-center justify-between gap-2 transition-all hover:border-[#E8A598]/80">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] font-bold text-[#8C3A32] uppercase">
-                            Cita Parentética
-                          </span>
-                          <span className="text-[10px] text-[#8D99AE]">(Al final de la idea)</span>
-                        </div>
-                        <code className="text-xs font-mono font-bold text-[#2B2D42] block mt-0.5 break-words [overflow-wrap:anywhere]">
-                          {parentheticalCite}
-                        </code>
-                      </div>
-                      <button
-                        onClick={() => handleCopyCitation(parentheticalCite, 'Cita parentética', keyParenthetical)}
-                        className="p-2 rounded-xl text-[#5A6275] hover:text-[#8C3A32] hover:bg-white transition-all cursor-pointer shrink-0 shadow-2xs border border-[#EBE5DF]"
-                        title="Copiar cita parentética"
-                        aria-label="Copiar cita parentética"
-                      >
-                        {copiedKey === keyParenthetical ? (
-                          <Check className="w-4 h-4 text-emerald-600" />
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-
-                    {/* 2. Narrative */}
-                    <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#EBE5DF] flex items-center justify-between gap-2 transition-all hover:border-[#E8A598]/80">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] font-bold text-[#8C3A32] uppercase">
-                            Cita Narrativa
-                          </span>
-                          <span className="text-[10px] text-[#8D99AE]">(En la oración)</span>
-                        </div>
-                        <code className="text-xs font-mono font-bold text-[#2B2D42] block mt-0.5 break-words [overflow-wrap:anywhere]">
-                          {narrativeCite}
-                        </code>
-                      </div>
-                      <button
-                        onClick={() => handleCopyCitation(narrativeCite, 'Cita narrativa', keyNarrative)}
-                        className="p-2 rounded-xl text-[#5A6275] hover:text-[#8C3A32] hover:bg-white transition-all cursor-pointer shrink-0 shadow-2xs border border-[#EBE5DF]"
-                        title="Copiar cita narrativa"
-                        aria-label="Copiar cita narrativa"
-                      >
-                        {copiedKey === keyNarrative ? (
-                          <Check className="w-4 h-4 text-emerald-600" />
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 3. Canonical Reference (Styled with French Indentation) */}
-                  <div className="p-3.5 rounded-xl bg-gradient-to-r from-[#FDF2F0] to-white border border-[#E8A598]/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                {/* In-Text Citations Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* 1. Parenthetical */}
+                  <div className="p-3 rounded-xl bg-white border border-[#EBE5DF] flex items-center justify-between gap-2 transition-all hover:border-[#E8A598]/80 shadow-2xs">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-bold text-[#8C3A32] uppercase">
-                          Referencia Bibliográfica Final
-                        </span>
-                        <span className="text-[10px] text-[#8D99AE]">(Lista de referencias con Sangría Francesa)</span>
-                      </div>
-                      <p
-                        className="text-xs text-[#2B2D42] font-serif leading-relaxed mt-1 break-words [overflow-wrap:anywhere]"
-                        style={{ paddingLeft: '1.5rem', textIndent: '-1.5rem' }}
-                      >
-                        {fullRef}
-                      </p>
+                      <span className="text-[10px] font-bold text-[#8C3A32] uppercase block">
+                        Cita Parentética
+                      </span>
+                      <code className="text-xs font-mono font-bold text-[#2B2D42] block mt-0.5 break-words [overflow-wrap:anywhere]">
+                        {parentheticalCite}
+                      </code>
                     </div>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        const fullRefHtml = `<p style="padding-left:1.5rem;text-indent:-1.5rem;">${formatFullReferenceHTML(source, selectedStyle)}</p>`;
-                        handleCopyCitation(fullRef, 'Referencia bibliográfica', keyRef, fullRefHtml);
-                      }}
-                      icon={
-                        copiedKey === keyRef ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5" />
-                        )
-                      }
-                      className="shrink-0 self-start sm:self-center font-bold"
+                    <button
+                      onClick={() => handleCopyCitation(parentheticalCite, 'Cita parentética', keyParenthetical)}
+                      className="p-2 rounded-xl text-[#5A6275] hover:text-[#8C3A32] hover:bg-[#FAF8F5] transition-all cursor-pointer shrink-0 border border-[#EBE5DF]"
+                      title="Copiar cita parentética"
+                      aria-label="Copiar cita parentética"
                     >
-                      {copiedKey === keyRef ? '¡Copiado!' : 'Copiar Referencia'}
-                    </Button>
+                      {copiedKey === keyParenthetical ? (
+                        <Check className="w-4 h-4 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* 2. Narrative */}
+                  <div className="p-3 rounded-xl bg-white border border-[#EBE5DF] flex items-center justify-between gap-2 transition-all hover:border-[#E8A598]/80 shadow-2xs">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold text-[#8C3A32] uppercase block">
+                        Cita Narrativa
+                      </span>
+                      <code className="text-xs font-mono font-bold text-[#2B2D42] block mt-0.5 break-words [overflow-wrap:anywhere]">
+                        {narrativeCite}
+                      </code>
+                    </div>
+                    <button
+                      onClick={() => handleCopyCitation(narrativeCite, 'Cita narrativa', keyNarrative)}
+                      className="p-2 rounded-xl text-[#5A6275] hover:text-[#8C3A32] hover:bg-[#FAF8F5] transition-all cursor-pointer shrink-0 border border-[#EBE5DF]"
+                      title="Copiar cita narrativa"
+                      aria-label="Copiar cita narrativa"
+                    >
+                      {copiedKey === keyNarrative ? (
+                        <Check className="w-4 h-4 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </button>
                   </div>
                 </div>
 
-                {/* Audit & Fidelity Check Action */}
-                <div className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-1">
+                {/* 3. Canonical Reference */}
+                <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E8A598]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-bold text-[#8C3A32] uppercase block">
+                      Referencia Bibliográfica ({selectedStyle.replace('_', ' ')})
+                    </span>
+                    <p
+                      className="text-xs text-[#2B2D42] font-serif leading-relaxed mt-1 break-words [overflow-wrap:anywhere]"
+                      style={{ paddingLeft: '1.25rem', textIndent: '-1.25rem' }}
+                    >
+                      {fullRef}
+                    </p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      const fullRefHtml = `<p style="padding-left:1.5rem;text-indent:-1.5rem;">${formatFullReferenceHTML(source, selectedStyle)}</p>`;
+                      handleCopyCitation(fullRef, 'Referencia bibliográfica', keyRef, fullRefHtml);
+                    }}
+                    icon={
+                      copiedKey === keyRef ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )
+                    }
+                    className="shrink-0 self-start sm:self-center font-bold"
+                  >
+                    {copiedKey === keyRef ? '¡Copiado!' : 'Copiar Referencia'}
+                  </Button>
+                </div>
+
+                {/* Audit Action */}
+                <div className="flex justify-end pt-1">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleAuditFidelity(para)}
                     isLoading={auditingParaId === para.id}
                     icon={<Sparkles className="w-3.5 h-3.5 text-[#D98880]" />}
-                    className="w-full sm:w-auto text-xs font-semibold text-[#8C3A32]"
+                    className="text-xs font-semibold text-[#8C3A32]"
                   >
-                    Verificar Fidelidad de Paráfrasis
+                    Verificar Fidelidad de Paráfrasis con IA
                   </Button>
                 </div>
               </Card>
