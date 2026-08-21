@@ -290,41 +290,6 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
           {/* 1. OVERVIEW TAB */}
           {activeTab === 'overview' && (
             <div className="space-y-5">
-              {/* Academic Stage Progression Bar */}
-              <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-[#EBE5DF] shadow-xs space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#8C3A32] uppercase tracking-wider">
-                    Etapa del Trabajo Académico
-                  </span>
-                  <span className="text-xs text-[#5A6275] font-semibold">
-                    Haz clic en una etapa para actualizar
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 tab-scroll-pc scroll-touch touch-pan-x flex-nowrap">
-                  {[
-                    { id: 'PLANIFICACION', label: '1. Planificación' },
-                    { id: 'INVESTIGACION', label: '2. Investigando' },
-                    { id: 'REDACTANDO', label: '3. Redactando' },
-                    { id: 'EN_REVISION', label: '4. En Revisión' },
-                    { id: 'CORRECCION', label: '5. En Corrección' },
-                    { id: 'ENTREGADO', label: '6. Entregado' },
-                    { id: 'ARCHIVADO', label: '7. Archivado' }
-                  ].map((stage) => (
-                    <button
-                      key={stage.id}
-                      onClick={() => handleStatusChange(stage.id as WorkStatus)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer select-none shrink-0 ${
-                        work.status === stage.id
-                          ? 'bg-[#8C3A32] text-white shadow-xs'
-                          : 'bg-[#FAF8F5] text-[#5A6275] border border-[#EBE5DF] hover:bg-[#F5F1EB]'
-                      }`}
-                    >
-                      {stage.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Progress & Target Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Card variant="default">
@@ -479,7 +444,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                   <Button
                     variant="secondary"
                     size="sm"
-                    icon={<Sparkles className="w-3.5 h-3.5 text-[#D98880]" />}
+                    icon={<Sparkles className="w-3.5 h-3.5 text-[#8C3A32]" />}
                     onClick={async () => {
                       if (work.rawInstructions) {
                         const analysis = analyzeInstructionsOffline(work.rawInstructions);
@@ -488,7 +453,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                       }
                     }}
                   >
-                    Reanalizar Consigna
+                    Reanalizar Consigna con IA
                   </Button>
                 </div>
                 <div className="p-3.5 rounded-xl bg-[#F5F1EB]/80 text-xs text-[#2B2D42] whitespace-pre-wrap leading-relaxed font-mono">
@@ -519,15 +484,15 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                 {/* AI Inferences (Clearly separated to prevent hallucination) */}
                 <Card variant="subtle" className="border-l-4 border-l-[#B39DDB]">
                   <div className="flex items-center gap-2 text-xs font-bold text-[#6A1B9A] uppercase tracking-wider mb-2">
-                    <Sparkles className="w-4 h-4 text-[#B39DDB]" />
-                    <span>Sugerencias e Inferencias de IA (No Oficial)</span>
+                    <Sparkles className="w-4 h-4 text-[#6A1B9A]" />
+                    <span>Sugerencias e Inferencias con IA (No Oficial)</span>
                   </div>
                   <ul className="space-y-2 text-xs text-[#5A6275]">
                     {(work.instructionAnalysis?.aiInferences || [
                       'Sugerencia: estructurar esquema con Introducción, Desarrollo argumentativo y Conclusiones.'
                     ]).map((inf, i) => (
                       <li key={i} className="flex items-start gap-2">
-                        <Sparkles className="w-3.5 h-3.5 text-[#B39DDB] shrink-0 mt-0.5" />
+                        <span className="text-[#6A1B9A] font-bold">•</span>
                         <span>{inf}</span>
                       </li>
                     ))}
@@ -696,41 +661,42 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                   onChange={(e) => setNewInquiryDoubt(e.target.value)}
                 />
                 <div className="flex justify-end gap-2">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={async () => {
-                      if (!newInquiryTopic.trim()) {
-                        showToast('Tema requerido', 'Por favor ingresa el tema de la consulta.', 'warning');
-                        return;
-                      }
-                      if (!newInquiryDoubt.trim()) {
-                        showToast('Duda requerida', 'Por favor describe tu duda para el profesor.', 'warning');
-                        return;
-                      }
-                      const formal = await formulateQuestionForTeacher(
-                        newInquiryDoubt.trim(),
-                        course?.name || 'Materia',
-                        course?.teacherName
-                      );
-                      await db.inquiries.add({
-                        id: `inq-${Math.random().toString(36).substring(2, 9)}`,
-                        workId,
-                        courseId: work.courseId,
-                        topic: newInquiryTopic.trim(),
-                        rawQuestion: newInquiryDoubt.trim(),
-                        formalQuestion: formal,
-                        status: 'DRAFT',
-                        createdAt: Date.now(),
-                        updatedAt: Date.now()
-                      });
-                      setNewInquiryTopic('');
-                      setNewInquiryDoubt('');
-                      showToast('Consulta guardada', 'Registrada para revisión.', 'success');
-                    }}
-                  >
-                    Guardar Duda
-                  </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      icon={<Sparkles className="w-3.5 h-3.5" />}
+                      onClick={async () => {
+                        if (!newInquiryTopic.trim()) {
+                          showToast('Tema requerido', 'Por favor ingresa el tema de la consulta.', 'warning');
+                          return;
+                        }
+                        if (!newInquiryDoubt.trim()) {
+                          showToast('Duda requerida', 'Por favor describe tu duda para el profesor.', 'warning');
+                          return;
+                        }
+                        const formal = await formulateQuestionForTeacher(
+                          newInquiryDoubt.trim(),
+                          course?.name || 'Materia',
+                          course?.teacherName
+                        );
+                        await db.inquiries.add({
+                          id: `inq-${Math.random().toString(36).substring(2, 9)}`,
+                          workId,
+                          courseId: work.courseId,
+                          topic: newInquiryTopic.trim(),
+                          rawQuestion: newInquiryDoubt.trim(),
+                          formalQuestion: formal,
+                          status: 'DRAFT',
+                          createdAt: Date.now(),
+                          updatedAt: Date.now()
+                        });
+                        setNewInquiryTopic('');
+                        setNewInquiryDoubt('');
+                        showToast('Consulta guardada', 'Registrada y formulada formalmente con IA.', 'success');
+                      }}
+                    >
+                      Guardar y Formular con IA
+                    </Button>
                 </div>
               </Card>
 

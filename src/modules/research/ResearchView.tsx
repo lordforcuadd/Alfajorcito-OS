@@ -365,12 +365,9 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                           {item.title}
                         </h4>
 
-                        <div className="flex items-center gap-1.5 text-xs text-[#5A6275]">
-                          <User className="w-3.5 h-3.5 text-[#8D99AE] shrink-0" />
-                          <span className="truncate">
-                            {item.authors.map((a: Author) => `${a.lastName || ''}, ${a.firstName || ''}`).join('; ')}
-                          </span>
-                        </div>
+                        <p className="text-xs text-[#5A6275] truncate font-medium">
+                          {item.authors.map((a: Author) => `${a.lastName || ''}, ${a.firstName || ''}`).join('; ')}
+                        </p>
 
                         {item.abstract && (
                           <p className="text-xs text-[#5A6275] line-clamp-2 italic pt-1 leading-relaxed bg-[#FAF8F5] p-2.5 rounded-xl border border-[#EBE5DF]/60">
@@ -498,16 +495,14 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                 return (
                   <Card
                     key={source.id}
-                    variant={isSelected ? 'elevated' : 'interactive'}
+                    variant="elevated"
                     onClick={() => {
                       setInspectedSource(source);
                       if (onSelectSource) onSelectSource(source.id);
                     }}
-                    className={`p-4 rounded-2xl sm:rounded-3xl space-y-3 flex flex-col justify-between transition-all cursor-pointer ${
-                      isSelected ? 'ring-2 ring-[#E8A598] bg-[#FDF2F0]/20' : ''
-                    }`}
+                    className="p-4 rounded-2xl sm:rounded-3xl space-y-3 flex flex-col justify-between transition-all cursor-pointer hover:shadow-md"
                   >
-                    <div className="space-y-2.5">
+                    <div className="space-y-2">
                       {/* Header row: Source Type + Verification */}
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[11px] font-bold text-[#8C3A32] bg-[#FDF2F0] px-2.5 py-0.5 rounded-lg border border-[#E8A598]/40 truncate max-w-[170px]">
@@ -522,19 +517,15 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                       </h4>
 
                       {/* Authors & Year */}
-                      <div className="flex items-center gap-1.5 text-xs text-[#5A6275]">
-                        <User className="w-3.5 h-3.5 text-[#8D99AE] shrink-0" />
-                        <span className="truncate font-medium">
-                          {authorNames} <span className="font-bold text-[#2B2D42]">({source.year || 's.f.'})</span>
-                        </span>
-                      </div>
+                      <p className="text-xs text-[#5A6275] truncate font-medium">
+                        {authorNames} <span className="font-bold text-[#2B2D42]">({source.year || 's.f.'})</span>
+                      </p>
 
                       {/* Publication / Journal */}
                       {source.publication && (
-                        <div className="flex items-center gap-1.5 text-xs text-[#8C3A32]">
-                          <BookOpen className="w-3.5 h-3.5 text-[#D98880] shrink-0" />
-                          <span className="truncate font-medium">{source.publication}</span>
-                        </div>
+                        <p className="text-xs text-[#8C3A32] truncate font-medium">
+                          {source.publication}
+                        </p>
                       )}
 
                       {/* Abstract Snippet */}

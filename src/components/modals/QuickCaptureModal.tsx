@@ -901,18 +901,18 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
               type="button"
               variant="secondary"
               size="sm"
-              icon={<Sparkles className="w-3.5 h-3.5 text-[#D98880]" />}
+              icon={<Sparkles className="w-3.5 h-3.5 text-[#8C3A32]" />}
               onClick={handleFormalizeInquiry}
               className="w-full sm:w-auto"
             >
-              Mejorar Redacción de la Pregunta
+              Redactar Formalmente con IA
             </Button>
           </div>
 
           {inquiryFormalPreview && (
             <div className="p-3.5 rounded-2xl bg-[#FDF2F0] border border-[#E8A598]/60 text-xs text-[#2B2D42] space-y-1.5 animate-fade-in">
               <span className="font-bold text-[#8C3A32] flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Redacción formal sugerida:
+                <Sparkles className="w-3.5 h-3.5" /> Redacción formal generada con IA:
               </span>
               <p className="whitespace-pre-line leading-relaxed">{inquiryFormalPreview}</p>
             </div>
