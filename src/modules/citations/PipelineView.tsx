@@ -14,12 +14,15 @@ import {
   BookMarked,
   Filter,
   Check,
-  Trash2
+  Trash2,
+  Edit2
 } from 'lucide-react';
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge, VerificationBadge } from '../../components/common/Badge';
+import { Modal } from '../../components/common/Modal';
+import { TextArea } from '../../components/common/Input';
 import { useToast } from '../../components/common/Toast';
 import { checkParaphraseFidelity } from '../../services/aiService';
 import {
@@ -40,6 +43,11 @@ export const PipelineView: React.FC = () => {
   const [workFilter, setWorkFilter] = useState<string>('ALL');
   const [showGuide, setShowGuide] = useState(false);
 
+  // Edit Paraphrase Modal State
+  const [editingPara, setEditingPara] = useState<Paraphrase | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   // Live queries
   const sources = useLiveQuery(() => db.sources.toArray()) || [];
   const ideas = useLiveQuery(() => db.ideas.toArray()) || [];
@@ -55,6 +63,54 @@ export const PipelineView: React.FC = () => {
     if (!confirm) return;
     await db.paraphrases.delete(id);
     showToast('Paráfrasis eliminada', 'La ficha ha sido retirada.', 'info');
+  };
+
+  const handleStartEdit = (para: Paraphrase) => {
+    setEditingPara(para);
+    setEditingText(para.finalParaphrase);
+  };
+
+  const handleSaveEdit = async (andAuditWithAi: boolean = false) => {
+    if (!editingPara) return;
+    if (!editingText.trim()) {
+      showToast('Texto requerido', 'La paráfrasis no puede estar vacía.', 'warning');
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      const idea = ideasMap.get(editingPara.ideaId);
+      let status = editingPara.fidelityReviewStatus;
+      let feedback = editingPara.fidelityWarningMessage;
+
+      if (andAuditWithAi && idea) {
+        const result = await checkParaphraseFidelity(idea.rawQuote, editingText.trim());
+        status = result.status;
+        feedback = result.feedback;
+        showToast(
+          result.status === 'CONFIRMED_FAITHFUL' ? '¡Bien redactado!' : 'Sugerencia de mejora',
+          result.feedback,
+          result.status === 'CONFIRMED_FAITHFUL' ? 'success' : 'warning',
+          10000
+        );
+      } else {
+        showToast('Paráfrasis guardada', 'Los cambios han sido guardados.', 'success');
+      }
+
+      await db.paraphrases.update(editingPara.id, {
+        finalParaphrase: editingText.trim(),
+        fidelityReviewStatus: andAuditWithAi ? status : 'PENDING_REVIEW',
+        fidelityWarningMessage: andAuditWithAi ? feedback : undefined,
+        updatedAt: Date.now()
+      });
+
+      setEditingPara(null);
+      setEditingText('');
+    } catch {
+      showToast('Error', 'No se pudo guardar la paráfrasis.', 'error');
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   // Handle Audit Fidelity (Anti-Plagiarism & Paraphrase Fidelity)
@@ -332,22 +388,39 @@ export const PipelineView: React.FC = () => {
                   </div>
 
                   {/* Student's Own Paraphrase */}
-                  <div className="p-3.5 rounded-2xl bg-[#FDF2F0] border border-[#E8A598]/50 space-y-1.5">
+                  <div className="p-3.5 rounded-2xl bg-[#FDF2F0] border border-[#E8A598]/50 space-y-2">
                     <div className="flex items-center justify-between gap-1 flex-wrap">
                       <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#8C3A32] uppercase tracking-wider">
                         <FileText className="w-3.5 h-3.5 text-[#D98880]" />
                         <span>Tu Paráfrasis:</span>
                       </div>
-                      <Badge
-                        variant={para.fidelityReviewStatus === 'CONFIRMED_FAITHFUL' ? 'verified' : 'amber'}
-                        size="sm"
-                      >
-                        {para.fidelityReviewStatus === 'CONFIRMED_FAITHFUL' ? 'Sin plagio / Fiel' : 'Por revisar'}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleStartEdit(para)}
+                          className="text-[11px] text-[#8C3A32] hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Edit2 className="w-3 h-3" /> Editar
+                        </button>
+                        <Badge
+                          variant={para.fidelityReviewStatus === 'CONFIRMED_FAITHFUL' ? 'verified' : 'amber'}
+                          size="sm"
+                        >
+                          {para.fidelityReviewStatus === 'CONFIRMED_FAITHFUL' ? 'Sin plagio / Fiel' : 'Por revisar'}
+                        </Badge>
+                      </div>
                     </div>
                     <p className="text-[#2B2D42] font-medium leading-relaxed break-words [overflow-wrap:anywhere]">
                       {para.finalParaphrase}
                     </p>
+
+                    {para.fidelityWarningMessage && (
+                      <div className="p-2.5 rounded-xl bg-white/90 border border-[#E8A598]/50 text-[11px] text-[#5A6275] leading-relaxed space-y-0.5">
+                        <span className="font-bold text-[#8C3A32] flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-[#8C3A32]" /> Observación de la IA:
+                        </span>
+                        <p>{para.fidelityWarningMessage}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -435,22 +508,33 @@ export const PipelineView: React.FC = () => {
                   </Button>
                 </div>
 
-                {/* Footer Actions: Delete & Audit */}
+                {/* Footer Actions: Edit, Delete & Audit */}
                 <div className="flex items-center justify-between pt-2 border-t border-[#EBE5DF]/60">
-                  <button
-                    onClick={() => handleDeleteParaphrase(para.id)}
-                    className="p-1.5 text-[#8D99AE] hover:text-[#C62828] hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                    title="Eliminar cita/paráfrasis"
-                    aria-label="Eliminar cita y paráfrasis"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleStartEdit(para)}
+                      className="px-2.5 py-1 text-xs font-bold text-[#5A6275] hover:text-[#8C3A32] hover:bg-[#FDF2F0] rounded-xl transition-colors cursor-pointer flex items-center gap-1 border border-[#EBE5DF]"
+                      title="Editar paráfrasis"
+                      aria-label="Editar paráfrasis"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      <span>Editar</span>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteParaphrase(para.id)}
+                      className="p-1.5 text-[#8D99AE] hover:text-[#C62828] hover:bg-rose-50 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-rose-200"
+                      title="Eliminar cita/paráfrasis"
+                      aria-label="Eliminar cita y paráfrasis"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleAuditFidelity(para)}
                     isLoading={auditingParaId === para.id}
-                    icon={<Sparkles className="w-3.5 h-3.5 text-[#D98880]" />}
+                    icon={<Sparkles className="w-3.5 h-3.5 text-[#8C3A32]" />}
                     className="text-xs font-semibold text-[#8C3A32]"
                   >
                     Verificar Fidelidad con IA
@@ -461,6 +545,73 @@ export const PipelineView: React.FC = () => {
           })
         )}
       </div>
+
+      {/* Edit Paraphrase Modal */}
+      {editingPara && (
+        <Modal
+          isOpen={!!editingPara}
+          onClose={() => setEditingPara(null)}
+          title="Editar Paráfrasis Académica"
+          subtitle="Reformula la idea con vocabulario propio y mantén la fidelidad científica al autor"
+          maxWidth="lg"
+        >
+          <div className="space-y-4">
+            {/* Original Quote Reference */}
+            {(() => {
+              const idea = ideasMap.get(editingPara.ideaId);
+              const src = sourcesMap.get(editingPara.sourceId);
+              return (
+                <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EBE5DF] space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-[#8D99AE] uppercase tracking-wider flex items-center gap-1">
+                      <Quote className="w-3.5 h-3.5 text-[#FFA000]" /> Cita Textual de la Fuente:
+                    </span>
+                    {src && <span className="font-bold text-[#2B2D42] truncate max-w-[220px]">{src.title}</span>}
+                  </div>
+                  <p className="text-xs text-[#2B2D42] italic font-serif leading-relaxed">
+                    "{idea?.rawQuote || 'Cita textual original'}"
+                  </p>
+                </div>
+              );
+            })()}
+
+            {/* Editing Textarea */}
+            <TextArea
+              label="Tu Paráfrasis Reformulada *"
+              placeholder="Escribe tu paráfrasis con vocabulario técnico y estructura propia..."
+              rows={5}
+              value={editingText}
+              onChange={(e) => setEditingText(e.target.value)}
+            />
+
+            {/* Actions */}
+            <div className="pt-3 border-t border-[#EBE5DF] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2">
+              <Button variant="ghost" onClick={() => setEditingPara(null)} className="w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Button
+                  variant="secondary"
+                  onClick={() => handleSaveEdit(false)}
+                  isLoading={isSavingEdit}
+                  className="w-full sm:w-auto font-bold"
+                >
+                  Guardar Cambios
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => handleSaveEdit(true)}
+                  isLoading={isSavingEdit}
+                  icon={<Sparkles className="w-4 h-4" />}
+                  className="w-full sm:w-auto font-bold"
+                >
+                  Guardar y Auditar con IA
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
