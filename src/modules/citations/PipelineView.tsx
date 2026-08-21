@@ -141,12 +141,12 @@ export const PipelineView: React.FC = () => {
             {showGuide ? 'Ocultar Guía' : '¿Cómo citar?'}
           </Button>
 
-          <div className="flex items-center gap-1.5 bg-white border border-[#EBE5DF] p-1 rounded-2xl shadow-xs">
+          <div className="grid grid-cols-3 sm:flex items-center gap-1.5 bg-white border border-[#EBE5DF] p-1 rounded-2xl shadow-xs">
             {(['APA_7', 'MLA_9', 'IEEE', 'CHICAGO_AUTHOR_DATE', 'VANCOUVER'] as const).map((style) => (
               <button
                 key={style}
                 onClick={() => setSelectedStyle(style)}
-                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer select-none whitespace-nowrap ${
+                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer select-none text-center whitespace-nowrap ${
                   selectedStyle === style
                     ? 'bg-[#E8A598] text-[#2B2D42] shadow-2xs'
                     : 'text-[#5A6275] hover:bg-[#F5F1EB]'

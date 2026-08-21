@@ -106,31 +106,41 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="space-y-2">
           {/* Institutional Chips */}
           <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-[#8C3A32]">
-            <span className="inline-flex items-center gap-1 bg-[#FDF2F0] text-[#8C3A32] px-2 py-0.5 rounded-lg border border-[#E8A598]/50">
-              <GraduationCap className="w-3 h-3 text-[#D98880] shrink-0" />
+            <span className="inline-flex items-center gap-1 bg-[#FDF2F0] text-[#8C3A32] px-2.5 py-1 rounded-lg border border-[#E8A598]/50">
+              <GraduationCap className="w-3.5 h-3.5 text-[#D98880] shrink-0" />
               <span>{userProfile.institution || 'USMP'}</span>
             </span>
-            <span className="inline-flex items-center bg-[#F5F1EB] text-[#5A6275] px-2 py-0.5 rounded-lg border border-[#EBE5DF] max-w-[260px] truncate">
+            <span className="inline-flex items-center bg-[#F5F1EB] text-[#5A6275] px-2.5 py-1 rounded-lg border border-[#EBE5DF]">
               {userProfile.faculty || 'FCCTP'}
             </span>
-            <span className="inline-flex items-center bg-[#F3E5F5] text-[#6A1B9A] px-2 py-0.5 rounded-lg border border-[#CE93D8]/60">
+            <span className="inline-flex items-center bg-[#F3E5F5] text-[#6A1B9A] px-2.5 py-1 rounded-lg border border-[#CE93D8]/60">
               {userProfile.currentCycle || '8vo Ciclo'}
             </span>
           </div>
 
           <div>
             <h2 className="text-xl sm:text-2xl font-extrabold text-[#2B2D42] leading-tight">
-              ¡Hola, {userProfile.name}!
+              ¡Hola, {userProfile.name}! 👋
             </h2>
-            <p className="text-xs sm:text-sm text-[#5A6275] mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="font-semibold text-[#2B2D42]">{courses.length}</span> asignaturas
-              <span className="text-[#CBD5E1] hidden xs:inline">•</span>
-              <span className="font-semibold text-[#2B2D42]">{works.length}</span> proyectos
-              <span className="text-[#CBD5E1] hidden xs:inline">•</span>
-              <span className="font-semibold text-[#2B2D42]">{sources.length}</span> fuentes
-              <span className="text-[#CBD5E1] hidden xs:inline">•</span>
-              <span className="font-semibold text-[#2B2D42]">{notes.length}</span> notas APA 7
+            <p className="text-xs text-[#8D99AE] font-medium mt-0.5">
+              Panel Académico & Tesis de Grado
             </p>
+          </div>
+
+          {/* Quick Metrics Bar in Structured Chips */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs text-[#5A6275]">
+            <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-[#EBE5DF] shadow-2xs">
+              <span className="font-bold text-[#2B2D42]">{courses.length}</span> {courses.length === 1 ? 'asignatura' : 'asignaturas'}
+            </span>
+            <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-[#EBE5DF] shadow-2xs">
+              <span className="font-bold text-[#2B2D42]">{works.length}</span> {works.length === 1 ? 'proyecto' : 'proyectos'}
+            </span>
+            <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-[#EBE5DF] shadow-2xs">
+              <span className="font-bold text-[#2B2D42]">{sources.length}</span> {sources.length === 1 ? 'fuente' : 'fuentes'}
+            </span>
+            <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-[#EBE5DF] shadow-2xs">
+              <span className="font-bold text-[#2B2D42]">{notes.length}</span> {notes.length === 1 ? 'nota' : 'notas'}
+            </span>
           </div>
         </div>
 

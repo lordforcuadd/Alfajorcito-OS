@@ -215,64 +215,81 @@ export const AppShell: React.FC<AppShellProps> = ({
       </div>
 
       {/* Mobile Bottom Navigation Bar (Fixed bottom for thumb accessibility) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-[#EBE5DF] px-1.5 py-1.5 flex items-center justify-around pb-safe">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-[#EBE5DF] px-1 py-1 flex items-center justify-between pb-safe shadow-lg">
         <button
           onClick={() => onTabChange('dashboard')}
-          className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all cursor-pointer ${
-            currentTab === 'dashboard' ? 'text-[#D98880]' : 'text-[#8D99AE]'
+          className={`flex-1 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
+            currentTab === 'dashboard' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
           }`}
+          title="Inicio"
         >
-          <LayoutDashboard className="w-5 h-5" />
-          <span className="text-[10px] font-semibold">Inicio</span>
+          <LayoutDashboard className="w-4.5 h-4.5" />
+          <span className="text-[9px] truncate">Inicio</span>
         </button>
 
         <button
           onClick={() => onTabChange('works')}
-          className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all cursor-pointer ${
-            currentTab === 'works' ? 'text-[#D98880]' : 'text-[#8D99AE]'
+          className={`flex-1 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
+            currentTab === 'works' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
           }`}
+          title="Tesis"
         >
-          <GraduationCap className="w-5 h-5" />
-          <span className="text-[10px] font-semibold">Tesis</span>
+          <GraduationCap className="w-4.5 h-4.5" />
+          <span className="text-[9px] truncate">Tesis</span>
         </button>
 
         <button
           onClick={() => onTabChange('curriculum')}
-          className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all cursor-pointer ${
-            currentTab === 'curriculum' ? 'text-[#D98880]' : 'text-[#8D99AE]'
+          className={`flex-1 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
+            currentTab === 'curriculum' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
           }`}
+          title="Malla"
         >
-          <Award className="w-5 h-5" />
-          <span className="text-[10px] font-semibold">Malla</span>
+          <Award className="w-4.5 h-4.5" />
+          <span className="text-[9px] truncate">Malla</span>
         </button>
 
         {/* Central Floating Quick Capture Button */}
         <button
           onClick={onOpenQuickCapture}
-          className="relative -top-3 w-11 h-11 rounded-2xl bg-[#E8A598] hover:bg-[#D98880] text-[#2B2D42] shadow-lg flex items-center justify-center border-2 border-white active:scale-95 transition-all cursor-pointer shrink-0"
+          className="relative -top-2.5 mx-0.5 w-10 h-10 rounded-2xl bg-[#E8A598] hover:bg-[#D98880] text-[#2B2D42] shadow-md flex items-center justify-center border-2 border-white active:scale-95 transition-all cursor-pointer shrink-0"
           aria-label="Captura rápida"
+          title="Captura Rápida"
         >
           <Plus className="w-5 h-5 stroke-[2.5]" />
         </button>
 
         <button
           onClick={() => onTabChange('research')}
-          className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all cursor-pointer ${
-            currentTab === 'research' ? 'text-[#D98880]' : 'text-[#8D99AE]'
+          className={`flex-1 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
+            currentTab === 'research' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
           }`}
+          title="Fuentes"
         >
-          <BookOpen className="w-5 h-5" />
-          <span className="text-[10px] font-semibold">Fuentes</span>
+          <BookOpen className="w-4.5 h-4.5" />
+          <span className="text-[9px] truncate">Fuentes</span>
+        </button>
+
+        <button
+          onClick={() => onTabChange('pipeline')}
+          className={`flex-1 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
+            currentTab === 'pipeline' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
+          }`}
+          title="Citas & Referencias"
+        >
+          <GitFork className="w-4.5 h-4.5" />
+          <span className="text-[9px] truncate">Citas</span>
         </button>
 
         <button
           onClick={() => onTabChange('brain')}
-          className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all cursor-pointer ${
-            currentTab === 'brain' ? 'text-[#D98880]' : 'text-[#8D99AE]'
+          className={`flex-1 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
+            currentTab === 'brain' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
           }`}
+          title="Cerebro"
         >
-          <Brain className="w-5 h-5" />
-          <span className="text-[10px] font-semibold">Cerebro</span>
+          <Brain className="w-4.5 h-4.5" />
+          <span className="text-[9px] truncate">Cerebro</span>
         </button>
       </div>
     </div>
