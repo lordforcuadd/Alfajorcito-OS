@@ -196,6 +196,21 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
     showToast('Evento creado', 'Archivo .ics descargado para importar a Google/Apple Calendar.', 'success');
   };
 
+  // Update Work Status (supports all 7 academic statuses)
+  const handleStatusChange = async (newStatus: WorkStatus) => {
+    await db.works.update(work.id, { status: newStatus, updatedAt: Date.now() });
+    if (newStatus === 'ENTREGADO') {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+      showToast('¡Felicitaciones!', 'Trabajo marcado como ENTREGADO.', 'success');
+    } else {
+      showToast('Estado actualizado', `El trabajo cambió a "${WORK_STATUS_META[newStatus]?.label || newStatus}".`, 'success');
+    }
+  };
+
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Top Header Bar */}
@@ -208,10 +223,23 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold text-[#8C3A32] uppercase">{course?.name || 'Materia'}</span>
               <CitationStyleBadge style={work.citationStyle} />
-              <WorkStatusBadge status={work.status} size="sm" />
+              <select
+                value={work.status}
+                onChange={(e) => handleStatusChange(e.target.value as WorkStatus)}
+                className="bg-[#FAF8F5] text-[#2B2D42] text-xs font-extrabold border border-[#EBE5DF] rounded-xl px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-[#E8A598] cursor-pointer shadow-2xs hover:border-[#E8A598]"
+                title="Cambiar estado del trabajo"
+              >
+                <option value="PLANIFICACION">Planificación</option>
+                <option value="INVESTIGACION">Investigando</option>
+                <option value="REDACTANDO">Redactando</option>
+                <option value="EN_REVISION">En Revisión</option>
+                <option value="CORRECCION">En Corrección</option>
+                <option value="ENTREGADO">Entregado</option>
+                <option value="ARCHIVADO">Archivado</option>
+              </select>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-[#2B2D42] mt-0.5">{work.title}</h2>
           </div>
@@ -262,6 +290,41 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
           {/* 1. OVERVIEW TAB */}
           {activeTab === 'overview' && (
             <div className="space-y-5">
+              {/* Academic Stage Progression Bar */}
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-[#EBE5DF] shadow-xs space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#8C3A32] uppercase tracking-wider">
+                    Etapa del Trabajo Académico
+                  </span>
+                  <span className="text-xs text-[#5A6275] font-semibold">
+                    Haz clic en una etapa para actualizar
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 tab-scroll-pc scroll-touch touch-pan-x flex-nowrap">
+                  {[
+                    { id: 'PLANIFICACION', label: '1. Planificación' },
+                    { id: 'INVESTIGACION', label: '2. Investigando' },
+                    { id: 'REDACTANDO', label: '3. Redactando' },
+                    { id: 'EN_REVISION', label: '4. En Revisión' },
+                    { id: 'CORRECCION', label: '5. En Corrección' },
+                    { id: 'ENTREGADO', label: '6. Entregado' },
+                    { id: 'ARCHIVADO', label: '7. Archivado' }
+                  ].map((stage) => (
+                    <button
+                      key={stage.id}
+                      onClick={() => handleStatusChange(stage.id as WorkStatus)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer select-none shrink-0 ${
+                        work.status === stage.id
+                          ? 'bg-[#8C3A32] text-white shadow-xs'
+                          : 'bg-[#FAF8F5] text-[#5A6275] border border-[#EBE5DF] hover:bg-[#F5F1EB]'
+                      }`}
+                    >
+                      {stage.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Progress & Target Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Card variant="default">

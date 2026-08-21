@@ -25,7 +25,7 @@ import { db } from '../../db';
 import { resolveDOI } from '../../services/academicApis';
 import { formulateQuestionForTeacher, analyzeInstructionsOffline } from '../../services/aiService';
 import { useToast } from '../common/Toast';
-import type { CitationStyle, WorkType, ParaCategory, TaskPriority, SourceType, Author } from '../../types';
+import type { CitationStyle, WorkType, WorkStatus, ParaCategory, TaskPriority, SourceType, Author } from '../../types';
 
 export type CaptureTab = 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task';
 
@@ -38,13 +38,13 @@ export interface QuickCaptureModalProps {
 }
 
 const PASTEL_COLORS = [
-  '#D98880', // Rose
-  '#B39DDB', // Lavender
-  '#80CBC4', // Mint
-  '#FFCC80', // Amber
-  '#90CAF9', // Blue
-  '#EF9A9A', // Coral
-  '#A5D6A7'  // Sage Green
+  '#FFD1DC', // Pastel Pink
+  '#C1E1C1', // Pastel Mint
+  '#B5EAD7', // Pastel Seafoam
+  '#C7CEEA', // Pastel Periwinkle
+  '#FFDAC1', // Pastel Peach
+  '#E2F0CB', // Pastel Lime
+  '#DED2F9'  // Pastel Lavender
 ];
 
 export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
@@ -74,6 +74,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
   const [workTitle, setWorkTitle] = useState('');
   const [workCourseId, setWorkCourseId] = useState(initialCourseId || '');
   const [workType, setWorkType] = useState<WorkType>('ENSAYO');
+  const [workStatus, setWorkStatus] = useState<WorkStatus>('PLANIFICACION');
   const [workDeadline, setWorkDeadline] = useState('');
   const [workCitationStyle, setWorkCitationStyle] = useState<CitationStyle>('APA_7');
   const [workInstructions, setWorkInstructions] = useState('');
@@ -242,7 +243,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         courseId: workCourseId,
         title: workTitle.trim(),
         type: workType,
-        status: 'PLANIFICACION',
+        status: workStatus,
         deadline: isNaN(deadlineMs) ? now + 86400000 * 7 : deadlineMs,
         citationStyle: workCitationStyle,
         rawInstructions: workInstructions.trim(),
@@ -580,7 +581,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
             onChange={(e) => setWorkTitle(e.target.value)}
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <Select
               label="Curso / Asignatura *"
               value={workCourseId}
@@ -604,6 +605,20 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
               <option value="MONOGRAFIA">Monografía</option>
               <option value="INFORME">Informe de Caso / Psicodiagnóstico</option>
               <option value="PROYECTO">Proyecto de Investigación / Artículo</option>
+            </Select>
+
+            <Select
+              label="Estado Inicial"
+              value={workStatus}
+              onChange={(e) => setWorkStatus(e.target.value as WorkStatus)}
+            >
+              <option value="PLANIFICACION">Planificación</option>
+              <option value="INVESTIGACION">Investigando</option>
+              <option value="REDACTANDO">Redactando</option>
+              <option value="EN_REVISION">En Revisión</option>
+              <option value="CORRECCION">En Corrección</option>
+              <option value="ENTREGADO">Entregado</option>
+              <option value="ARCHIVADO">Archivado</option>
             </Select>
 
             <Select

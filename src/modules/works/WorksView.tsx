@@ -17,6 +17,7 @@ import { db } from '../../db';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge, CitationStyleBadge, WorkStatusBadge, WORK_STATUS_META, type BadgeVariant } from '../../components/common/Badge';
+import { useToast } from '../../components/common/Toast';
 import { CourseModal } from '../../components/modals/CourseModal';
 import { WorkWorkspace } from './WorkWorkspace';
 import type { Work, Course, WorkStatus } from '../../types';
@@ -32,6 +33,7 @@ export const WorksView: React.FC<WorksViewProps> = ({
   onSelectWork,
   onOpenQuickCapture
 }) => {
+  const { showToast } = useToast();
   const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
@@ -43,6 +45,17 @@ export const WorksView: React.FC<WorksViewProps> = ({
   const tasks = useLiveQuery(() => db.tasks.toArray()) || [];
 
   const coursesMap = React.useMemo(() => new Map(courses.map((c) => [c.id, c])), [courses]);
+
+  const handleCardStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>, work: Work) => {
+    e.stopPropagation();
+    const newStatus = e.target.value as WorkStatus;
+    await db.works.update(work.id, { status: newStatus, updatedAt: Date.now() });
+    showToast(
+      'Estado actualizado',
+      `"${work.title}" cambió a ${WORK_STATUS_META[newStatus]?.label || newStatus}.`,
+      'success'
+    );
+  };
 
   // If a work is selected, show its full dedicated Workspace
   if (selectedWorkId) {
@@ -214,9 +227,22 @@ export const WorksView: React.FC<WorksViewProps> = ({
                     <span className="text-xs font-bold text-[#8C3A32] uppercase truncate max-w-[200px]">
                       {course?.name || 'Materia'}
                     </span>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                       <CitationStyleBadge style={work.citationStyle} />
-                      <WorkStatusBadge status={work.status} size="sm" />
+                      <select
+                        value={work.status}
+                        onChange={(e) => handleCardStatusChange(e, work)}
+                        className="text-[11px] font-bold bg-[#FAF8F5] border border-[#EBE5DF] rounded-lg px-2 py-0.5 text-[#2B2D42] focus:outline-none cursor-pointer shadow-2xs hover:border-[#E8A598]"
+                        title="Cambiar estado del trabajo"
+                      >
+                        <option value="PLANIFICACION">Planificación</option>
+                        <option value="INVESTIGACION">Investigando</option>
+                        <option value="REDACTANDO">Redactando</option>
+                        <option value="EN_REVISION">En Revisión</option>
+                        <option value="CORRECCION">En Corrección</option>
+                        <option value="ENTREGADO">Entregado</option>
+                        <option value="ARCHIVADO">Archivado</option>
+                      </select>
                     </div>
                   </div>
 
