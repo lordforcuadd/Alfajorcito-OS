@@ -53,10 +53,10 @@ export async function testAIConnection(settings: AISettings): Promise<{ success:
     const testPrompt = `Responde brevemente en una sola frase confirmando la conexión para Alfajorcito OS.`;
     const response = await callLLM(testPrompt, settings);
     if (response) {
-      const modelLabel = settings.modelName || (settings.provider === 'gemini' ? 'gemini-1.5-flash' : 'gpt-4o-mini');
+      const modelLabel = settings.provider === 'gemini' ? getActiveGeminiModelUsed() : (settings.modelName || 'gpt-4o-mini');
       return {
         success: true,
-        message: `¡Conexión exitosa con ${settings.provider.toUpperCase()} (${modelLabel})! Respuesta recibida: "${response.slice(0, 100).trim()}"`,
+        message: `¡Conexión exitosa con ${settings.provider.toUpperCase()} (${modelLabel})! Respuesta: "${response.slice(0, 100).trim()}"`,
         modelUsed: modelLabel
       };
     }
@@ -397,39 +397,140 @@ Devuelve ÚNICAMENTE un objeto JSON válido con este formato exacto:
   };
 }
 
+let activeGeminiModelUsed = 'gemini-1.5-flash';
+
+export function getActiveGeminiModelUsed(): string {
+  return activeGeminiModelUsed;
+}
+
+async function callGemini(
+  prompt: string,
+  apiKey: string,
+  modelName?: string,
+  temperature: number = 0.2
+): Promise<string | null> {
+  const key = apiKey.trim();
+  let requestedModel = (modelName || '').trim();
+
+  // Strip prefixes if user pasted full path
+  if (requestedModel.startsWith('models/')) {
+    requestedModel = requestedModel.replace(/^models\//, '');
+  }
+
+  // Pre-configured priority candidates
+  const candidates: string[] = [
+    requestedModel,
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-latest',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-exp',
+    'gemini-1.5-flash-8b',
+    'gemini-1.5-flash-002',
+    'gemini-1.5-flash-001',
+    'gemini-1.5-pro',
+    'gemini-pro'
+  ].filter((m): m is string => Boolean(m && m.length > 0));
+
+  const uniqueCandidates = Array.from(new Set(candidates));
+  const apiVersions: ('v1beta' | 'v1')[] = ['v1beta', 'v1'];
+  let lastError: Error | null = null;
+
+  for (const apiVer of apiVersions) {
+    for (const model of uniqueCandidates) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/${apiVer}/models/${model}:generateContent?key=${key}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature }
+          }),
+          signal: AbortSignal.timeout(10000)
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          activeGeminiModelUsed = `${model} (${apiVer})`;
+          return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+        }
+
+        const errText = await res.text();
+        let parsedErrMsg = '';
+        try {
+          const parsed = JSON.parse(errText);
+          parsedErrMsg = parsed.error?.message || '';
+        } catch {
+          parsedErrMsg = errText;
+        }
+
+        // If it's a 404 or unsupported model for this endpoint, keep trying other candidates
+        if (res.status === 404 || parsedErrMsg.includes('not found') || parsedErrMsg.includes('not supported')) {
+          lastError = new Error(parsedErrMsg || `Modelo ${model} no disponible en ${apiVer}`);
+          continue;
+        } else {
+          // If it's an API Key invalid error (400/403), throw immediately so user knows to check their key
+          throw new Error(parsedErrMsg || `HTTP ${res.status}: ${res.statusText}`);
+        }
+      } catch (e) {
+        if (e instanceof Error && (e.message.includes('API_KEY_INVALID') || e.message.includes('API key not valid'))) {
+          throw e;
+        }
+        lastError = e instanceof Error ? e : new Error(String(e));
+      }
+    }
+  }
+
+  // Multi-model discovery fallback: Query ListModels for this exact key
+  try {
+    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`;
+    const listRes = await fetch(listUrl, { signal: AbortSignal.timeout(6000) });
+    if (listRes.ok) {
+      const listData = await listRes.json();
+      const availableModels = (listData.models || [])
+        .filter((m: { supportedGenerationMethods?: string[] }) =>
+          (m.supportedGenerationMethods || []).includes('generateContent')
+        )
+        .map((m: { name?: string }) => (m.name || '').replace(/^models\//, ''))
+        .filter(Boolean);
+
+      for (const discoveredModel of availableModels) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${discoveredModel}:generateContent?key=${key}`;
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature }
+            }),
+            signal: AbortSignal.timeout(10000)
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            activeGeminiModelUsed = `${discoveredModel} (v1beta)`;
+            return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+          }
+        } catch {
+          // Continue to next discovered model
+        }
+      }
+    }
+  } catch {
+    // Gracefully handled
+  }
+
+  if (lastError) throw lastError;
+  return null;
+}
+
 // Low-level LLM caller supporting Gemini, OpenAI, Claude, OpenRouter, and Ollama
 async function callLLM(prompt: string, settings: AISettings): Promise<string | null> {
   const { provider, apiKey, modelName, ollamaEndpoint } = settings;
 
   if (provider === 'gemini') {
-    const key = apiKey;
-    let model = (modelName || 'gemini-1.5-flash').trim();
-    // Normalize aliases and common user variants gracefully to official Google Gemini endpoints
-    if (model.includes('3.5') || model.includes('flash-lite') || model.includes('flash_lite')) {
-      model = 'gemini-1.5-flash';
-    }
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: settings.temperature ?? 0.2 }
-      }),
-      signal: AbortSignal.timeout(10000)
-    });
-    if (!res.ok) {
-      const errText = await res.text();
-      try {
-        const parsed = JSON.parse(errText);
-        throw new Error(parsed.error?.message || `HTTP ${res.status}: ${res.statusText}`);
-      } catch (e) {
-        if (e instanceof Error && !e.message.startsWith('HTTP')) throw e;
-        throw new Error(`HTTP ${res.status}: ${errText.slice(0, 120)}`);
-      }
-    }
-    const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    return await callGemini(prompt, apiKey || '', modelName, settings.temperature ?? 0.2);
   }
 
   if (provider === 'openai' || provider === 'openrouter') {
