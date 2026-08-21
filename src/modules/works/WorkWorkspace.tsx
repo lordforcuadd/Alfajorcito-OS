@@ -29,7 +29,7 @@ import {
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { Badge, CitationStyleBadge, VerificationBadge, type BadgeVariant } from '../../components/common/Badge';
+import { Badge, CitationStyleBadge, VerificationBadge, WorkStatusBadge, WORK_STATUS_META, type BadgeVariant } from '../../components/common/Badge';
 import { Tabs } from '../../components/common/Tabs';
 import { Modal } from '../../components/common/Modal';
 import { Input, TextArea, Select } from '../../components/common/Input';
@@ -45,16 +45,6 @@ import {
 import { generateGoogleDocsRichHTML, generateGoogleCalendarUrl, generateICSFile } from '../../utils/googleExporter';
 import { formulateQuestionForTeacher, analyzeInstructionsOffline } from '../../services/aiService';
 import type { Work, Course, Source, Task, InquiryToTeacher, Citation, Paraphrase, Idea, UserProfile, TaskPriority, WorkStatus } from '../../types';
-
-const WORK_STATUS_META: Record<WorkStatus, { label: string; variant: BadgeVariant }> = {
-  PLANIFICACION: { label: 'Planificación', variant: 'amber' },
-  INVESTIGACION: { label: 'Investigando', variant: 'lavender' },
-  REDACTANDO: { label: 'Redactando', variant: 'rose' },
-  EN_REVISION: { label: 'En Revisión', variant: 'amber' },
-  CORRECCION: { label: 'En Corrección', variant: 'rose' },
-  ENTREGADO: { label: 'Entregado', variant: 'mint' },
-  ARCHIVADO: { label: 'Archivado', variant: 'default' }
-};
 
 export interface WorkWorkspaceProps {
   workId: string;
@@ -221,9 +211,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-[#8C3A32] uppercase">{course?.name || 'Materia'}</span>
               <CitationStyleBadge style={work.citationStyle} />
-              <Badge variant={WORK_STATUS_META[work.status]?.variant || 'default'} size="sm">
-                {WORK_STATUS_META[work.status]?.label || work.status}
-              </Badge>
+              <WorkStatusBadge status={work.status} size="sm" />
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-[#2B2D42] mt-0.5">{work.title}</h2>
           </div>

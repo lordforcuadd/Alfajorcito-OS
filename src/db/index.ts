@@ -395,7 +395,7 @@ Se identifican esquemas nucleares de incompetencia personal ("No soy lo suficien
     ],
     year: 2015,
     type: 'BOOK_CHAPTER',
-    publication: 'Handbook of Emotion Regulation (2nd ed., pp. 3-20). The Guilford Press',
+    publication: 'Handbook of Emotion Regulation (2nd ed.). The Guilford Press',
     pages: '3-20',
     doi: '10.1002/9781118993811.ch1',
     url: 'https://doi.org/10.1002/9781118993811.ch1',

@@ -529,13 +529,13 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                     <span className="text-[10px] text-[#8D99AE]">(Al final)</span>
                   </div>
                   <code className="text-xs font-mono font-bold text-[#2B2D42] block mt-0.5 break-words [overflow-wrap:anywhere]">
-                    {formatInTextParenthetical(inspectedSource, modalStyle)}
+                    {formatInTextParenthetical(inspectedSource, modalStyle, undefined, sourceRefNum)}
                   </code>
                 </div>
                 <button
                   type="button"
                   onClick={() => {
-                    const cite = formatInTextParenthetical(inspectedSource, modalStyle);
+                    const cite = formatInTextParenthetical(inspectedSource, modalStyle, undefined, sourceRefNum);
                     navigator.clipboard.writeText(cite);
                     setModalCopiedKey('modal-parenthetical');
                     showToast('Cita copiada', 'Cita parentética lista para pegar.', 'success');
@@ -563,13 +563,13 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                     <span className="text-[10px] text-[#8D99AE]">(En la oración)</span>
                   </div>
                   <code className="text-xs font-mono font-bold text-[#2B2D42] block mt-0.5 break-words [overflow-wrap:anywhere]">
-                    {formatInTextNarrative(inspectedSource, modalStyle)}
+                    {formatInTextNarrative(inspectedSource, modalStyle, sourceRefNum)}
                   </code>
                 </div>
                 <button
                   type="button"
                   onClick={() => {
-                    const cite = formatInTextNarrative(inspectedSource, modalStyle);
+                    const cite = formatInTextNarrative(inspectedSource, modalStyle, sourceRefNum);
                     navigator.clipboard.writeText(cite);
                     setModalCopiedKey('modal-narrative');
                     showToast('Cita copiada', 'Cita narrativa lista para pegar.', 'success');

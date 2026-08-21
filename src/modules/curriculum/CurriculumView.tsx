@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { Badge } from '../../components/common/Badge';
+import { Badge, WorkStatusBadge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { CourseModal } from '../../components/modals/CourseModal';
 import { USMP_PSYCHOLOGY_CURRICULUM } from '../../services/usmpCurriculum';
@@ -220,9 +220,14 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
                   <span className="text-xs font-bold font-mono text-[#8C3A32] bg-[#FDF2F0] px-2 py-0.5 rounded-lg border border-[#E8A598]/40">
                     {course.code}
                   </span>
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
                     {getAreaBadge(course.area)}
                     <Badge variant="default" size="sm">{course.credits} créditos</Badge>
+                    {isEnrolled && relatedWorks.length > 0 && (
+                      <Badge variant="lavender" size="sm">
+                        {relatedWorks.length} {relatedWorks.length === 1 ? 'trabajo' : 'trabajos'}
+                      </Badge>
+                    )}
                   </div>
                 </div>
 
@@ -338,7 +343,7 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
                     {worksInCourse.map((w) => (
                       <div key={w.id} className="flex items-center justify-between text-xs p-2 rounded-xl bg-[#FAF8F5] border border-[#EBE5DF]">
                         <span className="font-bold text-[#2B2D42] truncate">{w.title}</span>
-                        <Badge variant="rose" size="sm">{w.status}</Badge>
+                        <WorkStatusBadge status={w.status} size="sm" />
                       </div>
                     ))}
                   </div>

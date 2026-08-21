@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react';
-import type { VerificationStatus, CitationStyle } from '../../types';
+import type { VerificationStatus, CitationStyle, WorkStatus } from '../../types';
 
 export type BadgeVariant =
   | 'default'
@@ -101,5 +101,28 @@ export const CitationStyleBadge: React.FC<{ style: CitationStyle; size?: 'sm' | 
     >
       {labelMap[style] || style}
     </span>
+  );
+};
+
+export const WORK_STATUS_META: Record<WorkStatus, { label: string; variant: BadgeVariant }> = {
+  PLANIFICACION: { label: 'Planificación', variant: 'amber' },
+  INVESTIGACION: { label: 'Investigando', variant: 'lavender' },
+  REDACTANDO: { label: 'Redactando', variant: 'rose' },
+  EN_REVISION: { label: 'En Revisión', variant: 'amber' },
+  CORRECCION: { label: 'En Corrección', variant: 'rose' },
+  ENTREGADO: { label: 'Entregado', variant: 'mint' },
+  ARCHIVADO: { label: 'Archivado', variant: 'default' }
+};
+
+export const WorkStatusBadge: React.FC<{ status: WorkStatus; size?: 'sm' | 'md'; className?: string }> = ({
+  status,
+  size = 'sm',
+  className = ''
+}) => {
+  const meta = WORK_STATUS_META[status] || { label: status, variant: 'default' as BadgeVariant };
+  return (
+    <Badge variant={meta.variant} size={size} className={className}>
+      {meta.label}
+    </Badge>
   );
 };

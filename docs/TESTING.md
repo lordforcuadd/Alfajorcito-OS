@@ -28,31 +28,34 @@ Alfajorcito OS implementa una suite de pruebas multi-nivel para asegurar la fiab
    - Validación de esquema estricto en importación de copias de seguridad JSON.
    - Escape de inyecciones HTML/XSS en títulos, resúmenes y autores.
 
-### 2.2. Pruebas de Integración y Base de Datos (Dexie Mock / In-Memory IndexedDB)
-- Creación en cascada y trazabilidad: `Source -> Idea -> Paraphrase -> Citation -> Reference -> Work`.
-- Búsqueda global full-text con filtros.
-- Exportación e importación de copias de seguridad completas en formato JSON y validación de integridad.
-
-### 2.3. Pruebas de Flujos de Usuario (15 User Journeys)
-1. **Flujo 1**: Creación de Curso y Trabajo Académico.
-2. **Flujo 2**: Registro de consignas e instrucciones del trabajo.
-3. **Flujo 3**: Análisis de requisitos con separación explícita de consignas oficiales vs inferencias.
-4. **Flujo 4**: Registro de duda y formulación de pregunta formal al docente.
-5. **Flujo 5**: Búsqueda académica e importación de fuente desde OpenAlex / Crossref / DOI.
-6. **Flujo 6**: Verificación de metadatos y estado `VERIFIED`.
-7. **Flujo 7**: Extracción de idea y redacción de paráfrasis con aviso de fidelidad.
-8. **Flujo 8**: Generación de cita en texto narrativa y parentética (APA 7).
-9. **Flujo 9**: Generación de referencia bibliográfica con sangría francesa.
-10. **Flujo 10**: Creación de nota atómica en el Segundo Cerebro con `[[wikilinks]]`.
-11. **Flujo 11**: Exploración de conexiones en el Grafo de Conocimiento.
-12. **Flujo 12**: Exportación de borrador y referencias a formato Google Docs / Markdown.
-13. **Flujo 13**: Registro de feedback del profesor tras revisión preliminar.
-14. **Flujo 14**: Marcado de entrega de trabajo y actualización de métricas del Dashboard.
-15. **Flujo 15**: Exportación de la base de conocimiento a Vault de Obsidian (.zip).
+### 2.2. Cobertura de Código Automatizada (v8)
+- Ejecutable mediante: `npm run test:coverage` (alimentado por `@vitest/coverage-v8`).
+- Cubre motores de citación, validadores de metadatos científicos, exportadores de Obsidian/Google Docs, resiliencia de seguridad y análisis heurístico offline.
 
 ---
 
-## 3. Matriz de Auditoría de Rendimiento y Accesibilidad
-- **Tiempo de Carga Inicial**: < 1.0 segundo en red 4G simulada.
-- **Tiempo de Búsqueda Global**: < 50 ms sobre 1,000 registros indexados.
-- **Accesibilidad**: Criterios WCAG 2.1 AA cumplidos en contraste, navegación por teclado y etiquetas aria.
+## 3. Matriz de Verificación Manual (15 User Journeys)
+La validación interactiva de interfaz y reactividad de IndexedDB se realiza sobre el siguiente checklist de escenarios de aceptación:
+
+1. **Flujo 1**: Creación de Curso y Trabajo Académico con selector de fecha límite.
+2. **Flujo 2**: Registro de consignas e instrucciones del trabajo.
+3. **Flujo 3**: Análisis offline de requisitos con separación explícita de consignas oficiales vs inferencias.
+4. **Flujo 4**: Registro de dudas y formulación asistida de preguntas formales al docente.
+5. **Flujo 5**: Búsqueda académica e importación de fuente desde OpenAlex / Crossref / DOI.
+6. **Flujo 6**: Verificación de metadatos, estado `VERIFIED` y control de antigüedad máxima.
+7. **Flujo 7**: Extracción de idea y redacción de paráfrasis con estado `PENDING_REVIEW`.
+8. **Flujo 8**: Generación de cita en texto narrativa y parentética (APA 7, MLA 9, IEEE, Chicago, Vancouver).
+9. **Flujo 9**: Generación de referencia bibliográfica con sangría francesa y copiado enriquecido.
+10. **Flujo 10**: Creación de nota atómica en el Segundo Cerebro con `[[wikilinks]]`.
+11. **Flujo 11**: Exploración de conexiones en el Grafo de Conocimiento interactivo.
+12. **Flujo 12**: Exportación de borrador y referencias a formato Google Docs (HTML enriquecido).
+13. **Flujo 13**: Registro de feedback del profesor tras revisión preliminar.
+14. **Flujo 14**: Marcado de entrega de trabajo y actualización inmediata de métricas en Dashboard.
+15. **Flujo 15**: Exportación completa de la base de conocimiento a Vault de Obsidian (.zip).
+
+---
+
+## 4. Criterios de Rendimiento y Accesibilidad Manual
+- **Tiempo de Carga Inicial**: < 1.0 segundo en red estándar y carga instantánea vía Service Worker PWA offline.
+- **Rendimiento de Búsqueda**: Filtrado inmediato sobre tablas IndexedDB locales indexadas.
+- **Accesibilidad e Interfaz**: Contraste verificado para paleta pastel/pizarra, soporte de etiquetas `aria-label` en controles interactivos y navegación mediante atajos de teclado (`Ctrl+K`).
