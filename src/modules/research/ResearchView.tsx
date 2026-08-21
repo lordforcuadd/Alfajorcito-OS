@@ -130,22 +130,38 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
       } else if (searchEngine === 'DOAJ') {
         const res = await searchDOAJ(searchQuery.trim(), 10);
         setSearchResults(res);
-        showToast('Búsqueda en Español lista', `Encontramos ${res.length} artículos indexados en DOAJ (Iberoamérica).`, 'success');
+        if (res.length > 0) {
+          showToast('Búsqueda en Español lista', `Encontramos ${res.length} artículos indexados en DOAJ (Iberoamérica).`, 'success');
+        } else {
+          showToast('Sin resultados en DOAJ', 'Prueba con términos más generales o busca en OpenAlex / Crossref.', 'info');
+        }
       } else if (searchEngine === 'CROSSREF') {
         const res = await searchCrossref(searchQuery.trim(), 10);
         setSearchResults(res);
-        showToast('Búsqueda en Crossref lista', `Encontramos ${res.length} registros y tesis en Crossref.`, 'success');
+        if (res.length > 0) {
+          showToast('Búsqueda en Crossref lista', `Encontramos ${res.length} registros y tesis en Crossref.`, 'success');
+        } else {
+          showToast('Sin resultados en Crossref', 'Prueba con otro título o autor.', 'info');
+        }
       } else if (searchEngine === 'OPENALEX') {
         const res = await searchOpenAlex(searchQuery.trim(), 10);
         setSearchResults(res);
-        showToast('Búsqueda en OpenAlex lista', `Encontramos ${res.length} artículos en OpenAlex.`, 'success');
+        if (res.length > 0) {
+          showToast('Búsqueda en OpenAlex lista', `Encontramos ${res.length} artículos en OpenAlex.`, 'success');
+        } else {
+          showToast('Sin resultados en OpenAlex', 'Prueba con palabras clave en inglés o español.', 'info');
+        }
       } else {
         const res = await searchSemanticScholar(searchQuery.trim(), 10);
         setSearchResults(res);
-        showToast('Búsqueda en Semantic Scholar lista', `Encontramos ${res.length} artículos en Semantic Scholar.`, 'success');
+        if (res.length > 0) {
+          showToast('Búsqueda completada', `Encontramos ${res.length} artículos científicos indexados.`, 'success');
+        } else {
+          showToast('Sin resultados', 'Prueba con el buscador DOAJ (en Español) o Crossref.', 'info');
+        }
       }
     } catch {
-      showToast('Error de conexión', 'No se pudo conectar con el buscador académico.', 'error');
+      showToast('Aviso de conexión', 'No se pudo conectar directamente con el servidor. Revisa tu conexión.', 'warning');
     } finally {
       setIsSearching(false);
     }

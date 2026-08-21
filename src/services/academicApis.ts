@@ -247,7 +247,10 @@ export async function searchSemanticScholar(query: string, limit = 8): Promise<A
     const fields = 'title,authors,year,abstract,venue,citationCount,externalIds,url';
     const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=${limit}&fields=${fields}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      // If Semantic Scholar is rate-limited (HTTP 429) or fails, gracefully fallback to OpenAlex
+      return await searchOpenAlex(query, limit);
+    }
     const data = await res.json();
 
     return (data.data || []).map((item: SemanticScholarPaper) => {
@@ -272,8 +275,12 @@ export async function searchSemanticScholar(query: string, limit = 8): Promise<A
       };
     });
   } catch (err) {
-    console.error('Error searching Semantic Scholar:', err);
-    return [];
+    // If browser blocks fetch due to CORS or 429 network error, seamlessly fallback to OpenAlex
+    try {
+      return await searchOpenAlex(query, limit);
+    } catch {
+      return [];
+    }
   }
 }
 
