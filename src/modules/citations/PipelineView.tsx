@@ -13,7 +13,8 @@ import {
   Search,
   BookMarked,
   Filter,
-  Check
+  Check,
+  Trash2
 } from 'lucide-react';
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';
@@ -48,6 +49,13 @@ export const PipelineView: React.FC = () => {
   const sourcesMap = React.useMemo(() => new Map(sources.map((s) => [s.id, s])), [sources]);
   const ideasMap = React.useMemo(() => new Map(ideas.map((i) => [i.id, i])), [ideas]);
   const worksMap = React.useMemo(() => new Map(works.map((w) => [w.id, w])), [works]);
+
+  const handleDeleteParaphrase = async (id: string) => {
+    const confirm = window.confirm('¿Deseas eliminar esta cita/paráfrasis de tu registro?');
+    if (!confirm) return;
+    await db.paraphrases.delete(id);
+    showToast('Paráfrasis eliminada', 'La ficha ha sido retirada.', 'info');
+  };
 
   // Handle Audit Fidelity (Anti-Plagiarism & Paraphrase Fidelity)
   const handleAuditFidelity = async (paraphrase: Paraphrase) => {
@@ -426,8 +434,16 @@ export const PipelineView: React.FC = () => {
                   </Button>
                 </div>
 
-                {/* Audit Action */}
-                <div className="flex justify-end pt-1">
+                {/* Footer Actions: Delete & Audit */}
+                <div className="flex items-center justify-between pt-2 border-t border-[#EBE5DF]/60">
+                  <button
+                    onClick={() => handleDeleteParaphrase(para.id)}
+                    className="p-1.5 text-[#8D99AE] hover:text-[#C62828] hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                    title="Eliminar cita/paráfrasis"
+                    aria-label="Eliminar cita y paráfrasis"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -436,7 +452,7 @@ export const PipelineView: React.FC = () => {
                     icon={<Sparkles className="w-3.5 h-3.5 text-[#D98880]" />}
                     className="text-xs font-semibold text-[#8C3A32]"
                   >
-                    Verificar Fidelidad de Paráfrasis con IA
+                    Verificar Fidelidad con IA
                   </Button>
                 </div>
               </Card>

@@ -11,7 +11,7 @@ import { BrainView } from './modules/notes/BrainView';
 import { QuickCaptureModal, type CaptureTab } from './components/modals/QuickCaptureModal';
 import { CommandPalette } from './components/modals/CommandPalette';
 import { SettingsModal } from './components/modals/SettingsModal';
-import { initializeDatabaseSeed } from './db';
+import { initializeDatabaseSeed, db } from './db';
 
 interface QuickCaptureConfig {
   isOpen: boolean;
@@ -56,7 +56,7 @@ function MainApp() {
   };
 
   // Handle Navigation from Global Search
-  const handleNavigateFromSearch = (type: string, id: string) => {
+  const handleNavigateFromSearch = async (type: string, id: string) => {
     if (type === 'works') {
       setSelectedWorkId(id);
       setCurrentTab('works');
@@ -67,6 +67,16 @@ function MainApp() {
       setSelectedNoteId(id);
       setCurrentTab('brain');
     } else if (type === 'inquiries') {
+      const inq = await db.inquiries.get(id);
+      if (inq?.workId) {
+        setSelectedWorkId(inq.workId);
+      }
+      setCurrentTab('works');
+    } else if (type === 'tasks') {
+      const t = await db.tasks.get(id);
+      if (t?.workId) {
+        setSelectedWorkId(t.workId);
+      }
       setCurrentTab('works');
     } else if (type === 'concepts') {
       setCurrentTab('brain');

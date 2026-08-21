@@ -85,7 +85,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
   // New inquiry input state
   const [newInquiryTopic, setNewInquiryTopic] = useState('');
   const [newInquiryDoubt, setNewInquiryDoubt] = useState('');
-  const [newInquiryTeacherAnswer, setNewInquiryTeacherAnswer] = useState('');
+  const [inquiryTeacherAnswers, setInquiryTeacherAnswers] = useState<Record<string, string>>({});
   const [newInquiryStatus, setNewInquiryStatus] = useState<'DRAFT' | 'SENT' | 'ANSWERED'>('DRAFT');
   const [isFormulating, setIsFormulating] = useState(false);
   const [copiedInquiryId, setCopiedInquiryId] = useState<string | null>(null);
@@ -820,21 +820,31 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                         <TextArea
                           rows={2}
                           placeholder="Pega aquí la respuesta oficial dada por el docente..."
-                          value={newInquiryTeacherAnswer}
-                          onChange={(e) => setNewInquiryTeacherAnswer(e.target.value)}
+                          value={inquiryTeacherAnswers[inq.id] || ''}
+                          onChange={(e) =>
+                            setInquiryTeacherAnswers((prev) => ({
+                              ...prev,
+                              [inq.id]: e.target.value
+                            }))
+                          }
                         />
                         <Button
                           variant="secondary"
                           size="sm"
                           onClick={async () => {
-                            if (!newInquiryTeacherAnswer.trim()) return;
+                            const answer = (inquiryTeacherAnswers[inq.id] || '').trim();
+                            if (!answer) return;
                             await db.inquiries.update(inq.id, {
-                              teacherAnswer: newInquiryTeacherAnswer.trim(),
+                              teacherAnswer: answer,
                               status: 'ANSWERED',
                               answeredDate: Date.now(),
                               updatedAt: Date.now()
                             });
-                            setNewInquiryTeacherAnswer('');
+                            setInquiryTeacherAnswers((prev) => {
+                              const copy = { ...prev };
+                              delete copy[inq.id];
+                              return copy;
+                            });
                             showToast('Respuesta guardada', 'La respuesta oficial del profesor ha sido registrada.', 'success');
                           }}
                         >

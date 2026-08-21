@@ -54,6 +54,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
   const [editContent, setEditContent] = useState('');
   const [editCategory, setEditCategory] = useState<ParaCategory>('ATOMIC');
   const [editCourseId, setEditCourseId] = useState('');
+  const [editWorkId, setEditWorkId] = useState('');
   const [editTags, setEditTags] = useState('');
 
   // Sync state when note opens
@@ -63,6 +64,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
       setEditContent(note.content);
       setEditCategory(note.paraCategory);
       setEditCourseId(note.courseId || '');
+      setEditWorkId(note.workId || '');
       setEditTags(note.tags.join(', '));
       setMode('view');
     }
@@ -123,6 +125,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
       content: editContent.trim(),
       paraCategory: editCategory,
       courseId: editCourseId || undefined,
+      workId: editWorkId || undefined,
       tags: parsedTags,
       updatedAt: Date.now()
     };
@@ -317,7 +320,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
               placeholder="e.g. Regulación Emocional en Psicología"
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Select
                 label="Categoría"
                 value={editCategory}
@@ -331,7 +334,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
               </Select>
 
               <Select
-                label="Curso Asociado (Opcional)"
+                label="Curso Asociado"
                 value={editCourseId}
                 onChange={(e) => setEditCourseId(e.target.value)}
               >
@@ -339,6 +342,19 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
                 {courses.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
+                  </option>
+                ))}
+              </Select>
+
+              <Select
+                label="Trabajo / Tesis"
+                value={editWorkId}
+                onChange={(e) => setEditWorkId(e.target.value)}
+              >
+                <option value="">Sin trabajo vinculado</option>
+                {works.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.title}
                   </option>
                 ))}
               </Select>

@@ -66,8 +66,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // 4. ¿Qué está bloqueado? (Pending teacher inquiries)
   const blockedInquiries = inquiries.filter((inq) => inq.status === 'SENT' || inq.status === 'DRAFT');
 
-  // 5. ¿Qué estoy investigando? (Works currently in RESEARCH or WRITING status)
-  const activeResearchWorks = works.filter((w) => w.status === 'INVESTIGACION' || w.status === 'PLANIFICACION');
+  // 5. ¿Qué estoy investigando? (Works currently in active research/writing/review status)
+  const activeResearchWorks = works.filter((w) => w.status !== 'ENTREGADO' && w.status !== 'ARCHIVADO');
 
   // 6. ¿Qué investigué recientemente? (Latest sources added)
   const recentSources = [...sources].sort((a, b) => b.createdAt - a.createdAt).slice(0, 3);
