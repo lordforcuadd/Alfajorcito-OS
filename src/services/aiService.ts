@@ -343,7 +343,7 @@ async function callLLM(prompt: string, settings: AISettings): Promise<string | n
 
   if (provider === 'gemini') {
     const key = apiKey;
-    const model = modelName || 'gemini-3.5-flash-lite';
+    const model = modelName || 'gemini-1.5-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
     const res = await fetch(url, {
       method: 'POST',

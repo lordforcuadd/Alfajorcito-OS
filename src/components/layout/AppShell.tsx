@@ -218,7 +218,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-[#EBE5DF] px-1 py-1 flex items-center justify-between pb-safe shadow-lg">
         <button
           onClick={() => onTabChange('dashboard')}
-          className={`flex-1 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
+          className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
             currentTab === 'dashboard' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
           }`}
           title="Inicio"
@@ -229,7 +229,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         <button
           onClick={() => onTabChange('works')}
-          className={`flex-1 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
+          className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
             currentTab === 'works' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
           }`}
           title="Tesis"
@@ -240,7 +240,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         <button
           onClick={() => onTabChange('curriculum')}
-          className={`flex-1 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
+          className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
             currentTab === 'curriculum' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
           }`}
           title="Malla"
@@ -261,7 +261,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         <button
           onClick={() => onTabChange('research')}
-          className={`flex-1 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
+          className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
             currentTab === 'research' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
           }`}
           title="Fuentes"
@@ -272,7 +272,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         <button
           onClick={() => onTabChange('pipeline')}
-          className={`flex-1 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
+          className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
             currentTab === 'pipeline' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
           }`}
           title="Citas & Referencias"
@@ -283,7 +283,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         <button
           onClick={() => onTabChange('brain')}
-          className={`flex-1 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
+          className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
             currentTab === 'brain' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
           }`}
           title="Cerebro"
