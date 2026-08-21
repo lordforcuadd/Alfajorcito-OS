@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { auditSourceMetadata } from '../utils/antiHallucination';
 import { validateSourceAge } from '../utils/sourceAgeValidator';
+import { extractDOI } from '../services/academicApis';
 import type { Source, Work } from '../types';
 
 describe('Anti-Hallucination & Metadata Auditor Suite', () => {
@@ -29,6 +30,14 @@ describe('Anti-Hallucination & Metadata Auditor Suite', () => {
     expect(audit.status).toBe('UNVERIFIED');
     expect(audit.missingFields).toContain('Autores (DATO NO VERIFICADO)');
     expect(audit.missingFields).toContain('Año de publicación');
+  });
+
+  it('correctly extracts standard DOIs and rejects general non-DOI URLs (e.g. SciELO without DOI)', () => {
+    expect(extractDOI('10.1016/j.chb.2020.106443')).toBe('10.1016/j.chb.2020.106443');
+    expect(extractDOI('https://doi.org/10.1038/s41586-023-00000-0')).toBe('10.1038/s41586-023-00000-0');
+    expect(extractDOI('doi: 10.18800/psico.202202.008.')).toBe('10.18800/psico.202202.008');
+    expect(extractDOI('https://ve.scielo.org/scielo.php?script=sci_arttext&pid=S2739-00632026000103067')).toBeNull();
+    expect(extractDOI('')).toBeNull();
   });
 });
 

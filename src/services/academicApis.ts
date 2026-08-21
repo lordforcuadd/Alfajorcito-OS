@@ -1,4 +1,4 @@
-import type { Source, Author, SourceType } from '../types';
+import type { Author, SourceType } from '../types';
 
 export interface AcademicSearchResult {
   title: string;
@@ -16,85 +16,13 @@ export interface AcademicSearchResult {
   provider: 'OPENALEX' | 'CROSSREF' | 'SEMANTIC_SCHOLAR' | 'DOI_ORG';
 }
 
-// 1. Resolve direct DOI via Crossref or DOI.org Content Negotiation
-export async function resolveDOI(doiInput: string): Promise<AcademicSearchResult | null> {
-  const cleanDoi = doiInput
-    .replace(/^https?:\/\/(dx\.)?doi\.org\//i, '')
-    .trim();
-
-  if (!cleanDoi) return null;
-
-  try {
-    const url = `https://api.crossref.org/works/${encodeURIComponent(cleanDoi)}`;
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'AlfajorcitoOS/1.0 (mailto:academic-user@app.local)'
-      },
-      signal: AbortSignal.timeout(8000)
-    });
-
-    if (!res.ok) {
-      // Fallback to DOI Content Negotiation
-      const doiRes = await fetch(`https://doi.org/${encodeURIComponent(cleanDoi)}`, {
-        headers: {
-          'Accept': 'application/vnd.citationstyles.csl+json'
-        },
-        signal: AbortSignal.timeout(8000)
-      });
-      if (!doiRes.ok) return null;
-      const csl = await doiRes.json();
-      return {
-        title: csl.title || 'Sin título',
-        authors: (csl.author || []).map((a: { given?: string; family?: string }) => ({
-          firstName: a.given || '',
-          lastName: a.family || ''
-        })),
-        year: csl.issued?.['date-parts']?.[0]?.[0] || new Date().getFullYear(),
-        type: csl.type === 'book' ? 'BOOK' : 'JOURNAL_ARTICLE',
-        publication: csl['container-title'] || csl.publisher || '',
-        volume: csl.volume ? String(csl.volume) : undefined,
-        issue: csl.issue ? String(csl.issue) : undefined,
-        pages: csl.page ? String(csl.page) : undefined,
-        doi: cleanDoi,
-        url: `https://doi.org/${cleanDoi}`,
-        abstract: csl.abstract || '',
-        provider: 'DOI_ORG'
-      };
-    }
-
-    const data = await res.json();
-    const item = data.message;
-
-    const authors: Author[] = (item.author || []).map((a: { given?: string; family?: string }) => ({
-      firstName: a.given || '',
-      lastName: a.family || ''
-    }));
-
-    const year =
-      item.published?.['date-parts']?.[0]?.[0] ||
-      item['published-print']?.['date-parts']?.[0]?.[0] ||
-      item['published-online']?.['date-parts']?.[0]?.[0] ||
-      new Date().getFullYear();
-
-    return {
-      title: item.title?.[0] || 'Sin título',
-      authors,
-      year,
-      type: item.type === 'book' ? 'BOOK' : 'JOURNAL_ARTICLE',
-      publication: item['container-title']?.[0] || item.publisher || '',
-      volume: item.volume,
-      issue: item.issue,
-      pages: item.page,
-      doi: item.DOI || cleanDoi,
-      url: item.URL || `https://doi.org/${cleanDoi}`,
-      abstract: item.abstract ? item.abstract.replace(/<[^>]*>/g, '') : '',
-      citationCount: item['is-referenced-by-count'],
-      provider: 'CROSSREF'
-    };
-  } catch (err) {
-    console.error('Error resolving DOI:', err);
-    return null;
-  }
+/**
+ * Extracts a standard DOI pattern (10.xxxx/xxxx) from any string, URL, or citation text.
+ */
+export function extractDOI(input: string): string | null {
+  if (!input) return null;
+  const match = input.match(/10\.\d{4,9}\/[-._;()/:A-Za-z0-9]+/i);
+  return match ? match[0].replace(/[.,;)]+$/, '') : null;
 }
 
 interface OpenAlexAuthorship {
@@ -124,6 +52,165 @@ interface OpenAlexWorkItem {
   cited_by_count?: number;
 }
 
+function parseOpenAlexWork(item: OpenAlexWorkItem): AcademicSearchResult {
+  const authors: Author[] = (item.authorships || []).map((a) => {
+    const rawName = a.author?.display_name || '';
+    const parts = rawName.split(' ');
+    const lastName = parts.length > 1 ? parts[parts.length - 1] : rawName;
+    const firstName = parts.length > 1 ? parts.slice(0, -1).join(' ') : '';
+    return { firstName, lastName };
+  });
+
+  let abstract = '';
+  if (item.abstract_inverted_index) {
+    const wordPositions: [string, number][] = [];
+    Object.entries(item.abstract_inverted_index).forEach(([word, positions]) => {
+      (positions || []).forEach((pos) => wordPositions.push([word, pos]));
+    });
+    wordPositions.sort((a, b) => a[1] - b[1]);
+    abstract = wordPositions.map((w) => w[0]).join(' ');
+  }
+
+  const cleanDoi = item.doi ? item.doi.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '') : undefined;
+
+  return {
+    title: item.title || item.display_name || 'Sin título',
+    authors,
+    year: item.publication_year || new Date().getFullYear(),
+    type: item.type === 'book' ? 'BOOK' : 'JOURNAL_ARTICLE',
+    publication: item.primary_location?.source?.display_name || '',
+    volume: item.biblio?.volume,
+    issue: item.biblio?.issue,
+    pages:
+      item.biblio?.first_page && item.biblio?.last_page
+        ? `${item.biblio.first_page}-${item.biblio.last_page}`
+        : item.biblio?.first_page,
+    doi: cleanDoi,
+    url: item.doi || item.primary_location?.landing_page_url,
+    abstract: abstract.slice(0, 1000),
+    citationCount: item.cited_by_count,
+    provider: 'OPENALEX'
+  };
+}
+
+/**
+ * Resolves a DOI or academic URL with multi-layer fallback:
+ * 1. OpenAlex DOI endpoint (CORS-friendly, highly available)
+ * 2. Crossref Works API
+ * 3. DOI.org Content Negotiation
+ * 4. Fallback search on OpenAlex if input is a URL/identifier without standard DOI format
+ */
+export async function resolveDOI(doiInput: string): Promise<AcademicSearchResult | null> {
+  const trimmed = doiInput.trim();
+  if (!trimmed) return null;
+
+  const validDoi = extractDOI(trimmed);
+
+  // If a valid DOI is detected (e.g. "10.1016/..." or "https://doi.org/10.1016/..."):
+  if (validDoi) {
+    // Strategy 1: OpenAlex by DOI (No CORS restrictions, resilient)
+    try {
+      const openAlexUrl = `https://api.openalex.org/works/https://doi.org/${encodeURIComponent(validDoi)}?mailto=academic-user@app.local`;
+      const oaRes = await fetch(openAlexUrl, { signal: AbortSignal.timeout(5000) });
+      if (oaRes.ok) {
+        const oaItem = await oaRes.json();
+        return parseOpenAlexWork(oaItem);
+      }
+    } catch {
+      // Continue to next strategy
+    }
+
+    // Strategy 2: Crossref Works API
+    try {
+      const url = `https://api.crossref.org/works/${encodeURIComponent(validDoi)}`;
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': 'AlfajorcitoOS/1.0 (mailto:academic-user@app.local)'
+        },
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const item = data.message;
+
+        const authors: Author[] = (item.author || []).map((a: { given?: string; family?: string }) => ({
+          firstName: a.given || '',
+          lastName: a.family || ''
+        }));
+
+        const year =
+          item.published?.['date-parts']?.[0]?.[0] ||
+          item['published-print']?.['date-parts']?.[0]?.[0] ||
+          item['published-online']?.['date-parts']?.[0]?.[0] ||
+          new Date().getFullYear();
+
+        return {
+          title: item.title?.[0] || 'Sin título',
+          authors,
+          year,
+          type: item.type === 'book' ? 'BOOK' : 'JOURNAL_ARTICLE',
+          publication: item['container-title']?.[0] || item.publisher || '',
+          volume: item.volume,
+          issue: item.issue,
+          pages: item.page,
+          doi: item.DOI || validDoi,
+          url: item.URL || `https://doi.org/${validDoi}`,
+          abstract: item.abstract ? item.abstract.replace(/<[^>]*>/g, '') : '',
+          citationCount: item['is-referenced-by-count'],
+          provider: 'CROSSREF'
+        };
+      }
+    } catch {
+      // Continue to next strategy
+    }
+
+    // Strategy 3: DOI.org Content Negotiation
+    try {
+      const doiRes = await fetch(`https://doi.org/${encodeURIComponent(validDoi)}`, {
+        headers: {
+          'Accept': 'application/vnd.citationstyles.csl+json'
+        },
+        signal: AbortSignal.timeout(5000)
+      });
+      if (doiRes.ok) {
+        const csl = await doiRes.json();
+        return {
+          title: csl.title || 'Sin título',
+          authors: (csl.author || []).map((a: { given?: string; family?: string }) => ({
+            firstName: a.given || '',
+            lastName: a.family || ''
+          })),
+          year: csl.issued?.['date-parts']?.[0]?.[0] || new Date().getFullYear(),
+          type: csl.type === 'book' ? 'BOOK' : 'JOURNAL_ARTICLE',
+          publication: csl['container-title'] || csl.publisher || '',
+          volume: csl.volume ? String(csl.volume) : undefined,
+          issue: csl.issue ? String(csl.issue) : undefined,
+          pages: csl.page ? String(csl.page) : undefined,
+          doi: validDoi,
+          url: `https://doi.org/${validDoi}`,
+          abstract: csl.abstract || '',
+          provider: 'DOI_ORG'
+        };
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  // Strategy 4: If input is a URL or search identifier (like SciELO, Dialnet, title), search OpenAlex
+  try {
+    const results = await searchOpenAlex(trimmed, 1);
+    if (results.length > 0) {
+      return results[0];
+    }
+  } catch {
+    // Graceful return
+  }
+
+  return null;
+}
+
 // 2. Search OpenAlex API (250M+ open scientific works)
 export async function searchOpenAlex(query: string, limit = 8): Promise<AcademicSearchResult[]> {
   if (!query || query.trim().length < 2) return [];
@@ -134,47 +221,7 @@ export async function searchOpenAlex(query: string, limit = 8): Promise<Academic
     if (!res.ok) return [];
     const data = await res.json();
 
-    return (data.results || []).map((item: OpenAlexWorkItem) => {
-      const authors: Author[] = (item.authorships || []).map((a) => {
-        const rawName = a.author?.display_name || '';
-        const parts = rawName.split(' ');
-        const lastName = parts.length > 1 ? parts[parts.length - 1] : rawName;
-        const firstName = parts.length > 1 ? parts.slice(0, -1).join(' ') : '';
-        return { firstName, lastName };
-      });
-
-      // Reconstruct abstract from OpenAlex inverted index
-      let abstract = '';
-      if (item.abstract_inverted_index) {
-        const wordPositions: [string, number][] = [];
-        Object.entries(item.abstract_inverted_index).forEach(([word, positions]) => {
-          (positions || []).forEach((pos) => wordPositions.push([word, pos]));
-        });
-        wordPositions.sort((a, b) => a[1] - b[1]);
-        abstract = wordPositions.map((w) => w[0]).join(' ');
-      }
-
-      const cleanDoi = item.doi ? item.doi.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '') : undefined;
-
-      return {
-        title: item.title || item.display_name || 'Sin título',
-        authors,
-        year: item.publication_year || new Date().getFullYear(),
-        type: item.type === 'book' ? 'BOOK' : 'JOURNAL_ARTICLE',
-        publication: item.primary_location?.source?.display_name || '',
-        volume: item.biblio?.volume,
-        issue: item.biblio?.issue,
-        pages:
-          item.biblio?.first_page && item.biblio?.last_page
-            ? `${item.biblio.first_page}-${item.biblio.last_page}`
-            : item.biblio?.first_page,
-        doi: cleanDoi,
-        url: item.doi || item.primary_location?.landing_page_url,
-        abstract: abstract.slice(0, 1000),
-        citationCount: item.cited_by_count,
-        provider: 'OPENALEX' as const
-      };
-    });
+    return (data.results || []).map(parseOpenAlexWork);
   } catch (err) {
     console.error('Error searching OpenAlex:', err);
     return [];
