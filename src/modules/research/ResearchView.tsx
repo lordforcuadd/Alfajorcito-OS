@@ -19,7 +19,8 @@ import {
   Copy,
   Check,
   BookMarked,
-  ChevronRight
+  ChevronRight,
+  Info
 } from 'lucide-react';
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';
@@ -28,7 +29,14 @@ import { Input, TextArea, Select } from '../../components/common/Input';
 import { Badge, VerificationBadge, CitationStyleBadge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../components/common/Toast';
-import { resolveDOI, searchOpenAlex, searchSemanticScholar, type AcademicSearchResult } from '../../services/academicApis';
+import {
+  resolveDOI,
+  searchOpenAlex,
+  searchSemanticScholar,
+  searchDOAJ,
+  searchCrossref,
+  type AcademicSearchResult
+} from '../../services/academicApis';
 import { auditSourceMetadata } from '../../utils/antiHallucination';
 import { validateSourceAge } from '../../utils/sourceAgeValidator';
 import {
@@ -66,7 +74,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'library' | 'search'>('library');
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchEngine, setSearchEngine] = useState<'OPENALEX' | 'SEMANTIC_SCHOLAR' | 'DOI'>('OPENALEX');
+  const [searchEngine, setSearchEngine] = useState<'DOAJ' | 'CROSSREF' | 'OPENALEX' | 'SEMANTIC_SCHOLAR' | 'DOI'>('DOAJ');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<AcademicSearchResult[]>([]);
   const [verificationFilter, setVerificationFilter] = useState<'ALL' | VerificationStatus>('ALL');
@@ -115,18 +123,26 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
         const res = await resolveDOI(searchQuery.trim());
         setSearchResults(res ? [res] : []);
         if (res) {
-          showToast('Artículo encontrado', 'Datos obtenidos de Crossref / DOI.org', 'success');
+          showToast('Artículo encontrado', `Datos obtenidos de ${res.provider}`, 'success');
         } else {
-          showToast('No encontrado', 'Revisa que el DOI esté bien escrito (e.g. 10.1016/...)', 'warning');
+          showToast('No encontrado', 'Verifica que el identificador corresponda a un artículo publicado.', 'warning');
         }
+      } else if (searchEngine === 'DOAJ') {
+        const res = await searchDOAJ(searchQuery.trim(), 10);
+        setSearchResults(res);
+        showToast('Búsqueda en Español lista', `Encontramos ${res.length} artículos indexados en DOAJ (Iberoamérica).`, 'success');
+      } else if (searchEngine === 'CROSSREF') {
+        const res = await searchCrossref(searchQuery.trim(), 10);
+        setSearchResults(res);
+        showToast('Búsqueda en Crossref lista', `Encontramos ${res.length} registros y tesis en Crossref.`, 'success');
       } else if (searchEngine === 'OPENALEX') {
         const res = await searchOpenAlex(searchQuery.trim(), 10);
         setSearchResults(res);
-        showToast('Búsqueda lista', `Encontramos ${res.length} artículos en OpenAlex.`, 'success');
+        showToast('Búsqueda en OpenAlex lista', `Encontramos ${res.length} artículos en OpenAlex.`, 'success');
       } else {
         const res = await searchSemanticScholar(searchQuery.trim(), 10);
         setSearchResults(res);
-        showToast('Búsqueda lista', `Encontramos ${res.length} artículos en Semantic Scholar.`, 'success');
+        showToast('Búsqueda en Semantic Scholar lista', `Encontramos ${res.length} artículos en Semantic Scholar.`, 'success');
       }
     } catch {
       showToast('Error de conexión', 'No se pudo conectar con el buscador académico.', 'error');
@@ -249,21 +265,39 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                 <Sparkles className="w-3.5 h-3.5 text-[#D98880]" />
                 <span>Proveedor de Búsqueda Académica</span>
               </span>
-              <div className="grid grid-cols-3 sm:flex items-center gap-1.5">
-                {(['OPENALEX', 'SEMANTIC_SCHOLAR', 'DOI'] as const).map((eng) => (
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-touch touch-pan-x flex-nowrap py-1">
+                {[
+                  { id: 'DOAJ', label: '🇪🇸 DOAJ (En Español / Iberoamérica)' },
+                  { id: 'CROSSREF', label: '🌐 Crossref (Tesis & DOIs)' },
+                  { id: 'OPENALEX', label: '🔬 OpenAlex (250M+ Papers)' },
+                  { id: 'SEMANTIC_SCHOLAR', label: '🧠 Semantic Scholar (IA)' },
+                  { id: 'DOI', label: '🔗 DOI Directo' }
+                ].map((eng) => (
                   <button
-                    key={eng}
-                    onClick={() => setSearchEngine(eng)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center select-none ${
-                      searchEngine === eng
-                        ? 'bg-[#2B2D42] text-white shadow-2xs'
+                    key={eng.id}
+                    onClick={() => setSearchEngine(eng.id as any)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap text-center select-none shrink-0 ${
+                      searchEngine === eng.id
+                        ? 'bg-[#8C3A32] text-white shadow-xs'
                         : 'bg-[#F5F1EB] text-[#5A6275] hover:bg-[#EBE5DF]'
                     }`}
                   >
-                    {eng === 'OPENALEX' ? 'OpenAlex' : eng === 'SEMANTIC_SCHOLAR' ? 'Semantic' : 'DOI Directo'}
+                    {eng.label}
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Provider Info Banner */}
+            <div className="text-[11px] text-[#5A6275] bg-[#FAF8F5] p-2.5 rounded-xl border border-[#EBE5DF] flex items-center gap-2">
+              <Info className="w-4 h-4 text-[#8C3A32] shrink-0" />
+              <span className="leading-tight">
+                {searchEngine === 'DOAJ' && 'Directorio de 10M+ de artículos en acceso abierto con especial cobertura en español (SciELO, Redalyc, Dialnet, Latindex y revistas universitarias de Iberoamérica).'}
+                {searchEngine === 'CROSSREF' && 'Registro global con más de 150M de publicaciones académicas, actas de congresos y tesis universitarias de Perú y el mundo.'}
+                {searchEngine === 'OPENALEX' && 'Catálogo bibliográfico global abierto con 250M+ de artículos científicos y análisis de red de citaciones.'}
+                {searchEngine === 'SEMANTIC_SCHOLAR' && 'Buscador de artículos científicos impulsado por modelos de inteligencia artificial del Allen Institute.'}
+                {searchEngine === 'DOI' && 'Pega un código DOI (e.g. 10.18800/psico.202202.008) o enlace de SciELO/Dialnet para recuperar metadatos completos.'}
+              </span>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2">
@@ -271,8 +305,12 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                 <Input
                   placeholder={
                     searchEngine === 'DOI'
-                      ? 'Ingresa el código DOI (e.g. 10.18800/psico.202202.008)'
-                      : 'Escribe el tema, título o autor (e.g. regulacion emocional beck)...'
+                      ? 'Ingresa el código DOI (e.g. 10.18800/psico.202202.008) o enlace...'
+                      : searchEngine === 'DOAJ'
+                      ? 'Escribe un tema de psicología en español (e.g. apego infantil, regulacion emocional)...'
+                      : searchEngine === 'CROSSREF'
+                      ? 'Buscar artículos, tesis o autores en el registro global Crossref...'
+                      : 'Escribe el tema, título o autor (e.g. terapia cognitivo conductual beck)...'
                   }
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -301,7 +339,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                   Escribe un tema de psicología o pega un DOI para buscar artículos verificados.
                 </p>
                 <p className="text-xs text-[#8D99AE] mt-0.5">
-                  Conexión directa con bases indexadas de OpenAlex, Semantic Scholar y Crossref.
+                  Conexión directa con bases indexadas de DOAJ (Español), Crossref, OpenAlex y Semantic Scholar.
                 </p>
               </Card>
             ) : (

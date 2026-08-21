@@ -39,6 +39,14 @@ describe('Anti-Hallucination & Metadata Auditor Suite', () => {
     expect(extractDOI('https://ve.scielo.org/scielo.php?script=sci_arttext&pid=S2739-00632026000103067')).toBeNull();
     expect(extractDOI('')).toBeNull();
   });
+
+  it('safely handles empty queries in academic search engines', async () => {
+    const { searchDOAJ, searchCrossref, searchOpenAlex, searchSemanticScholar } = await import('../services/academicApis');
+    expect(await searchDOAJ('')).toEqual([]);
+    expect(await searchCrossref(' ')).toEqual([]);
+    expect(await searchOpenAlex('a')).toEqual([]);
+    expect(await searchSemanticScholar('')).toEqual([]);
+  });
 });
 
 describe('Source Age Validator Suite', () => {

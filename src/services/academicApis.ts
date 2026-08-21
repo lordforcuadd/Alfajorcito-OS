@@ -276,3 +276,103 @@ export async function searchSemanticScholar(query: string, limit = 8): Promise<A
     return [];
   }
 }
+
+// 4. Search DOAJ API (Directory of Open Access Journals - Massive Spanish / Ibero-America coverage)
+export async function searchDOAJ(query: string, limit = 8): Promise<AcademicSearchResult[]> {
+  if (!query || query.trim().length < 2) return [];
+
+  try {
+    const url = `https://doaj.org/api/search/articles/${encodeURIComponent(query)}?pageSize=${limit}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return [];
+    const data = await res.json();
+
+    return (data.results || []).map((item: any) => {
+      const bib = item.bibjson || {};
+      const authors: Author[] = (bib.author || []).map((a: { name?: string }) => {
+        const rawName = a.name || '';
+        const parts = rawName.split(' ');
+        const lastName = parts.length > 1 ? parts[parts.length - 1] : rawName;
+        const firstName = parts.length > 1 ? parts.slice(0, -1).join(' ') : '';
+        return { firstName, lastName };
+      });
+
+      const doiObj = (bib.identifier || []).find(
+        (id: { type?: string; id?: string }) => id.type?.toLowerCase() === 'doi'
+      );
+      const doi = doiObj ? doiObj.id : undefined;
+      const fullTextLink =
+        (bib.link || []).find((l: { type?: string; url?: string }) => l.type === 'fulltext')?.url ||
+        (bib.link || [])[0]?.url;
+
+      return {
+        title: bib.title || 'Sin título',
+        authors,
+        year: bib.year ? Number(bib.year) : new Date().getFullYear(),
+        type: 'JOURNAL_ARTICLE' as SourceType,
+        publication: bib.journal?.title || bib.journal?.publisher || 'Revista Indexada DOAJ',
+        volume: bib.journal?.volume,
+        issue: bib.journal?.number,
+        pages:
+          bib.start_page && bib.end_page ? `${bib.start_page}-${bib.end_page}` : bib.start_page,
+        doi,
+        url: doi ? `https://doi.org/${doi}` : fullTextLink,
+        abstract: bib.abstract ? bib.abstract.slice(0, 1000) : '',
+        citationCount: undefined,
+        provider: 'DOAJ' as const
+      };
+    });
+  } catch (err) {
+    console.error('Error searching DOAJ:', err);
+    return [];
+  }
+}
+
+// 5. Search Crossref Works API (Global DOI registry, thesis, and peer-reviewed papers)
+export async function searchCrossref(query: string, limit = 8): Promise<AcademicSearchResult[]> {
+  if (!query || query.trim().length < 2) return [];
+
+  try {
+    const url = `https://api.crossref.org/works?query=${encodeURIComponent(query)}&rows=${limit}&mailto=academic-user@app.local`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'AlfajorcitoOS/1.0 (mailto:academic-user@app.local)'
+      },
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+
+    return (data.message?.items || []).map((item: any) => {
+      const authors: Author[] = (item.author || []).map((a: { given?: string; family?: string }) => ({
+        firstName: a.given || '',
+        lastName: a.family || ''
+      }));
+
+      const year =
+        item.published?.['date-parts']?.[0]?.[0] ||
+        item['published-print']?.['date-parts']?.[0]?.[0] ||
+        item['published-online']?.['date-parts']?.[0]?.[0] ||
+        new Date().getFullYear();
+
+      return {
+        title: item.title?.[0] || 'Sin título',
+        authors,
+        year,
+        type: item.type === 'book' ? 'BOOK' : 'JOURNAL_ARTICLE',
+        publication: item['container-title']?.[0] || item.publisher || 'Registro Crossref',
+        volume: item.volume,
+        issue: item.issue,
+        pages: item.page,
+        doi: item.DOI,
+        url: item.URL || (item.DOI ? `https://doi.org/${item.DOI}` : undefined),
+        abstract: item.abstract ? item.abstract.replace(/<[^>]*>/g, '').slice(0, 1000) : '',
+        citationCount: item['is-referenced-by-count'],
+        provider: 'CROSSREF' as const
+      };
+    });
+  } catch (err) {
+    console.error('Error searching Crossref:', err);
+    return [];
+  }
+}
