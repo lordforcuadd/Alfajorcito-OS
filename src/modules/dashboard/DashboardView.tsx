@@ -102,21 +102,36 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Header Welcome Card (100% Dynamic & Reactive) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/40 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-[#8C3A32] uppercase tracking-wider mb-1 flex-wrap">
-            <span className="flex items-center gap-1.5"><GraduationCap className="w-3.5 h-3.5" /> {userProfile.institution || 'USMP'}</span>
-            <span>•</span>
-            <span>{userProfile.faculty || 'Facultad de Ciencias de la Comunicación, Turismo y Psicología'}</span>
-            <span>•</span>
-            <span>{userProfile.currentCycle || '8vo Ciclo'}</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-6 rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/40 shadow-xs">
+        <div className="space-y-2">
+          {/* Institutional Chips */}
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-[#8C3A32]">
+            <span className="inline-flex items-center gap-1 bg-[#FDF2F0] text-[#8C3A32] px-2 py-0.5 rounded-lg border border-[#E8A598]/50">
+              <GraduationCap className="w-3 h-3 text-[#D98880] shrink-0" />
+              <span>{userProfile.institution || 'USMP'}</span>
+            </span>
+            <span className="inline-flex items-center bg-[#F5F1EB] text-[#5A6275] px-2 py-0.5 rounded-lg border border-[#EBE5DF] max-w-[260px] truncate">
+              {userProfile.faculty || 'FCCTP'}
+            </span>
+            <span className="inline-flex items-center bg-[#F3E5F5] text-[#6A1B9A] px-2 py-0.5 rounded-lg border border-[#CE93D8]/60">
+              {userProfile.currentCycle || '8vo Ciclo'}
+            </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-[#2B2D42]">
-            ¡Hola, {userProfile.name}! • Panel Académico & Tesis
-          </h2>
-          <p className="text-xs sm:text-sm text-[#5A6275] mt-1">
-            {courses.length} asignaturas • {works.length} proyectos de investigación • {sources.length} fuentes verificadas • {notes.length} notas APA 7
-          </p>
+
+          <div>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-[#2B2D42] leading-tight">
+              ¡Hola, {userProfile.name}!
+            </h2>
+            <p className="text-xs sm:text-sm text-[#5A6275] mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="font-semibold text-[#2B2D42]">{courses.length}</span> asignaturas
+              <span className="text-[#CBD5E1] hidden xs:inline">•</span>
+              <span className="font-semibold text-[#2B2D42]">{works.length}</span> proyectos
+              <span className="text-[#CBD5E1] hidden xs:inline">•</span>
+              <span className="font-semibold text-[#2B2D42]">{sources.length}</span> fuentes
+              <span className="text-[#CBD5E1] hidden xs:inline">•</span>
+              <span className="font-semibold text-[#2B2D42]">{notes.length}</span> notas APA 7
+            </p>
+          </div>
         </div>
 
         <Button
@@ -124,7 +139,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           variant="primary"
           size="md"
           icon={<Plus className="w-4 h-4 stroke-[2.5]" />}
-          className="shadow-sm self-start sm:self-auto shrink-0"
+          className="shadow-sm w-full sm:w-auto shrink-0 font-bold"
         >
           Captura Rápida
         </Button>

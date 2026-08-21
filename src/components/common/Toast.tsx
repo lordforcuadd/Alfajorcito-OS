@@ -49,18 +49,18 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {/* Toast Floating Container */}
-      <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-2 sm:px-0">
+      {/* Toast Floating Container - Centered on Mobile, Bottom-Right on Desktop */}
+      <div className="fixed bottom-20 sm:bottom-6 left-0 right-0 sm:left-auto sm:right-6 z-50 flex flex-col items-center sm:items-end gap-2 max-w-sm sm:max-w-md mx-auto sm:mx-0 pointer-events-none px-3.5 sm:px-0">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`pointer-events-auto flex items-start gap-3 p-3.5 rounded-2xl border shadow-lg backdrop-blur-md transition-all animate-fade-in ${borderStyles[toast.type]}`}
+            className={`pointer-events-auto w-full flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl border shadow-xl backdrop-blur-md transition-all animate-fade-in ${borderStyles[toast.type]}`}
           >
             <div className="shrink-0 mt-0.5">{icons[toast.type]}</div>
             <div className="flex-1 min-w-0">
-              <h5 className="text-xs sm:text-sm font-bold">{toast.title}</h5>
+              <h5 className="text-xs sm:text-sm font-bold leading-tight">{toast.title}</h5>
               {toast.description && (
-                <p className="text-xs opacity-80 mt-0.5 leading-relaxed">{toast.description}</p>
+                <p className="text-xs opacity-90 mt-1 leading-relaxed">{toast.description}</p>
               )}
             </div>
             <button

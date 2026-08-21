@@ -918,14 +918,17 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <h4 className="font-bold text-sm text-[#2B2D42]">Borrador Académico</h4>
-                  <div className="flex items-center gap-2 text-xs text-[#5A6275] mt-0.5 flex-wrap">
-                    <span className="font-semibold text-[#2B2D42]">{wordCount} palabras</span>
-                    <span>•</span>
-                    <span>~{Math.max(1, Math.ceil(wordCount / 200))} min de lectura</span>
-                    <span>•</span>
-                    <span className="font-semibold text-[#8C3A32]">Estilo {work.citationStyle}</span>
-                    <span>•</span>
-                    <span className="text-[11px] text-[#5A6275]">
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-[#5A6275] mt-1">
+                    <span className="font-bold text-[#2B2D42] bg-[#F5F1EB] px-2 py-0.5 rounded-md border border-[#EBE5DF]">
+                      {wordCount} palabras
+                    </span>
+                    <span className="bg-[#FAF8F5] px-2 py-0.5 rounded-md border border-[#EBE5DF]">
+                      ~{Math.max(1, Math.ceil(wordCount / 200))} min de lectura
+                    </span>
+                    <span className="font-bold text-[#8C3A32] bg-[#FDF2F0] px-2 py-0.5 rounded-md border border-[#E8A598]/40">
+                      Estilo {work.citationStyle}
+                    </span>
+                    <span className="text-[11px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 font-medium">
                       {hasUnsavedDraft ? '🟡 Guardando...' : '🟢 Autoguardado activo'}
                     </span>
                   </div>

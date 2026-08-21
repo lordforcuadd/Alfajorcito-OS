@@ -18,7 +18,8 @@ import {
   GraduationCap,
   Copy,
   Check,
-  BookMarked
+  BookMarked,
+  ChevronRight
 } from 'lucide-react';
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';
@@ -38,7 +39,18 @@ import {
   copyRichReference,
   generateBibTeX
 } from '../../utils/citationEngine';
-import type { Source, VerificationStatus, Idea, Paraphrase, Work, Author, CitationStyle } from '../../types';
+import type { Source, VerificationStatus, Idea, Paraphrase, Work, Author, CitationStyle, SourceType } from '../../types';
+
+const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
+  JOURNAL_ARTICLE: 'Artículo Científico',
+  BOOK: 'Libro Completo',
+  BOOK_CHAPTER: 'Capítulo de Libro',
+  CONFERENCE_PAPER: 'Ponencia / Congreso',
+  THESIS: 'Tesis de Grado',
+  REPORT: 'Informe Técnico',
+  WEBPAGE: 'Sitio Web / Enlace',
+  OTHER: 'Fuente Académica'
+};
 
 export interface ResearchViewProps {
   onOpenQuickCapture: (tab?: 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task') => void;
@@ -175,76 +187,80 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
   });
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-[#2B2D42]">
-            Biblioteca de Fuentes & Buscador Científico
+    <div className="space-y-5 animate-fade-in">
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/40 shadow-xs">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#8C3A32] uppercase tracking-wider bg-[#FDF2F0] px-2.5 py-0.5 rounded-lg border border-[#E8A598]/50">
+            <BookOpen className="w-3.5 h-3.5 text-[#D98880]" />
+            <span>Investigación & Literatura Científica</span>
+          </div>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-[#2B2D42] leading-tight">
+            Biblioteca de Fuentes & Papers
           </h2>
-          <p className="text-xs sm:text-sm text-[#5A6275] mt-0.5">
-            Busca libros y artículos científicos reales, guarda citas y redacta con tus propias palabras.
+          <p className="text-xs sm:text-sm text-[#5A6275]">
+            Gestiona tus fuentes, verifica su vigencia y genera citas rigurosas para tus trabajos académicos.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => onOpenQuickCapture('source')}
-            variant="primary"
-            size="md"
-            icon={<Plus className="w-4 h-4 stroke-[2.5]" />}
-            className="w-full sm:w-auto"
-          >
-            Registrar Fuente
-          </Button>
-        </div>
+
+        <Button
+          onClick={() => onOpenQuickCapture('source')}
+          variant="primary"
+          size="md"
+          icon={<Plus className="w-4 h-4 stroke-[2.5]" />}
+          className="w-full sm:w-auto shrink-0 font-bold shadow-xs"
+        >
+          Registrar Fuente
+        </Button>
       </div>
 
-      {/* Main Mode Tabs */}
-      <div className="flex items-center gap-2 border-b border-[#EBE5DF] pb-2">
+      {/* Mode Switcher Segmented Tabs */}
+      <div className="grid grid-cols-2 p-1 bg-[#F5F1EB] rounded-2xl border border-[#EBE5DF] gap-1">
         <button
           onClick={() => setActiveTab('library')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none ${
+          className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none ${
             activeTab === 'library'
-              ? 'bg-[#E8A598] text-[#2B2D42] shadow-2xs'
-              : 'text-[#5A6275] hover:bg-[#F5F1EB]'
+              ? 'bg-white text-[#8C3A32] shadow-xs border border-[#E8A598]/40'
+              : 'text-[#5A6275] hover:text-[#2B2D42]'
           }`}
         >
-          <BookOpen className="w-4 h-4" />
+          <BookOpen className="w-4 h-4 text-[#D98880]" />
           <span>Mis Fuentes ({sources.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('search')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none ${
+          className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none ${
             activeTab === 'search'
-              ? 'bg-[#E8A598] text-[#2B2D42] shadow-2xs'
-              : 'text-[#5A6275] hover:bg-[#F5F1EB]'
+              ? 'bg-white text-[#8C3A32] shadow-xs border border-[#E8A598]/40'
+              : 'text-[#5A6275] hover:text-[#2B2D42]'
           }`}
         >
-          <Search className="w-4 h-4" />
-          <span>Búsqueda en Revistas Científicas</span>
+          <Search className="w-4 h-4 text-[#D98880]" />
+          <span className="truncate">Buscador Científico</span>
         </button>
       </div>
 
       {/* 1. SEARCH TAB */}
       {activeTab === 'search' && (
         <div className="space-y-4">
-          <Card variant="elevated" className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <span className="text-xs font-bold text-[#5A6275] uppercase tracking-wider">
-                Buscador
+          <Card variant="elevated" className="space-y-4 p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <span className="text-xs font-bold text-[#8C3A32] uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#D98880]" />
+                <span>Proveedor de Búsqueda Académica</span>
               </span>
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-touch touch-pan-x flex-nowrap">
+              <div className="grid grid-cols-3 sm:flex items-center gap-1.5">
                 {(['OPENALEX', 'SEMANTIC_SCHOLAR', 'DOI'] as const).map((eng) => (
                   <button
                     key={eng}
                     onClick={() => setSearchEngine(eng)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 select-none ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center select-none ${
                       searchEngine === eng
                         ? 'bg-[#2B2D42] text-white shadow-2xs'
                         : 'bg-[#F5F1EB] text-[#5A6275] hover:bg-[#EBE5DF]'
                     }`}
                   >
-                    {eng === 'OPENALEX' ? 'OpenAlex' : eng === 'SEMANTIC_SCHOLAR' ? 'Semantic Scholar' : 'Buscar por DOI'}
+                    {eng === 'OPENALEX' ? 'OpenAlex' : eng === 'SEMANTIC_SCHOLAR' ? 'Semantic' : 'DOI Directo'}
                   </button>
                 ))}
               </div>
@@ -269,9 +285,9 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                 onClick={handleExecuteSearch}
                 isLoading={isSearching}
                 icon={<Search className="w-4 h-4" />}
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto font-bold"
               >
-                Buscar
+                Buscar Papers
               </Button>
             </div>
           </Card>
@@ -279,9 +295,13 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
           {/* Search Results List */}
           <div className="space-y-3">
             {searchResults.length === 0 && !isSearching ? (
-              <Card variant="subtle" className="text-center py-10">
-                <p className="text-sm text-[#8D99AE]">
+              <Card variant="subtle" className="text-center py-10 px-4">
+                <BookOpen className="w-8 h-8 text-[#8D99AE] mx-auto mb-2 opacity-60" />
+                <p className="text-sm font-semibold text-[#5A6275]">
                   Escribe un tema de psicología o pega un DOI para buscar artículos verificados.
+                </p>
+                <p className="text-xs text-[#8D99AE] mt-0.5">
+                  Conexión directa con bases indexadas de OpenAlex, Semantic Scholar y Crossref.
                 </p>
               </Card>
             ) : (
@@ -291,14 +311,14 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                 );
 
                 return (
-                  <Card key={idx} variant="elevated" className="space-y-3">
+                  <Card key={idx} variant="elevated" className="p-4 sm:p-5 space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                      <div className="space-y-1.5 flex-1">
+                      <div className="space-y-2 flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-bold text-[#8C3A32] bg-[#FDF2F0] px-2 py-0.5 rounded-lg border border-[#E8A598]/40">
+                          <span className="text-xs font-bold text-[#8C3A32] bg-[#FDF2F0] px-2.5 py-0.5 rounded-lg border border-[#E8A598]/40">
                             {item.year || 'Año s/n'}
                           </span>
-                          <span className="text-xs text-[#5A6275] font-medium">
+                          <span className="text-xs text-[#5A6275] font-medium truncate max-w-[280px]">
                             {item.publication || 'Revista científica'}
                           </span>
                         </div>
@@ -307,29 +327,32 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                           {item.title}
                         </h4>
 
-                        <p className="text-xs text-[#5A6275]">
-                          {item.authors.map((a: Author) => `${a.lastName || ''}, ${a.firstName || ''}`).join('; ')}
-                        </p>
+                        <div className="flex items-center gap-1.5 text-xs text-[#5A6275]">
+                          <User className="w-3.5 h-3.5 text-[#8D99AE] shrink-0" />
+                          <span className="truncate">
+                            {item.authors.map((a: Author) => `${a.lastName || ''}, ${a.firstName || ''}`).join('; ')}
+                          </span>
+                        </div>
 
                         {item.abstract && (
-                          <p className="text-xs text-[#5A6275] line-clamp-2 italic pt-1 leading-relaxed">
+                          <p className="text-xs text-[#5A6275] line-clamp-2 italic pt-1 leading-relaxed bg-[#FAF8F5] p-2.5 rounded-xl border border-[#EBE5DF]/60">
                             "{item.abstract}"
                           </p>
                         )}
                       </div>
 
-                      <div className="shrink-0 flex sm:flex-col items-end gap-2">
+                      <div className="shrink-0 flex flex-col sm:items-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#EBE5DF]">
                         {isAlreadyImported ? (
-                          <span className="text-xs text-emerald-800 font-bold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-300 flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> En tu Biblioteca
+                          <span className="text-xs text-emerald-800 font-bold bg-emerald-50 px-3.5 py-2 rounded-xl border border-emerald-300 flex items-center justify-center gap-1.5 w-full sm:w-auto">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" /> En tu Biblioteca
                           </span>
                         ) : (
                           <Button
-                            variant="secondary"
+                            variant="primary"
                             size="sm"
                             onClick={() => handleImportResult(item)}
-                            icon={<Plus className="w-3.5 h-3.5" />}
-                            className="w-full sm:w-auto"
+                            icon={<Plus className="w-3.5 h-3.5 stroke-[2.5]" />}
+                            className="w-full sm:w-auto font-bold"
                           >
                             Guardar en Biblioteca
                           </Button>
@@ -340,9 +363,9 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                             href={item.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-[#8D99AE] hover:text-[#2B2D42] flex items-center gap-1 transition-colors"
+                            className="text-xs text-[#8D99AE] hover:text-[#2B2D42] flex items-center justify-center sm:justify-end gap-1 transition-colors py-1"
                           >
-                            <span>Ver artículo</span>
+                            <span>Ver artículo original</span>
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         )}
@@ -365,10 +388,10 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
               <Search className="w-4 h-4 text-[#8D99AE] absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Buscar por título, autor, revista, DOI o año en tu biblioteca..."
+                placeholder="Buscar por título, autor, revista, DOI o año..."
                 value={librarySearchQuery}
                 onChange={(e) => setLibrarySearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3.5 py-2 bg-white rounded-xl border border-[#EBE5DF] text-xs sm:text-sm text-[#2B2D42] placeholder-[#8D99AE] focus:outline-none focus:ring-2 focus:ring-[#E8A598]"
+                className="w-full pl-9 pr-3.5 py-2.5 bg-white rounded-xl border border-[#EBE5DF] text-xs sm:text-sm text-[#2B2D42] placeholder-[#8D99AE] focus:outline-none focus:ring-2 focus:ring-[#E8A598]"
               />
             </div>
             <div>
@@ -376,7 +399,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                 value={libraryWorkFilter}
                 onChange={(e) => setLibraryWorkFilter(e.target.value)}
               >
-                <option value="ALL">Todos los Proyectos / Tesis</option>
+                <option value="ALL">Todos los Trabajos / Tesis</option>
                 {works.map((w) => {
                   const c = coursesMap.get(w.courseId);
                   return (
@@ -420,16 +443,19 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
 
           {/* Source Cards Grid */}
           {filteredSources.length === 0 ? (
-            <Card variant="subtle" className="text-center py-12">
-              <p className="text-sm text-[#8D99AE]">No se encontraron fuentes con los filtros seleccionados.</p>
+            <Card variant="subtle" className="text-center py-12 px-4">
+              <BookOpen className="w-8 h-8 text-[#8D99AE] mx-auto mb-2 opacity-60" />
+              <p className="text-sm font-semibold text-[#5A6275]">No se encontraron fuentes con estos filtros.</p>
+              <p className="text-xs text-[#8D99AE] mt-0.5">Prueba a buscar con otro término o agregar una nueva fuente.</p>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {filteredSources.map((source) => {
                 const isSelected = selectedSourceId === source.id;
                 const authorNames = (source.authors || []).map((a) => a.lastName).join(', ') || 'Autor Desconocido';
                 const linkedWork = source.workIds?.[0] ? worksMap.get(source.workIds[0]) : undefined;
                 const ageValidation = validateSourceAge(source, linkedWork);
+                const sourceTypeName = SOURCE_TYPE_LABELS[source.type] || 'Artículo Científico';
 
                 return (
                   <Card
@@ -439,34 +465,70 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                       setInspectedSource(source);
                       if (onSelectSource) onSelectSource(source.id);
                     }}
-                    className={`space-y-3 flex flex-col justify-between ${
-                      isSelected ? 'ring-2 ring-[#E8A598]' : ''
+                    className={`p-4 rounded-2xl sm:rounded-3xl space-y-3 flex flex-col justify-between transition-all cursor-pointer ${
+                      isSelected ? 'ring-2 ring-[#E8A598] bg-[#FDF2F0]/20' : ''
                     }`}
                   >
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-[11px] font-bold text-[#8C3A32] uppercase tracking-wider line-clamp-1">
-                          {source.publication || 'Publicación Científica'}
+                    <div className="space-y-2.5">
+                      {/* Header row: Source Type + Verification */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-[#8C3A32] bg-[#FDF2F0] px-2.5 py-0.5 rounded-lg border border-[#E8A598]/40 truncate max-w-[170px]">
+                          {sourceTypeName}
                         </span>
-                        <VerificationBadge status={source.verificationStatus} />
+                        <VerificationBadge status={source.verificationStatus} size="sm" />
                       </div>
 
-                      <h4 className="text-sm font-extrabold text-[#2B2D42] leading-snug line-clamp-2">
+                      {/* Title */}
+                      <h4 className="text-sm sm:text-base font-extrabold text-[#2B2D42] leading-snug line-clamp-2">
                         {source.title}
                       </h4>
 
-                      <p className="text-xs text-[#5A6275] line-clamp-2">
-                        {source.abstract || 'Sin resumen registrado en metadatos.'}
-                      </p>
+                      {/* Authors & Year */}
+                      <div className="flex items-center gap-1.5 text-xs text-[#5A6275]">
+                        <User className="w-3.5 h-3.5 text-[#8D99AE] shrink-0" />
+                        <span className="truncate font-medium">
+                          {authorNames} <span className="font-bold text-[#2B2D42]">({source.year || 's.f.'})</span>
+                        </span>
+                      </div>
+
+                      {/* Publication / Journal */}
+                      {source.publication && (
+                        <div className="flex items-center gap-1.5 text-xs text-[#8C3A32]">
+                          <BookOpen className="w-3.5 h-3.5 text-[#D98880] shrink-0" />
+                          <span className="truncate font-medium">{source.publication}</span>
+                        </div>
+                      )}
+
+                      {/* Abstract Snippet */}
+                      {source.abstract && (
+                        <p className="text-xs text-[#5A6275] line-clamp-2 italic leading-relaxed pt-0.5 bg-[#FAF8F5] p-2.5 rounded-xl border border-[#EBE5DF]/60">
+                          "{source.abstract}"
+                        </p>
+                      )}
                     </div>
 
-                    <div className="pt-2 border-t border-[#EBE5DF] flex items-center justify-between text-[11px] text-[#8D99AE]">
-                      <span className="font-semibold text-[#2B2D42]">{authorNames} ({source.year || 's.f.'})</span>
-                      {ageValidation.status !== 'COMPLIANT' && (
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${ageValidation.badgeColor}`}>
+                    {/* Footer with Age badge & Linked Projects */}
+                    <div className="pt-2.5 border-t border-[#EBE5DF] flex items-center justify-between gap-2 text-xs">
+                      {ageValidation.status !== 'COMPLIANT' ? (
+                        <span className={`px-2 py-0.5 rounded-lg text-[11px] font-bold border ${ageValidation.badgeColor}`}>
                           {ageValidation.status === 'NON_COMPLIANT' ? `> ${linkedWork?.maxSourceAgeYears || 5} años` : 'Año s.f.'}
                         </span>
+                      ) : (
+                        <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg text-[11px] font-bold">
+                          ✓ Vigente
+                        </span>
                       )}
+
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-[#8C3A32] shrink-0">
+                        <span>
+                          {(source.workIds || []).length === 0
+                            ? 'Sin vincular'
+                            : (source.workIds || []).length === 1
+                            ? '1 trabajo'
+                            : `${(source.workIds || []).length} trabajos`}
+                        </span>
+                        <ChevronRight className="w-3.5 h-3.5 text-[#8C3A32]" />
+                      </div>
                     </div>
                   </Card>
                 );
@@ -487,17 +549,17 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
         >
           <div className="space-y-4">
             {/* Citation Style Switcher & Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-2xl bg-[#FAF8F5] border border-[#EBE5DF]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-2xl bg-[#FAF8F5] border border-[#EBE5DF]">
               <div className="flex items-center gap-1.5 text-xs font-bold text-[#8C3A32]">
-                <BookMarked className="w-4 h-4" />
-                <span>Formato de Cita & Referencia:</span>
+                <BookMarked className="w-4 h-4 text-[#D98880]" />
+                <span>Formato de Cita:</span>
               </div>
-              <div className="flex items-center gap-1 bg-white border border-[#EBE5DF] p-1 rounded-xl shadow-2xs overflow-x-auto no-scrollbar">
+              <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-white border border-[#EBE5DF] p-1 rounded-xl shadow-2xs">
                 {(['APA_7', 'MLA_9', 'IEEE', 'CHICAGO_AUTHOR_DATE', 'VANCOUVER'] as const).map((st) => (
                   <button
                     key={st}
                     onClick={() => setModalStyle(st)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer select-none shrink-0 ${
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer text-center select-none ${
                       modalStyle === st
                         ? 'bg-[#E8A598] text-[#2B2D42] shadow-2xs'
                         : 'text-[#5A6275] hover:bg-[#F5F1EB]'
@@ -520,15 +582,15 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
             {/* In-Text Citations Grid (Parenthetical & Narrative) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
               {/* Parenthetical */}
-              <div className="p-3 rounded-xl bg-white border border-[#EBE5DF] flex items-center justify-between gap-2 shadow-2xs">
-                <div className="min-w-0 flex-1">
+              <div className="p-3.5 rounded-2xl bg-white border border-[#EBE5DF] flex items-center justify-between gap-3 shadow-2xs">
+                <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex items-center gap-1">
                     <span className="text-[10px] font-bold text-[#8C3A32] uppercase">
                       Cita Parentética
                     </span>
                     <span className="text-[10px] text-[#8D99AE]">(Al final)</span>
                   </div>
-                  <code className="text-xs font-mono font-bold text-[#2B2D42] block mt-0.5 break-words [overflow-wrap:anywhere]">
+                  <code className="text-xs font-mono font-bold text-[#2B2D42] block break-words [overflow-wrap:anywhere]">
                     {formatInTextParenthetical(inspectedSource, modalStyle, undefined, sourceRefNum)}
                   </code>
                 </div>
@@ -541,28 +603,28 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                     showToast('Cita copiada', 'Cita parentética lista para pegar.', 'success');
                     setTimeout(() => setModalCopiedKey(null), 2000);
                   }}
-                  className="p-2 rounded-xl text-[#5A6275] hover:text-[#8C3A32] hover:bg-[#F5F1EB] transition-colors cursor-pointer shrink-0 border border-[#EBE5DF]"
+                  className="p-2.5 rounded-xl text-[#5A6275] hover:text-[#8C3A32] hover:bg-[#F5F1EB] transition-colors cursor-pointer shrink-0 border border-[#EBE5DF]"
                   title="Copiar cita parentética"
                   aria-label="Copiar cita parentética"
                 >
                   {modalCopiedKey === 'modal-parenthetical' ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <Check className="w-4 h-4 text-emerald-600" />
                   ) : (
-                    <Copy className="w-3.5 h-3.5" />
+                    <Copy className="w-4 h-4" />
                   )}
                 </button>
               </div>
 
               {/* Narrative */}
-              <div className="p-3 rounded-xl bg-white border border-[#EBE5DF] flex items-center justify-between gap-2 shadow-2xs">
-                <div className="min-w-0 flex-1">
+              <div className="p-3.5 rounded-2xl bg-white border border-[#EBE5DF] flex items-center justify-between gap-3 shadow-2xs">
+                <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex items-center gap-1">
                     <span className="text-[10px] font-bold text-[#8C3A32] uppercase">
                       Cita Narrativa
                     </span>
                     <span className="text-[10px] text-[#8D99AE]">(En la oración)</span>
                   </div>
-                  <code className="text-xs font-mono font-bold text-[#2B2D42] block mt-0.5 break-words [overflow-wrap:anywhere]">
+                  <code className="text-xs font-mono font-bold text-[#2B2D42] block break-words [overflow-wrap:anywhere]">
                     {formatInTextNarrative(inspectedSource, modalStyle, sourceRefNum)}
                   </code>
                 </div>
@@ -575,52 +637,75 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                     showToast('Cita copiada', 'Cita narrativa lista para pegar.', 'success');
                     setTimeout(() => setModalCopiedKey(null), 2000);
                   }}
-                  className="p-2 rounded-xl text-[#5A6275] hover:text-[#8C3A32] hover:bg-[#F5F1EB] transition-colors cursor-pointer shrink-0 border border-[#EBE5DF]"
+                  className="p-2.5 rounded-xl text-[#5A6275] hover:text-[#8C3A32] hover:bg-[#F5F1EB] transition-colors cursor-pointer shrink-0 border border-[#EBE5DF]"
                   title="Copiar cita narrativa"
                   aria-label="Copiar cita narrativa"
                 >
                   {modalCopiedKey === 'modal-narrative' ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <Check className="w-4 h-4 text-emerald-600" />
                   ) : (
-                    <Copy className="w-3.5 h-3.5" />
+                    <Copy className="w-4 h-4" />
                   )}
                 </button>
               </div>
             </div>
 
             {/* Canonical Reference with French Indentation */}
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-[#FDF2F0] to-white border border-[#E8A598]/60 space-y-2">
-              <div className="flex items-center justify-between gap-2">
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-[#FDF2F0] to-white border border-[#E8A598]/60 space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C3A32] flex items-center gap-1.5">
                   <BookOpen className="w-3.5 h-3.5 text-[#D98880]" />
-                  <span>Referencia Bibliográfica Final (Sangría Francesa)</span>
+                  <span>Referencia Bibliográfica Final</span>
                 </span>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const ref = formatFullReference(inspectedSource, modalStyle);
-                    const refHtml = `<p style="padding-left:1.5rem;text-indent:-1.5rem;">${formatFullReferenceHTML(inspectedSource, modalStyle)}</p>`;
-                    await copyRichReference(ref, refHtml);
-                    setModalCopiedKey('modal-ref');
-                    showToast('Referencia copiada', `Copiada en formato ${modalStyle} con cursivas.`, 'success');
-                    setTimeout(() => setModalCopiedKey(null), 2000);
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#F5F1EB] border border-[#E8A598]/60 text-[11px] font-bold text-[#8C3A32] flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs shrink-0"
-                  title="Copiar referencia bibliográfica con cursiva"
-                  aria-label="Copiar referencia bibliográfica"
-                >
-                  {modalCopiedKey === 'modal-ref' ? (
-                    <>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const bib = generateBibTeX(inspectedSource);
+                      navigator.clipboard.writeText(bib);
+                      setModalCopiedKey('modal-bibtex');
+                      showToast('BibTeX copiado', 'Entrada BibTeX lista para LaTeX / Zotero.', 'success');
+                      setTimeout(() => setModalCopiedKey(null), 2000);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-white hover:bg-[#F5F1EB] border border-[#EBE5DF] text-[11px] font-bold text-[#5A6275] flex items-center gap-1 transition-all cursor-pointer shadow-2xs shrink-0"
+                    title="Copiar BibTeX"
+                    aria-label="Copiar BibTeX"
+                  >
+                    {modalCopiedKey === 'modal-bibtex' ? (
                       <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>¡Copiado!</span>
-                    </>
-                  ) : (
-                    <>
+                    ) : (
                       <Copy className="w-3.5 h-3.5" />
-                      <span>Copiar Referencia</span>
-                    </>
-                  )}
-                </button>
+                    )}
+                    <span>BibTeX</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const ref = formatFullReference(inspectedSource, modalStyle);
+                      const refHtml = `<p style="padding-left:1.5rem;text-indent:-1.5rem;">${formatFullReferenceHTML(inspectedSource, modalStyle)}</p>`;
+                      await copyRichReference(ref, refHtml);
+                      setModalCopiedKey('modal-ref');
+                      showToast('Referencia copiada', `Copiada en formato ${modalStyle} con cursivas.`, 'success');
+                      setTimeout(() => setModalCopiedKey(null), 2000);
+                    }}
+                    className="px-3 py-1 rounded-xl bg-white hover:bg-[#F5F1EB] border border-[#E8A598]/60 text-[11px] font-bold text-[#8C3A32] flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs shrink-0"
+                    title="Copiar referencia con cursiva"
+                    aria-label="Copiar referencia"
+                  >
+                    {modalCopiedKey === 'modal-ref' ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>¡Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copiar Referencia</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
               <p
                 className="text-xs text-[#2B2D42] font-serif leading-relaxed break-words [overflow-wrap:anywhere]"
@@ -631,9 +716,9 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
             </div>
 
             {/* Symmetrical 2x2 Metadata Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
               {/* Authors */}
-              <div className="p-3.5 rounded-2xl bg-white border border-[#EBE5DF] flex items-start gap-3 shadow-2xs">
+              <div className="p-3 rounded-2xl bg-white border border-[#EBE5DF] flex items-start gap-3 shadow-2xs">
                 <div className="w-8 h-8 rounded-xl bg-[#FDF2F0] text-[#D98880] flex items-center justify-center shrink-0 mt-0.5">
                   <User className="w-4 h-4" />
                 </div>
@@ -648,7 +733,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
               </div>
 
               {/* Year & Journal */}
-              <div className="p-3.5 rounded-2xl bg-white border border-[#EBE5DF] flex items-start gap-3 shadow-2xs">
+              <div className="p-3 rounded-2xl bg-white border border-[#EBE5DF] flex items-start gap-3 shadow-2xs">
                 <div className="w-8 h-8 rounded-xl bg-[#FFF8E1] text-[#FFA000] flex items-center justify-center shrink-0 mt-0.5">
                   <Calendar className="w-4 h-4" />
                 </div>
@@ -661,7 +746,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
               </div>
 
               {/* DOI / Access Link */}
-              <div className="p-3.5 rounded-2xl bg-white border border-[#EBE5DF] flex items-start gap-3 shadow-2xs">
+              <div className="p-3 rounded-2xl bg-white border border-[#EBE5DF] flex items-start gap-3 shadow-2xs">
                 <div className="w-8 h-8 rounded-xl bg-[#E0F2F1] text-[#00897B] flex items-center justify-center shrink-0 mt-0.5">
                   <ExternalLink className="w-4 h-4" />
                 </div>
@@ -691,8 +776,8 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                 </div>
               </div>
 
-              {/* Verification & Anti-Plagiarism */}
-              <div className="p-3.5 rounded-2xl bg-white border border-[#EBE5DF] flex items-start gap-3 shadow-2xs">
+              {/* Verification Status */}
+              <div className="p-3 rounded-2xl bg-white border border-[#EBE5DF] flex items-start gap-3 shadow-2xs">
                 <div className="w-8 h-8 rounded-xl bg-[#F3E5F5] text-[#8E24AA] flex items-center justify-center shrink-0 mt-0.5">
                   <ShieldCheck className="w-4 h-4" />
                 </div>
@@ -705,7 +790,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
               </div>
             </div>
 
-            {/* Symmetrical Linked Works / Thesis Cards */}
+            {/* Linked Works / Thesis Cards */}
             <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#EBE5DF] space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -756,7 +841,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                             'info'
                           );
                         }}
-                        className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs transition-all cursor-pointer select-none ${
+                        className={`p-3 rounded-xl border flex items-center justify-between gap-2 text-xs transition-all cursor-pointer select-none min-h-[44px] ${
                           isLinked
                             ? 'bg-[#FDF2F0] border-[#E8A598] text-[#2B2D42] shadow-2xs font-semibold'
                             : 'bg-white border-[#EBE5DF] text-[#5A6275] hover:bg-[#F5F1EB]'
@@ -764,7 +849,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <div
-                            className={`w-4 h-4 rounded-md flex items-center justify-center text-[10px] shrink-0 ${
+                            className={`w-4 h-4 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 ${
                               isLinked ? 'bg-[#D98880] text-white' : 'border border-[#CBD5E1]'
                             }`}
                           >
@@ -791,7 +876,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
               )}
             </div>
 
-            {/* Symmetrical Extract New Idea & Paraphrase Section */}
+            {/* Extract New Idea & Paraphrase Section */}
             <div className="p-4 rounded-2xl bg-white border border-[#EBE5DF] space-y-3.5 shadow-2xs">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

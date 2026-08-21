@@ -106,34 +106,39 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header Banner */}
-      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/40 shadow-xs space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-[#8C3A32] uppercase tracking-wider flex-wrap">
-              <span className="flex items-center gap-1.5"><GraduationCap className="w-3.5 h-3.5" /> {userProfile?.institution || 'USMP'}</span>
-              <span>•</span>
-              <span>{userProfile?.faculty || 'Facultad de Ciencias de la Comunicación, Turismo y Psicología'}</span>
+      <div className="p-4 sm:p-6 rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/40 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-[#8C3A32]">
+              <span className="inline-flex items-center gap-1 bg-[#FDF2F0] text-[#8C3A32] px-2 py-0.5 rounded-lg border border-[#E8A598]/50">
+                <GraduationCap className="w-3 h-3 text-[#D98880] shrink-0" />
+                <span>{userProfile?.institution || 'USMP'}</span>
+              </span>
+              <span className="inline-flex items-center bg-[#F5F1EB] text-[#5A6275] px-2 py-0.5 rounded-lg border border-[#EBE5DF] max-w-[260px] truncate">
+                {userProfile?.faculty || 'FCCTP'}
+              </span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-[#2B2D42] mt-1">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-[#2B2D42] leading-tight">
               Malla Curricular & Plan de Internado / Tesis
             </h2>
-            <p className="text-xs sm:text-sm text-[#5A6275] mt-0.5">
+            <p className="text-xs sm:text-sm text-[#5A6275]">
               Personaliza tus asignaturas matriculadas, revisa prerrequisitos y planifica tu ruta de titulación.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs px-3 py-1.5 rounded-full font-bold bg-[#E8A598]/20 text-[#8C3A32] border border-[#E8A598]/40 shrink-0">
+            <span className="text-xs px-3 py-1.5 rounded-xl font-bold bg-[#E8A598]/20 text-[#8C3A32] border border-[#E8A598]/40 shrink-0">
               Ciclo Actual: {userProfile?.currentCycle || '8vo Ciclo'}
             </span>
             <Button
               variant="primary"
-              size="sm"
+              size="md"
               onClick={() => {
                 setCourseToEdit(null);
                 setIsCourseModalOpen(true);
               }}
               icon={<Plus className="w-4 h-4 stroke-[2.5]" />}
+              className="w-full sm:w-auto font-bold"
             >
               Nuevo Curso
             </Button>
