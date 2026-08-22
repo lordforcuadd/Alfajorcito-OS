@@ -47,6 +47,7 @@ import {
   copyRichReference,
   generateBibTeX
 } from '../../utils/citationEngine';
+import { checkParaphraseFidelity } from '../../services/aiService';
 import type { Source, VerificationStatus, Idea, Paraphrase, Work, Author, CitationStyle, SourceType } from '../../types';
 
 const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
@@ -89,6 +90,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
   const [newPageLoc, setNewPageLoc] = useState('');
   const [newCoreIdea, setNewCoreIdea] = useState('');
   const [newParaphraseText, setNewParaphraseText] = useState('');
+  const [isSavingQuote, setIsSavingQuote] = useState(false);
 
   // Live queries
   const sources = useLiveQuery(() => db.sources.toArray()) || [];
@@ -987,54 +989,126 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                 </div>
               )}
 
-              <div className="flex justify-end pt-1">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1">
                 <Button
-                  variant="primary"
+                  variant="secondary"
                   size="md"
                   className="w-full sm:w-auto font-bold"
+                  isLoading={isSavingQuote}
                   onClick={async () => {
                     if (!newQuote.trim() || !newParaphraseText.trim()) {
                       showToast('Campos requeridos', 'Ingresa la cita original y tu paráfrasis.', 'warning');
                       return;
                     }
 
-                    const now = Date.now();
-                    const ideaId = `idea-${Math.random().toString(36).substring(2, 9)}`;
-                    const assignedWorkId = inspectedSource.workIds?.[0] || (libraryWorkFilter !== 'ALL' ? libraryWorkFilter : undefined);
+                    setIsSavingQuote(true);
+                    try {
+                      const now = Date.now();
+                      const ideaId = `idea-${Math.random().toString(36).substring(2, 9)}`;
+                      const assignedWorkId = inspectedSource.workIds?.[0] || (libraryWorkFilter !== 'ALL' ? libraryWorkFilter : undefined);
 
-                    await db.ideas.add({
-                      id: ideaId,
-                      sourceId: inspectedSource.id,
-                      workId: assignedWorkId,
-                      rawQuote: newQuote.trim(),
-                      pageOrLocation: newPageLoc.trim(),
-                      extractedCoreIdea: newCoreIdea.trim() || 'Idea extraída',
-                      tags: [],
-                      createdAt: now,
-                      updatedAt: now
-                    });
+                      await db.ideas.add({
+                        id: ideaId,
+                        sourceId: inspectedSource.id,
+                        workId: assignedWorkId,
+                        rawQuote: newQuote.trim(),
+                        pageOrLocation: newPageLoc.trim(),
+                        extractedCoreIdea: newCoreIdea.trim() || 'Idea extraída',
+                        tags: [],
+                        createdAt: now,
+                        updatedAt: now
+                      });
 
-                    await db.paraphrases.add({
-                      id: `para-${Math.random().toString(36).substring(2, 9)}`,
-                      ideaId,
-                      sourceId: inspectedSource.id,
-                      workId: assignedWorkId,
-                      ownInterpretation: newCoreIdea.trim(),
-                      finalParaphrase: newParaphraseText.trim(),
-                      fidelityReviewStatus: 'PENDING_REVIEW',
-                      createdAt: now,
-                      updatedAt: now
-                    });
+                      await db.paraphrases.add({
+                        id: `para-${Math.random().toString(36).substring(2, 9)}`,
+                        ideaId,
+                        sourceId: inspectedSource.id,
+                        workId: assignedWorkId,
+                        ownInterpretation: newCoreIdea.trim(),
+                        finalParaphrase: newParaphraseText.trim(),
+                        fidelityReviewStatus: 'PENDING_REVIEW',
+                        createdAt: now,
+                        updatedAt: now
+                      });
 
-                    setNewQuote('');
-                    setNewPageLoc('');
-                    setNewCoreIdea('');
-                    setNewParaphraseText('');
-                    showToast('Cita guardada', 'Idea y paráfrasis conectadas con éxito.', 'success');
-                    setInspectedSource(null);
+                      setNewQuote('');
+                      setNewPageLoc('');
+                      setNewCoreIdea('');
+                      setNewParaphraseText('');
+                      showToast('Cita guardada', 'Idea y paráfrasis conectadas con éxito.', 'success');
+                      setInspectedSource(null);
+                    } finally {
+                      setIsSavingQuote(false);
+                    }
                   }}
                 >
                   Guardar Cita & Paráfrasis
+                </Button>
+                <Button
+                  variant="primary"
+                  size="md"
+                  icon={<Sparkles className="w-4 h-4" />}
+                  className="w-full sm:w-auto font-bold"
+                  isLoading={isSavingQuote}
+                  onClick={async () => {
+                    if (!newQuote.trim() || !newParaphraseText.trim()) {
+                      showToast('Campos requeridos', 'Ingresa la cita original y tu paráfrasis.', 'warning');
+                      return;
+                    }
+
+                    setIsSavingQuote(true);
+                    try {
+                      const now = Date.now();
+                      const ideaId = `idea-${Math.random().toString(36).substring(2, 9)}`;
+                      const assignedWorkId = inspectedSource.workIds?.[0] || (libraryWorkFilter !== 'ALL' ? libraryWorkFilter : undefined);
+
+                      const auditRes = await checkParaphraseFidelity(newQuote.trim(), newParaphraseText.trim());
+
+                      await db.ideas.add({
+                        id: ideaId,
+                        sourceId: inspectedSource.id,
+                        workId: assignedWorkId,
+                        rawQuote: newQuote.trim(),
+                        pageOrLocation: newPageLoc.trim(),
+                        extractedCoreIdea: newCoreIdea.trim() || 'Idea extraída',
+                        tags: [],
+                        createdAt: now,
+                        updatedAt: now
+                      });
+
+                      await db.paraphrases.add({
+                        id: `para-${Math.random().toString(36).substring(2, 9)}`,
+                        ideaId,
+                        sourceId: inspectedSource.id,
+                        workId: assignedWorkId,
+                        ownInterpretation: newCoreIdea.trim(),
+                        finalParaphrase: newParaphraseText.trim(),
+                        fidelityReviewStatus: auditRes.status,
+                        fidelityWarningMessage: auditRes.feedback,
+                        createdAt: now,
+                        updatedAt: now
+                      });
+
+                      showToast(
+                        auditRes.status === 'CONFIRMED_FAITHFUL' ? '¡Paráfrasis Fiel y Guardada!' : 'Guardado con Sugerencias',
+                        auditRes.feedback,
+                        auditRes.status === 'CONFIRMED_FAITHFUL' ? 'success' : 'warning',
+                        10000
+                      );
+
+                      setNewQuote('');
+                      setNewPageLoc('');
+                      setNewCoreIdea('');
+                      setNewParaphraseText('');
+                      setInspectedSource(null);
+                    } catch {
+                      showToast('Error', 'No se pudo completar la auditoría con IA.', 'error');
+                    } finally {
+                      setIsSavingQuote(false);
+                    }
+                  }}
+                >
+                  Guardar y Auditar con IA
                 </Button>
               </div>
             </div>

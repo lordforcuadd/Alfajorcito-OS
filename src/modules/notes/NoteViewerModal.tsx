@@ -56,6 +56,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
   const [editCourseId, setEditCourseId] = useState('');
   const [editWorkId, setEditWorkId] = useState('');
   const [editTags, setEditTags] = useState('');
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
   // Sync state when note opens
   useEffect(() => {
@@ -67,6 +68,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
       setEditWorkId(note.workId || '');
       setEditTags(note.tags.join(', '));
       setMode('view');
+      setIsConfirmDeleteOpen(false);
     }
   }, [note]);
 
@@ -137,11 +139,9 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
 
   // Handle Delete
   const handleDelete = async () => {
-    const confirmDelete = window.confirm(`¿Estás seguro de eliminar la nota "${note.title}"?`);
-    if (!confirmDelete) return;
-
     await db.notes.delete(note.id);
     showToast('Nota eliminada', 'La nota ha sido retirada de tu Segundo Cerebro.', 'info');
+    setIsConfirmDeleteOpen(false);
     onClose();
   };
 
@@ -286,7 +286,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleDelete}
+                onClick={() => setIsConfirmDeleteOpen(true)}
                 icon={<Trash2 className="w-3.5 h-3.5 text-[#C62828]" />}
                 className="text-[#C62828] hover:bg-red-50"
               >
@@ -444,6 +444,35 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
           </div>
         )}
       </div>
+
+      {/* Custom Confirmation Modal for Deleting Note */}
+      {isConfirmDeleteOpen && (
+        <Modal
+          isOpen={isConfirmDeleteOpen}
+          onClose={() => setIsConfirmDeleteOpen(false)}
+          title="¿Eliminar esta Nota?"
+          subtitle={`Se eliminará "${note.title}" de tu Segundo Cerebro`}
+          maxWidth="sm"
+        >
+          <div className="space-y-4">
+            <p className="text-xs text-[#5A6275] leading-relaxed">
+              Esta acción retirará la nota de tus ideas conectadas. Los backlinks hacia esta nota quedarán archivados.
+            </p>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-[#EBE5DF]">
+              <Button variant="ghost" onClick={() => setIsConfirmDeleteOpen(false)} className="w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleDelete}
+                className="w-full sm:w-auto bg-[#C62828] hover:bg-[#B71C1C] text-white font-bold"
+              >
+                Eliminar Definitivamente
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </Modal>
   );
 };

@@ -47,6 +47,7 @@ export const PipelineView: React.FC = () => {
   const [editingPara, setEditingPara] = useState<Paraphrase | null>(null);
   const [editingText, setEditingText] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [paraToDelete, setParaToDelete] = useState<Paraphrase | null>(null);
 
   // Live queries
   const sources = useLiveQuery(() => db.sources.toArray()) || [];
@@ -58,11 +59,11 @@ export const PipelineView: React.FC = () => {
   const ideasMap = React.useMemo(() => new Map(ideas.map((i) => [i.id, i])), [ideas]);
   const worksMap = React.useMemo(() => new Map(works.map((w) => [w.id, w])), [works]);
 
-  const handleDeleteParaphrase = async (id: string) => {
-    const confirm = window.confirm('¿Deseas eliminar esta cita/paráfrasis de tu registro?');
-    if (!confirm) return;
-    await db.paraphrases.delete(id);
-    showToast('Paráfrasis eliminada', 'La ficha ha sido retirada.', 'info');
+  const handleConfirmDelete = async () => {
+    if (!paraToDelete) return;
+    await db.paraphrases.delete(paraToDelete.id);
+    showToast('Paráfrasis eliminada', 'La ficha ha sido retirada de tus citas.', 'info');
+    setParaToDelete(null);
   };
 
   const handleStartEdit = (para: Paraphrase) => {
@@ -521,7 +522,7 @@ export const PipelineView: React.FC = () => {
                       <span>Editar</span>
                     </button>
                     <button
-                      onClick={() => handleDeleteParaphrase(para.id)}
+                      onClick={() => setParaToDelete(para)}
                       className="p-1.5 text-[#8D99AE] hover:text-[#C62828] hover:bg-rose-50 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-rose-200"
                       title="Eliminar cita/paráfrasis"
                       aria-label="Eliminar cita y paráfrasis"
@@ -608,6 +609,35 @@ export const PipelineView: React.FC = () => {
                   Guardar y Auditar con IA
                 </Button>
               </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delete Paraphrase Confirmation Modal */}
+      {paraToDelete && (
+        <Modal
+          isOpen={!!paraToDelete}
+          onClose={() => setParaToDelete(null)}
+          title="¿Eliminar esta Paráfrasis?"
+          subtitle="Se retirará esta ficha de citas y referencias"
+          maxWidth="sm"
+        >
+          <div className="space-y-4">
+            <p className="text-xs text-[#5A6275] leading-relaxed">
+              Esta acción eliminará la paráfrasis registrada. La fuente bibliográfica seguirá guardada en tu biblioteca.
+            </p>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-[#EBE5DF]">
+              <Button variant="ghost" onClick={() => setParaToDelete(null)} className="w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleConfirmDelete}
+                className="w-full sm:w-auto bg-[#C62828] hover:bg-[#B71C1C] text-white font-bold"
+              >
+                Eliminar Definitivamente
+              </Button>
             </div>
           </div>
         </Modal>
