@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { BookOpen, Trash2, CheckCircle2, Palette, User, Mail, Link as LinkIcon, Calendar } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { db } from '../../db';
 import { useToast } from '../common/Toast';
-import type { Course } from '../../types';
+import type { Course, UserProfile } from '../../types';
 
 export interface CourseModalProps {
   isOpen: boolean;
@@ -30,9 +31,18 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   courseToEdit
 }) => {
   const { showToast } = useToast();
+  const userProfile = useLiveQuery(async () => {
+    const rec = await db.settings.get('user_profile');
+    return rec?.value as UserProfile | undefined;
+  });
+
+  const defaultCyclePeriod = userProfile?.currentCycle
+    ? `2026-II (${userProfile.currentCycle})`
+    : '2026-II (Ciclo Actual)';
+
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
-  const [period, setPeriod] = useState('2026-II (8vo Ciclo)');
+  const [period, setPeriod] = useState(defaultCyclePeriod);
   const [teacherName, setTeacherName] = useState('');
   const [teacherEmail, setTeacherEmail] = useState('');
   const [syllabusUrl, setSyllabusUrl] = useState('');
@@ -44,7 +54,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
     if (courseToEdit) {
       setName(courseToEdit.name || '');
       setCode(courseToEdit.code || '');
-      setPeriod(courseToEdit.period || '2026-II (8vo Ciclo)');
+      setPeriod(courseToEdit.period || defaultCyclePeriod);
       setTeacherName(courseToEdit.teacherName || '');
       setTeacherEmail(courseToEdit.teacherEmail || '');
       setSyllabusUrl(courseToEdit.syllabusUrl || '');
@@ -52,13 +62,13 @@ export const CourseModal: React.FC<CourseModalProps> = ({
     } else {
       setName('');
       setCode('');
-      setPeriod('2026-II (8vo Ciclo)');
+      setPeriod(defaultCyclePeriod);
       setTeacherName('');
       setTeacherEmail('');
       setSyllabusUrl('');
       setColor(PASTEL_COLORS[0]);
     }
-  }, [courseToEdit, isOpen]);
+  }, [courseToEdit, isOpen, defaultCyclePeriod]);
 
   const handleSaveCourse = async () => {
     if (!name.trim()) {

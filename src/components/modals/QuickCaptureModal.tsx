@@ -25,7 +25,7 @@ import { db } from '../../db';
 import { resolveDOI } from '../../services/academicApis';
 import { formulateQuestionForTeacher, analyzeInstructionsOffline } from '../../services/aiService';
 import { useToast } from '../common/Toast';
-import type { CitationStyle, WorkType, WorkStatus, ParaCategory, TaskPriority, SourceType, Author } from '../../types';
+import type { CitationStyle, WorkType, WorkStatus, ParaCategory, TaskPriority, SourceType, Author, UserProfile } from '../../types';
 
 export type CaptureTab = 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task';
 
@@ -58,9 +58,17 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
   const [activeTab, setActiveTab] = useState<CaptureTab>(initialTab);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Courses & Works live query for dropdowns
+  // Courses, Works & User Profile live query for dropdowns
   const courses = useLiveQuery(() => db.courses.toArray()) || [];
   const works = useLiveQuery(() => db.works.toArray()) || [];
+  const userProfile = useLiveQuery(async () => {
+    const rec = await db.settings.get('user_profile');
+    return rec?.value as UserProfile | undefined;
+  });
+
+  const defaultCyclePeriod = userProfile?.currentCycle
+    ? `2026-II (${userProfile.currentCycle})`
+    : '2026-II (Ciclo Actual)';
 
   // 1. Note State
   const [noteTitle, setNoteTitle] = useState('');
@@ -84,11 +92,18 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
   // 3. Course State (Dynamic Course creation)
   const [courseName, setCourseName] = useState('');
   const [courseCode, setCourseCode] = useState('');
-  const [coursePeriod, setCoursePeriod] = useState('2026-II (8vo Ciclo)');
+  const [coursePeriod, setCoursePeriod] = useState(defaultCyclePeriod);
   const [courseTeacherName, setCourseTeacherName] = useState('');
   const [courseTeacherEmail, setCourseTeacherEmail] = useState('');
   const [courseSyllabusUrl, setCourseSyllabusUrl] = useState('');
   const [courseColor, setCourseColor] = useState(PASTEL_COLORS[0]);
+
+  // Sync coursePeriod when userProfile loads
+  useEffect(() => {
+    if (userProfile?.currentCycle) {
+      setCoursePeriod((prev) => (prev.includes('Ciclo Actual') ? `2026-II (${userProfile.currentCycle})` : prev));
+    }
+  }, [userProfile?.currentCycle]);
 
   // 4. Source State
   const [sourceDoiOrSearch, setSourceDoiOrSearch] = useState('');

@@ -249,11 +249,11 @@ async function getEffectiveUserProfile(passedProfile?: Partial<UserProfile>): Pr
     console.warn('Could not read user_profile from db:', err);
   }
   return {
-    name: 'Saory',
-    institution: 'Universidad de San Martín de Porres (USMP)',
-    faculty: 'Facultad de Ciencias de la Comunicación, Turismo y Psicología',
-    major: 'Psicología',
-    currentCycle: 'VIII Ciclo (8vo Ciclo)',
+    name: 'Estudiante',
+    institution: 'Universidad',
+    faculty: 'Facultad',
+    major: 'Carrera',
+    currentCycle: 'Ciclo Actual',
     defaultCitationStyle: 'APA_7'
   };
 }
@@ -270,10 +270,10 @@ export async function formulateQuestionForTeacher(
   const effectiveSettings = await getEffectiveAISettings(explicitSettings);
   const profile = await getEffectiveUserProfile(explicitProfile);
 
-  const studentName = profile.name || 'Saory';
-  const institution = profile.institution || 'Universidad de San Martín de Porres (USMP)';
-  const facultyMajor = `${profile.faculty || 'FCCTP'} - ${profile.major || 'Psicología'}`;
-  const cycle = String(profile.currentCycle || 'VIII Ciclo (8vo Ciclo)');
+  const studentName = profile.name || 'Estudiante';
+  const institution = profile.institution || 'Universidad';
+  const facultyMajor = [profile.faculty, profile.major].filter(Boolean).join(' - ') || 'Carrera';
+  const cycle = String(profile.currentCycle || 'Ciclo Actual');
 
   if (effectiveSettings?.apiKey && effectiveSettings.provider !== 'offline_heuristics') {
     try {
