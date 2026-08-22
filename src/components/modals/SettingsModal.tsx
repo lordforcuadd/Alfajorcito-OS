@@ -354,9 +354,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               value={userCycle}
               onChange={(e) => setUserCycle(e.target.value)}
             >
-              <option value="VIII Ciclo (8vo Ciclo)">VIII Ciclo (8vo - Actual)</option>
-              <option value="IX Ciclo (9no Ciclo - Internado I)">IX Ciclo (9no - Internado I)</option>
-              <option value="X Ciclo (10mo Ciclo - Internado II & Tesis)">X Ciclo (10mo - Internado II & Tesis)</option>
+              <option value="I Ciclo">I Ciclo (1er Ciclo)</option>
+              <option value="II Ciclo">II Ciclo (2do Ciclo)</option>
+              <option value="III Ciclo">III Ciclo (3er Ciclo)</option>
+              <option value="IV Ciclo">IV Ciclo (4to Ciclo)</option>
+              <option value="V Ciclo">V Ciclo (5to Ciclo)</option>
+              <option value="VI Ciclo">VI Ciclo (6to Ciclo)</option>
+              <option value="VII Ciclo">VII Ciclo (7mo Ciclo)</option>
+              <option value="VIII Ciclo (8vo Ciclo)">VIII Ciclo (8vo Ciclo)</option>
+              <option value="IX Ciclo (9no Ciclo - Internado I)">IX Ciclo (9no Ciclo - Internado I)</option>
+              <option value="X Ciclo (10mo Ciclo - Internado II & Tesis)">X Ciclo (10mo Ciclo - Internado II & Tesis)</option>
             </Select>
 
             <Select

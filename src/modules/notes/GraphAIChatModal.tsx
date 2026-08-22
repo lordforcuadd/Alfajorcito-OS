@@ -99,10 +99,10 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
   };
 
   useEffect(() => {
-    if (messages.length === 0) {
+    if (messages.length === 0 || (messages.length === 1 && messages[0].id === 'welcome')) {
       setMessages(initWelcome());
     }
-  }, [studentName, cycle, specialty, institution, thesisTitle, messages.length]);
+  }, [studentName, cycle, specialty, institution, thesisTitle]);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {

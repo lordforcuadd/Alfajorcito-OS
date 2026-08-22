@@ -38,10 +38,6 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
   onOpenWork
 }) => {
   const { showToast } = useToast();
-  const [selectedCycle, setSelectedCycle] = useState<number>(8);
-  const [inspectedCourse, setInspectedCourse] = useState<CurriculumCourse | null>(null);
-  const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
-  const [courseToEdit, setCourseToEdit] = useState<Course | null>(null);
 
   // Live queries
   const userCourses = useLiveQuery(() => db.courses.toArray()) || [];
@@ -50,6 +46,35 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
     const rec = await db.settings.get('user_profile');
     return rec?.value as UserProfile | undefined;
   });
+
+  // Calculate active cycle number dynamically from userProfile
+  const userCycleNum = React.useMemo(() => {
+    const cycleStr = String(userProfile?.currentCycle || '');
+    if (cycleStr.includes('X') || cycleStr.includes('10')) return 10;
+    if (cycleStr.includes('IX') || cycleStr.includes('9')) return 9;
+    if (cycleStr.includes('VIII') || cycleStr.includes('8')) return 8;
+    if (cycleStr.includes('VII') || cycleStr.includes('7')) return 7;
+    if (cycleStr.includes('VI') || cycleStr.includes('6')) return 6;
+    if (cycleStr.includes('V') || cycleStr.includes('5')) return 5;
+    if (cycleStr.includes('IV') || cycleStr.includes('4')) return 4;
+    if (cycleStr.includes('III') || cycleStr.includes('3')) return 3;
+    if (cycleStr.includes('II') || cycleStr.includes('2')) return 2;
+    if (cycleStr.includes('I') || cycleStr.includes('1')) return 1;
+    return 8;
+  }, [userProfile?.currentCycle]);
+
+  const [selectedCycle, setSelectedCycle] = useState<number>(8);
+  const [hasUserManuallySelectedCycle, setHasUserManuallySelectedCycle] = useState(false);
+  const [inspectedCourse, setInspectedCourse] = useState<CurriculumCourse | null>(null);
+  const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
+  const [courseToEdit, setCourseToEdit] = useState<Course | null>(null);
+
+  // Sync selectedCycle with userProfile on initial load or profile update if not manually clicked
+  React.useEffect(() => {
+    if (!hasUserManuallySelectedCycle && userCycleNum) {
+      setSelectedCycle(userCycleNum);
+    }
+  }, [userCycleNum, hasUserManuallySelectedCycle]);
 
   const [unenrollTarget, setUnenrollTarget] = useState<{ course: CurriculumCourse; existingId: string } | null>(null);
 
@@ -117,7 +142,7 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
               <span className="inline-flex items-center bg-[#F5F1EB] text-[#5A6275] px-2.5 py-1 rounded-lg border border-[#EBE5DF]">
                 {userProfile?.faculty || 'FCCTP'}
               </span>
-              <span className="inline-flex items-center bg-[#E8A598]/20 text-[#8C3A32] px-2.5 py-1 rounded-lg border border-[#E8A598]/40">
+              <span className="inline-flex items-center bg-[#E8A598]/20 text-[#8C3A32] px-2.5 py-1 rounded-lg border border-[#E8A598]/40 font-bold">
                 Ciclo Actual: {userProfile?.currentCycle || '8vo Ciclo'}
               </span>
             </div>
@@ -147,28 +172,44 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
 
         {/* Pathway summary */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-          <div className="p-3 rounded-2xl bg-white border border-[#EBE5DF] space-y-1">
+          <div className={`p-3 rounded-2xl bg-white border ${userCycleNum === 8 ? 'border-[#E8A598] bg-[#FDF2F0]/40' : 'border-[#EBE5DF]'} space-y-1`}>
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-[#8C3A32] uppercase">Ciclo 8 (Actual)</span>
-              <span className="text-[10px] bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">En Curso</span>
+              <span className="text-[10px] font-bold text-[#8C3A32] uppercase">Ciclo 8</span>
+              {userCycleNum === 8 ? (
+                <span className="text-[10px] bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">En Curso</span>
+              ) : userCycleNum > 8 ? (
+                <span className="text-[10px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-full">Completado</span>
+              ) : (
+                <span className="text-[10px] bg-[#F3E5F5] text-[#512DA8] font-bold px-2 py-0.5 rounded-full">Próximo</span>
+              )}
             </div>
             <p className="text-xs font-bold text-[#2B2D42]">Taller de Tesis I & Psicoterapia</p>
             <p className="text-[11px] text-[#5A6275]">Aprobación de proyecto de tesis y seminarios clínicos.</p>
           </div>
 
-          <div className="p-3 rounded-2xl bg-white border border-[#EBE5DF] space-y-1">
+          <div className={`p-3 rounded-2xl bg-white border ${userCycleNum === 9 ? 'border-[#B39DDB] bg-[#F3E5F5]/40' : 'border-[#EBE5DF]'} space-y-1`}>
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-[#512DA8] uppercase">Ciclo 9 (Próximo)</span>
-              <span className="text-[10px] bg-[#F3E5F5] text-[#512DA8] font-bold px-2 py-0.5 rounded-full border border-[#B39DDB]/50">Internado I</span>
+              <span className="text-[10px] font-bold text-[#512DA8] uppercase">Ciclo 9</span>
+              {userCycleNum === 9 ? (
+                <span className="text-[10px] bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">En Curso (Internado I)</span>
+              ) : userCycleNum > 9 ? (
+                <span className="text-[10px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-full">Completado</span>
+              ) : (
+                <span className="text-[10px] bg-[#F3E5F5] text-[#512DA8] font-bold px-2 py-0.5 rounded-full">Internado I</span>
+              )}
             </div>
             <p className="text-xs font-bold text-[#2B2D42]">Prácticas Preprofesionales I & Tesis II</p>
             <p className="text-[11px] text-[#5A6275]">Inmersión en sedes hospitalarias/CSMC y recolección de datos.</p>
           </div>
 
-          <div className="p-3 rounded-2xl bg-white border border-[#EBE5DF] space-y-1">
+          <div className={`p-3 rounded-2xl bg-white border ${userCycleNum === 10 ? 'border-emerald-400 bg-emerald-50/40' : 'border-[#EBE5DF]'} space-y-1`}>
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-[#004D40] uppercase">Ciclo 10 (Final)</span>
-              <span className="text-[10px] bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">Licenciatura</span>
+              <span className="text-[10px] font-bold text-[#004D40] uppercase">Ciclo 10</span>
+              {userCycleNum === 10 ? (
+                <span className="text-[10px] bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">En Curso (Licenciatura)</span>
+              ) : (
+                <span className="text-[10px] bg-[#E0F2F1] text-[#004D40] font-bold px-2 py-0.5 rounded-full border border-teal-200">Licenciatura</span>
+              )}
             </div>
             <p className="text-xs font-bold text-[#2B2D42]">Internado II & Sustentación de Tesis</p>
             <p className="text-[11px] text-[#5A6275]">Memoria de prácticas, dictamen y título profesional USMP.</p>
@@ -186,29 +227,39 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
         className="flex items-center gap-2 pb-1.5 tab-scroll-pc flex-nowrap"
       >
         {[
-          { cycle: 1, label: 'I Ciclo' },
-          { cycle: 2, label: 'II Ciclo' },
-          { cycle: 3, label: 'III Ciclo' },
-          { cycle: 4, label: 'IV Ciclo' },
-          { cycle: 5, label: 'V Ciclo' },
-          { cycle: 6, label: 'VI Ciclo' },
-          { cycle: 7, label: 'VII Ciclo' },
-          { cycle: 8, label: 'VIII Ciclo (8vo - Actual)' },
-          { cycle: 9, label: 'IX Ciclo (9no - Internado I)' },
-          { cycle: 10, label: 'X Ciclo (10mo - Internado II & Tesis)' }
-        ].map((item) => (
-          <button
-            key={item.cycle}
-            onClick={() => setSelectedCycle(item.cycle)}
-            className={`px-4 py-2.5 sm:py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none whitespace-nowrap shrink-0 active:scale-[0.98] ${
-              selectedCycle === item.cycle
-                ? 'bg-[#E8A598] text-[#2B2D42] shadow-2xs border border-[#D98880]/30'
-                : 'bg-white text-[#5A6275] border border-[#EBE5DF] hover:bg-[#F5F1EB]'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
+          { cycle: 1, roman: 'I', label: 'I Ciclo' },
+          { cycle: 2, roman: 'II', label: 'II Ciclo' },
+          { cycle: 3, roman: 'III', label: 'III Ciclo' },
+          { cycle: 4, roman: 'IV', label: 'IV Ciclo' },
+          { cycle: 5, roman: 'V', label: 'V Ciclo' },
+          { cycle: 6, roman: 'VI', label: 'VI Ciclo' },
+          { cycle: 7, roman: 'VII', label: 'VII Ciclo' },
+          { cycle: 8, roman: 'VIII', label: 'VIII Ciclo' },
+          { cycle: 9, roman: 'IX', label: 'IX Ciclo (Internado I)' },
+          { cycle: 10, roman: 'X', label: 'X Ciclo (Internado II & Tesis)' }
+        ].map((item) => {
+          const isActual = item.cycle === userCycleNum;
+          const displayLabel = isActual ? `${item.roman} Ciclo (${item.cycle}vo - Actual)` : item.label;
+
+          return (
+            <button
+              key={item.cycle}
+              onClick={() => {
+                setHasUserManuallySelectedCycle(true);
+                setSelectedCycle(item.cycle);
+              }}
+              className={`px-4 py-2.5 sm:py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none whitespace-nowrap shrink-0 active:scale-[0.98] ${
+                selectedCycle === item.cycle
+                  ? 'bg-[#E8A598] text-[#2B2D42] shadow-2xs border border-[#D98880]/30'
+                  : isActual
+                  ? 'bg-[#FDF2F0] text-[#8C3A32] border border-[#E8A598]/60'
+                  : 'bg-white text-[#5A6275] border border-[#EBE5DF] hover:bg-[#F5F1EB]'
+              }`}
+            >
+              {displayLabel}
+            </button>
+          );
+        })}
       </div>
 
       {/* Courses in Selected Cycle */}
