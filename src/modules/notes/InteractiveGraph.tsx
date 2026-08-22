@@ -399,14 +399,27 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
 
       if (width === 0 || height === 0) return;
 
+      const oldWidth = dimensionsRef.current.width;
+      const oldHeight = dimensionsRef.current.height;
+
       if (
-        dimensionsRef.current.width !== width ||
-        dimensionsRef.current.height !== height ||
+        oldWidth !== width ||
+        oldHeight !== height ||
         dimensionsRef.current.dpr !== dpr
       ) {
         canvas.width = width * dpr;
         canvas.height = height * dpr;
         dimensionsRef.current = { width, height, dpr };
+
+        // If resizing (like toggling fullscreen or rotating phone), maintain perfect center!
+        if (oldWidth > 0 && oldHeight > 0) {
+          const shiftX = (width - oldWidth) / 2;
+          const shiftY = (height - oldHeight) / 2;
+          setPan((prev) => ({
+            x: prev.x + shiftX,
+            y: prev.y + shiftY
+          }));
+        }
       }
     };
 
@@ -414,11 +427,31 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     const ro = new ResizeObserver(updateSize);
     ro.observe(canvas);
 
-    // Native non-passive wheel listener to prevent "Unable to preventDefault inside passive event listener" error
+    // Focal Zoom Wheel Listener (Smooth, zero drift, zooms directly into mouse cursor)
     const onNativeWheel = (e: WheelEvent) => {
       e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      const { width, height } = dimensionsRef.current;
+      const centerX = width / 2;
+      const centerY = height / 2;
+
       const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
-      setZoom((prev) => Math.min(3.2, Math.max(0.35, prev * zoomFactor)));
+
+      setZoom((oldZoom) => {
+        const newZoom = Math.min(3.2, Math.max(0.35, oldZoom * zoomFactor));
+        const actualFactor = newZoom / oldZoom;
+
+        // Mathematical focal-point invariant: the world point under mouse cursor stays rock-solid
+        setPan((oldPan) => ({
+          x: mouseX - centerX - (mouseX - centerX - oldPan.x) * actualFactor,
+          y: mouseY - centerY - (mouseY - centerY - oldPan.y) * actualFactor
+        }));
+
+        return newZoom;
+      });
     };
     canvas.addEventListener('wheel', onNativeWheel, { passive: false });
 
@@ -840,11 +873,36 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
         });
       }
     } else if (e.touches.length === 2 && touchStartRef.current.dist) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const midX = (touch1.clientX + touch2.clientX) / 2 - rect.left;
+      const midY = (touch1.clientY + touch2.clientY) / 2 - rect.top;
+
+      const dx = touch1.clientX - touch2.clientX;
+      const dy = touch1.clientY - touch2.clientY;
       const currentDist = Math.sqrt(dx * dx + dy * dy);
       const factor = currentDist / touchStartRef.current.dist;
-      setZoom((prev) => Math.min(3.2, Math.max(0.35, prev * factor)));
+
+      const { width, height } = dimensionsRef.current;
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      setZoom((oldZoom) => {
+        const newZoom = Math.min(3.2, Math.max(0.35, oldZoom * factor));
+        const actualFactor = newZoom / oldZoom;
+
+        setPan((oldPan) => ({
+          x: midX - centerX - (midX - centerX - oldPan.x) * actualFactor,
+          y: midY - centerY - (midY - centerY - oldPan.y) * actualFactor
+        }));
+
+        return newZoom;
+      });
+
       touchStartRef.current.dist = currentDist;
     }
   };
@@ -855,6 +913,19 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
       setDraggedNode(null);
     }
     setIsPanning(false);
+  };
+
+  // Zoom by discrete factor from center
+  const handleZoomBy = (factor: number) => {
+    setZoom((oldZoom) => {
+      const newZoom = Math.min(3.2, Math.max(0.35, oldZoom * factor));
+      const actualFactor = newZoom / oldZoom;
+      setPan((oldPan) => ({
+        x: oldPan.x * actualFactor,
+        y: oldPan.y * actualFactor
+      }));
+      return newZoom;
+    });
   };
 
   // Double Click Handler (Centers camera on node or resets view)
@@ -973,7 +1044,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
 
           {/* Zoom In */}
           <button
-            onClick={() => setZoom((prev) => Math.min(3, prev * 1.2))}
+            onClick={() => handleZoomBy(1.2)}
             className="p-1.5 hover:bg-[#F1F5F9] rounded-xl text-[#475569] hover:text-[#0F172A] transition-colors cursor-pointer"
             title="Acercar (Zoom In)"
             aria-label="Acercar zoom del grafo"
@@ -983,7 +1054,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
 
           {/* Zoom Out */}
           <button
-            onClick={() => setZoom((prev) => Math.max(0.35, prev * 0.8))}
+            onClick={() => handleZoomBy(0.8)}
             className="p-1.5 hover:bg-[#F1F5F9] rounded-xl text-[#475569] hover:text-[#0F172A] transition-colors cursor-pointer"
             title="Alejar (Zoom Out)"
             aria-label="Alejar zoom del grafo"
