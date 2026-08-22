@@ -516,22 +516,13 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
 
             // Damping / Friction
             node.vx *= 0.86;
-            node.vy *= 0.86;
-
-            // Clamp max velocity to prevent sudden jumps
-            const maxV = 7;
+                  // Clamp max velocity to prevent sudden jumps
+            const maxV = 5;
             node.vx = Math.max(-maxV, Math.min(maxV, node.vx));
             node.vy = Math.max(-maxV, Math.min(maxV, node.vy));
 
             node.x += node.vx;
             node.y += node.vy;
-
-            // Soft boundaries
-            const margin = node.radius + 15;
-            if (node.x < margin) { node.x = margin; node.vx *= -0.5; }
-            if (node.x > width - margin) { node.x = width - margin; node.vx *= -0.5; }
-            if (node.y < margin) { node.y = margin; node.vy *= -0.5; }
-            if (node.y > height - margin) { node.y = height - margin; node.vy *= -0.5; }
           }
         });
 
@@ -543,101 +534,93 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
         });
       }
 
-      // ─── 2. RENDERING CANVAS WITH DPR SCALING ───
+      // ─── 2. GRAPH DRAWING PASS ───
       ctx.save();
       ctx.scale(dpr, dpr);
-      ctx.clearRect(0, 0, width, height);
 
-      // Camera Transformation (Pan & Zoom)
-      ctx.save();
-      ctx.translate(pan.x + centerX, pan.y + centerY);
-      ctx.scale(zoom, zoom);
-      ctx.translate(-centerX, -centerY);
+      // Clear canvas background
+      ctx.fillStyle = '#FAF8F5';
+      ctx.fillRect(0, 0, width, height);
 
-      // A. Ambient Grid Dots
-      ctx.fillStyle = '#CBD5E1';
-      const dotSpacing = 36;
-      for (let gx = -width * 1.5; gx < width * 2.5; gx += dotSpacing) {
-        for (let gy = -height * 1.5; gy < height * 2.5; gy += dotSpacing) {
+      // Subtle Background Grid Dot Matrix
+      const dotSpacing = 28 * zoom;
+      const startX = ((pan.x + centerX) % dotSpacing + dotSpacing) % dotSpacing;
+      const startY = ((pan.y + centerY) % dotSpacing + dotSpacing) % dotSpacing;
+
+      ctx.fillStyle = 'rgba(203, 213, 225, 0.45)';
+      for (let x = startX; x < width; x += dotSpacing) {
+        for (let y = startY; y < height; y += dotSpacing) {
           ctx.beginPath();
-          ctx.arc(gx, gy, 0.85, 0, Math.PI * 2);
+          ctx.arc(x, y, Math.max(0.8, 1.1 * Math.min(zoom, 1.2)), 0, Math.PI * 2);
           ctx.fill();
         }
       }
 
-      // B. Draw Edges & Particle Pulses
+      // Apply Zoom & Pan Camera Transformation
+      ctx.save();
+      ctx.translate(centerX + pan.x, centerY + pan.y);
+      ctx.scale(zoom, zoom);
+      ctx.translate(-centerX, -centerY);
+
+      // A. Draw Edges
       edgesRef.current.forEach((edge) => {
-        const isEdgeActive =
-          activeConnectedIds &&
-          activeConnectedIds.has(edge.source.id) &&
-          activeConnectedIds.has(edge.target.id);
+        const isSourceConnected = activeConnectedIds ? activeConnectedIds.has(edge.source.id) : false;
+        const isTargetConnected = activeConnectedIds ? activeConnectedIds.has(edge.target.id) : false;
+        const isEdgeActive = isSourceConnected && isTargetConnected;
+        const isEdgeDimmed = activeConnectedIds && !isEdgeActive;
 
         ctx.beginPath();
         ctx.moveTo(edge.source.x, edge.source.y);
         ctx.lineTo(edge.target.x, edge.target.y);
 
         if (isEdgeActive) {
-          ctx.strokeStyle = edge.source.color;
-          ctx.lineWidth = 2.8;
-          ctx.globalAlpha = 1.0;
-        } else if (activeConnectedIds) {
-          ctx.strokeStyle = '#E2E8F0';
+          ctx.strokeStyle = '#0D9488';
+          ctx.lineWidth = 2.2;
+        } else if (isEdgeDimmed) {
+          ctx.strokeStyle = 'rgba(226, 232, 240, 0.4)';
           ctx.lineWidth = 1;
-          ctx.globalAlpha = 0.12;
         } else {
-          ctx.strokeStyle = '#94A3B8';
-          ctx.lineWidth = 1.4;
-          ctx.globalAlpha = 0.55;
+          ctx.strokeStyle = 'rgba(203, 213, 225, 0.7)';
+          ctx.lineWidth = 1.2;
         }
-
         ctx.stroke();
 
-        // Draw Flowing Energy Particle Pulse
-        if (!activeConnectedIds || isEdgeActive) {
-          edge.particles.forEach((prog) => {
-            const px = edge.source.x + (edge.target.x - edge.source.x) * prog;
-            const py = edge.source.y + (edge.target.y - edge.source.y) * prog;
+        // Animated Energy Particles
+        if (!isEdgeDimmed) {
+          edge.particles.forEach((p) => {
+            const px = edge.source.x + (edge.target.x - edge.source.x) * p;
+            const py = edge.source.y + (edge.target.y - edge.source.y) * p;
 
             ctx.beginPath();
-            ctx.arc(px, py, isEdgeActive ? 2.8 : 1.8, 0, Math.PI * 2);
-            ctx.fillStyle = isEdgeActive ? '#FFFFFF' : edge.source.color;
-            ctx.globalAlpha = isEdgeActive ? 0.95 : 0.6;
+            ctx.arc(px, py, isEdgeActive ? 2.5 : 1.8, 0, Math.PI * 2);
+            ctx.fillStyle = isEdgeActive ? '#14B8A6' : 'rgba(217, 136, 128, 0.75)';
             ctx.fill();
           });
         }
-
-        ctx.globalAlpha = 1;
       });
 
-      // C. Draw Nodes
+      // B. Draw Nodes
       nodesRef.current.forEach((node) => {
-        const isHovered = hoveredNode?.id === node.id;
         const isSelected = selectedNode?.id === node.id;
-        const isDimmed = activeConnectedIds && !activeConnectedIds.has(node.id);
+        const isHovered = hoveredNode?.id === node.id;
+        const isConnected = activeConnectedIds ? activeConnectedIds.has(node.id) : false;
+        const isDimmed = activeConnectedIds && !isConnected;
         const isMatchedBySearch =
           searchQuery.trim().length > 0 &&
-          node.label.toLowerCase().includes(searchQuery.toLowerCase());
+          node.label.toLowerCase().includes(searchQuery.toLowerCase().trim());
 
         ctx.save();
+
         if (isDimmed) {
-          ctx.globalAlpha = 0.16;
+          ctx.globalAlpha = 0.22;
         }
 
-        // Vibrant Soft Glow Halo
-        if (isHovered || isSelected || isMatchedBySearch) {
+        // Active Pulsing Ring or Halo
+        if (isSelected || isHovered || isMatchedBySearch) {
           ctx.beginPath();
-          ctx.arc(node.x, node.y, node.radius + 10, 0, Math.PI * 2);
+          ctx.arc(node.x, node.y, node.radius + (isSelected ? 9 : 6), 0, Math.PI * 2);
           ctx.fillStyle = node.glowColor;
-          ctx.globalAlpha = isDimmed ? 0.06 : 0.5;
           ctx.fill();
-          ctx.globalAlpha = isDimmed ? 0.16 : 1;
-        }
-
-        // Drop Shadow
-        if (!isDimmed) {
-          ctx.shadowColor = 'rgba(15, 23, 42, 0.22)';
-          ctx.shadowBlur = 6;
-          ctx.shadowOffsetY = 2;
         }
 
         // Main Node Circle
@@ -645,8 +628,6 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
         ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
         ctx.fillStyle = node.color;
         ctx.fill();
-
-        ctx.shadowColor = 'transparent';
 
         // Border ring
         ctx.lineWidth = isSelected ? 3.5 : isHovered ? 2.5 : 2;
@@ -661,7 +642,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
           ctx.fill();
         }
 
-        // Node Label with High Contrast Pill
+        // Node Label Typography
         const showLabel =
           zoom >= 0.65 ||
           node.type === 'course' ||
@@ -671,32 +652,45 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
           isMatchedBySearch;
 
         if (showLabel) {
-          ctx.font = `${isHovered || isSelected ? 'bold 11px' : '600 10px'} "Plus Jakarta Sans", sans-serif`;
+          const isHighlight = isHovered || isSelected || isMatchedBySearch || node.type === 'course';
+          ctx.font = `${isHighlight ? 'bold 11px' : '500 10px'} "Plus Jakarta Sans", sans-serif`;
           ctx.textAlign = 'center';
 
           const labelText =
-            node.label.length > 22 && !isHovered && !isSelected
-              ? node.label.substring(0, 20) + '...'
+            node.label.length > 24 && !isHovered && !isSelected
+              ? node.label.substring(0, 22) + '...'
               : node.label;
 
-          // High Contrast White Pill behind text
           const textWidth = ctx.measureText(labelText).width;
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-          ctx.beginPath();
-          ctx.roundRect(
-            node.x - textWidth / 2 - 5,
-            node.y + node.radius + 3,
-            textWidth + 10,
-            15,
-            5
-          );
-          ctx.fill();
-          ctx.lineWidth = 1;
-          ctx.strokeStyle = isSelected ? node.color : 'rgba(203, 213, 225, 0.85)';
-          ctx.stroke();
 
-          ctx.fillStyle = isDimmed ? '#94A3B8' : '#0F172A';
-          ctx.fillText(labelText, node.x, node.y + node.radius + 14);
+          if (isHighlight) {
+            // Sleek white glass pill ONLY for selected/hovered/searched/course hubs
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+            ctx.beginPath();
+            ctx.roundRect(
+              node.x - textWidth / 2 - 6,
+              node.y + node.radius + 3,
+              textWidth + 12,
+              16,
+              6
+            );
+            ctx.fill();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = isSelected ? node.color : 'rgba(203, 213, 225, 0.9)';
+            ctx.stroke();
+
+            ctx.fillStyle = isDimmed ? '#94A3B8' : '#0F172A';
+            ctx.fillText(labelText, node.x, node.y + node.radius + 15);
+          } else {
+            // Clean, uncluttered typography with subtle text shadow
+            ctx.shadowColor = 'rgba(255, 255, 255, 0.95)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.fillStyle = isDimmed ? 'rgba(148, 163, 184, 0.7)' : '#334155';
+            ctx.fillText(labelText, node.x, node.y + node.radius + 13);
+            ctx.shadowColor = 'transparent';
+          }
         }
 
         ctx.restore();
