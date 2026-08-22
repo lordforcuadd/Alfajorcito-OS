@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ZoomIn,
   ZoomOut,
@@ -139,9 +140,11 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
   const nodesRef = useRef<GraphNode[]>([]);
   const edgesRef = useRef<GraphEdge[]>([]);
   const dimensionsRef = useRef({ width: 800, height: 500, dpr: 1 });
+  const alphaRef = useRef(1.0); // Physics simulation cooling factor (1.0 -> 0.0)
 
   // Build or update Graph structure (Preserving existing node positions to prevent jitter!)
   const buildGraphData = useCallback(() => {
+    alphaRef.current = 1.0; // Start simulation smoothly fanning out
     const existingNodesMap = new Map<string, GraphNode>();
     nodesRef.current.forEach((n) => existingNodesMap.set(n.id, n));
 
@@ -479,8 +482,9 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
       const centerX = width / 2;
       const centerY = height / 2;
 
-      // ─── 1. PHYSICS SIMULATION STEP ───
-      if (isPhysicsRunning) {
+      // ─── 1. PHYSICS SIMULATION STEP (Alpha Decay Cooling) ───
+      if (isPhysicsRunning && alphaRef.current > 0.001) {
+        const alpha = alphaRef.current;
         const nodes = nodesRef.current;
         const edges = edgesRef.current;
 
@@ -492,21 +496,21 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
             const dx = b.x - a.x;
             const dy = b.y - a.y;
             const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-            const safeDist = Math.max(dist, 12);
+            const safeDist = Math.max(dist, 14);
 
-            if (safeDist < 250) {
-              const force = (250 - safeDist) / 250;
-              const repStrength = (a.radius + b.radius) * 2.2 * force;
+            if (safeDist < 200) {
+              const force = ((200 - safeDist) / 200) * alpha;
+              const repStrength = (a.radius + b.radius) * 1.5 * force;
               const fx = (dx / safeDist) * repStrength;
               const fy = (dy / safeDist) * repStrength;
 
               if (!a.isDragging) {
-                a.vx -= fx * 0.12;
-                a.vy -= fy * 0.12;
+                a.vx -= fx * 0.09;
+                a.vy -= fy * 0.09;
               }
               if (!b.isDragging) {
-                b.vx += fx * 0.12;
-                b.vy += fy * 0.12;
+                b.vx += fx * 0.09;
+                b.vy += fy * 0.09;
               }
             }
           }
@@ -519,7 +523,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const springForce = (dist - edge.length) * 0.02;
+          const springForce = (dist - edge.length) * 0.02 * alpha;
 
           const fx = (dx / dist) * springForce;
           const fy = (dy / dist) * springForce;
@@ -534,23 +538,19 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
           }
         });
 
-        // C. Center Gravity, Harmonic Breathing & Velocity Clamping
+        // C. Center Gravity, Damping & Velocity Clamping
         nodes.forEach((node) => {
           if (!node.isDragging) {
             const dx = centerX - node.x;
             const dy = centerY - node.y;
-            node.vx += dx * 0.001;
-            node.vy += dy * 0.001;
-
-            // Organic subtle floating micro-wave
-            node.phase += dt * 1.5;
-            node.vx += Math.cos(node.phase) * 0.04;
-            node.vy += Math.sin(node.phase) * 0.04;
+            node.vx += dx * 0.0012 * alpha;
+            node.vy += dy * 0.0012 * alpha;
 
             // Damping / Friction
-            node.vx *= 0.86;
-                  // Clamp max velocity to prevent sudden jumps
-            const maxV = 5;
+            node.vx *= 0.82;
+            node.vy *= 0.82;
+
+            const maxV = 4;
             node.vx = Math.max(-maxV, Math.min(maxV, node.vx));
             node.vy = Math.max(-maxV, Math.min(maxV, node.vy));
 
@@ -559,13 +559,23 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
           }
         });
 
-        // D. Animate Energy Particle Flow along Edges
-        edges.forEach((edge) => {
-          for (let p = 0; p < edge.particles.length; p++) {
-            edge.particles[p] = (edge.particles[p] + dt * 0.45) % 1;
-          }
-        });
+        // Smooth cooling decay
+        alphaRef.current *= 0.975;
+        if (alphaRef.current <= 0.001) {
+          alphaRef.current = 0;
+          nodes.forEach((n) => {
+            n.vx = 0;
+            n.vy = 0;
+          });
+        }
       }
+
+      // Energy particles animation along edges
+      edgesRef.current.forEach((edge) => {
+        for (let p = 0; p < edge.particles.length; p++) {
+          edge.particles[p] = (edge.particles[p] + dt * 0.4) % 1;
+        }
+      });
 
       // ─── 2. GRAPH DRAWING PASS ───
       ctx.save();
@@ -792,6 +802,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
       clickedNode.isDragging = true;
       setDraggedNode(clickedNode);
       setSelectedNode(clickedNode);
+      alphaRef.current = 0.5; // Smoothly reheat physics while dragging
     } else {
       setIsPanning(true);
       setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
@@ -806,6 +817,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
       draggedNode.y = y;
       draggedNode.vx = 0;
       draggedNode.vy = 0;
+      alphaRef.current = 0.4;
     } else if (isPanning) {
       setPan({
         x: e.clientX - panStart.x,
@@ -844,6 +856,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
         clickedNode.isDragging = true;
         setDraggedNode(clickedNode);
         setSelectedNode(clickedNode);
+        alphaRef.current = 0.5;
       } else {
         setIsPanning(true);
         touchStartRef.current = { x: touch.clientX - pan.x, y: touch.clientY - pan.y };
@@ -953,13 +966,23 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     setIsMobileSearchOpen(false);
   };
 
-  return (
+  // Lock document body scroll during fullscreen
+  useEffect(() => {
+    if (isFullscreen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isFullscreen]);
+
+  const graphContent = (
     <div
       ref={containerRef}
-      className={`relative w-full rounded-3xl bg-[#FAF8F5] border border-[#CBD5E1] overflow-hidden shadow-xs select-none transition-all ${
+      className={`relative w-full bg-[#FAF8F5] select-none transition-all ${
         isFullscreen
-          ? 'fixed inset-0 z-50 h-screen w-screen rounded-none'
-          : 'h-[440px] xs:h-[500px] sm:h-[580px] lg:h-[640px] max-h-[85vh]'
+          ? 'fixed inset-0 z-[99999] h-screen w-screen rounded-none m-0 p-0 overflow-hidden shadow-none'
+          : 'h-[440px] xs:h-[500px] sm:h-[580px] lg:h-[640px] max-h-[85vh] rounded-3xl border border-[#CBD5E1] overflow-hidden shadow-xs'
       }`}
     >
       {/* 1. Header Toolbar (Single Clean Responsive Row - Never Covers the Graph!) */}
@@ -1076,7 +1099,12 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
 
           {/* Physics Play/Pause */}
           <button
-            onClick={() => setIsPhysicsRunning(!isPhysicsRunning)}
+            onClick={() => {
+              if (!isPhysicsRunning) {
+                alphaRef.current = 1.0;
+              }
+              setIsPhysicsRunning(!isPhysicsRunning);
+            }}
             className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
               isPhysicsRunning ? 'text-[#7C3AED] bg-[#F5F3FF]' : 'text-[#475569] hover:bg-[#F1F5F9]'
             }`}
@@ -1098,14 +1126,6 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
         </div>
       </div>
 
-      {/* Floating Clarity Hint */}
-      {!selectedNode && !searchQuery && !isMobileSearchOpen && (
-        <div className="absolute top-12 left-1/2 -translate-x-1/2 pointer-events-none z-10 hidden sm:flex items-center gap-1.5 px-3 py-1 bg-white/90 backdrop-blur-md border border-[#CBD5E1] rounded-full shadow-2xs text-[11px] font-semibold text-[#475569] animate-fade-in">
-          <Sparkles className="w-3 h-3 text-[#7C3AED]" />
-          <span>Haz clic en un nodo para inspeccionar sus conexiones y abrir su contenido</span>
-        </div>
-      )}
-
       {/* 2. Bottom High-Contrast Type Filter Pills (Compact & Horizontally Scrollable on PC & Mobile) */}
       <div
         onWheel={(e) => {
@@ -1124,9 +1144,10 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
           ].map((item) => (
             <button
               key={item.key}
-              onClick={() =>
-                setFilterTypes((prev) => ({ ...prev, [item.key]: !prev[item.key] }))
-              }
+              onClick={() => {
+                alphaRef.current = 0.8;
+                setFilterTypes((prev) => ({ ...prev, [item.key]: !prev[item.key] }));
+              }}
               className={`flex items-center gap-1 px-2 py-0.5 rounded-xl text-[11px] font-bold cursor-pointer transition-all whitespace-nowrap ${
                 filterTypes[item.key]
                   ? 'bg-[#0F172A] text-white shadow-xs'
@@ -1165,82 +1186,52 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
         }`}
       />
 
-      {/* 4. Selected Node Detail Inspector (Responsive Bottom Sheet on Mobile & Floating Glass Card on Desktop) */}
+      {/* 4. Sleek Node Inspector Panel (Bottom Sheet on Mobile, Floating Card on Desktop) */}
       {selectedNode && (
-        <div className="absolute z-20 transition-all animate-fade-in bottom-0 left-0 right-0 max-h-[65vh] overflow-y-auto rounded-t-3xl sm:bottom-auto sm:left-auto sm:top-14 sm:right-3 sm:w-88 sm:max-h-[82vh] sm:rounded-3xl bg-white/98 backdrop-blur-xl border-t sm:border border-[#CBD5E1] shadow-2xl p-4 sm:p-5 space-y-3">
-          {/* Mobile Sheet Drag Handle Indicator */}
-          <div className="w-10 h-1 bg-[#CBD5E1] rounded-full mx-auto sm:hidden mb-1" />
-
-          <div className="flex items-start justify-between gap-2 border-b border-[#E2E8F0] pb-2.5">
+        <div
+          className={`absolute z-20 pointer-events-auto bg-white/95 backdrop-blur-md border border-[#CBD5E1] shadow-xl transition-all animate-fade-in ${
+            isFullscreen
+              ? 'bottom-4 right-4 max-w-sm w-full rounded-2xl p-4'
+              : 'bottom-0 left-0 right-0 sm:bottom-4 sm:right-4 sm:left-auto sm:max-w-xs sm:w-full rounded-t-3xl sm:rounded-2xl p-4 max-h-[55vh] sm:max-h-[80%] overflow-y-auto overscroll-contain'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-2 border-b border-[#E2E8F0] pb-2.5 mb-2.5">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 mb-1">
-                <span
-                  className="w-2.5 h-2.5 rounded-full shrink-0 border border-white shadow-2xs"
-                  style={{ backgroundColor: selectedNode.color }}
-                />
-                <span
-                  className="text-[10px] font-extrabold uppercase tracking-wider"
-                  style={{ color: selectedNode.color }}
-                >
-                  {selectedNode.type === 'course'
-                    ? 'Asignatura FCCTP'
-                    : selectedNode.type === 'work'
-                    ? 'Trabajo o Asignación'
-                    : selectedNode.type === 'concept'
-                    ? 'Concepto Teórico'
-                    : 'Nota de Estudio'}
-                </span>
-              </div>
-              <h4 className="font-extrabold text-sm sm:text-base text-[#0F172A] leading-snug line-clamp-2 break-words">
+              <span
+                className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md inline-block mb-1 text-white shadow-2xs"
+                style={{ backgroundColor: selectedNode.color }}
+              >
+                {selectedNode.type === 'course'
+                  ? 'Asignatura'
+                  : selectedNode.type === 'work'
+                  ? 'Entregable APA 7'
+                  : selectedNode.type === 'concept'
+                  ? 'Concepto Teórico'
+                  : 'Nota Atómica'}
+              </span>
+              <h4 className="font-extrabold text-sm text-[#0F172A] leading-snug break-words">
                 {selectedNode.label}
               </h4>
             </div>
             <button
               onClick={() => setSelectedNode(null)}
-              className="p-1.5 hover:bg-[#F1F5F9] rounded-xl text-[#64748B] hover:text-[#0F172A] transition-colors cursor-pointer shrink-0"
-              title="Cerrar detalles del nodo"
-              aria-label="Cerrar detalles del nodo"
+              className="p-1 hover:bg-[#F1F5F9] rounded-xl text-[#64748B] hover:text-[#0F172A] transition-colors cursor-pointer shrink-0"
+              title="Cerrar inspector"
+              aria-label="Cerrar inspector"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Node specifics */}
-          <div className="text-xs text-[#475569] space-y-2.5">
+          {/* Node details */}
+          <div className="space-y-3">
             {selectedNode.type === 'note' && (() => {
               const noteItem = selectedNode.rawItem as Note;
               return (
                 <>
-                  <div className="max-h-48 overflow-y-auto p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2E8F0] shadow-2xs break-words scroll-touch">
-                    <FormattedNoteContent
-                      content={noteItem.content}
-                      notes={notes}
-                      concepts={concepts}
-                      courses={courses}
-                      works={works}
-                      onNavigateToNote={(n) => onOpenNote(n)}
-                      onNavigateToWork={onOpenWork}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] font-medium text-[#64748B] pt-0.5">
-                    <span>
-                      Categoría:{' '}
-                      <strong className="text-[#0F172A]">
-                        {noteItem.paraCategory === 'ATOMIC'
-                          ? 'Idea Rápida'
-                          : noteItem.paraCategory === 'PROJECT'
-                          ? 'Proyecto / Trabajo'
-                          : noteItem.paraCategory === 'AREA'
-                          ? 'Materia'
-                          : noteItem.paraCategory === 'RESOURCE'
-                          ? 'Recurso de Estudio'
-                          : 'Archivada'}
-                      </strong>
-                    </span>
-                    <span className="bg-[#F1F5F9] px-2 py-0.5 rounded-lg font-bold text-[#475569]">
-                      {selectedNode.connectionsCount} enlaces
-                    </span>
-                  </div>
+                  <p className="text-xs text-[#475569] line-clamp-3 bg-[#FAF8F5] p-2.5 rounded-xl border border-[#E2E8F0] leading-relaxed">
+                    {noteItem.content}
+                  </p>
                   <Button
                     variant="primary"
                     size="md"
@@ -1248,7 +1239,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
                     icon={<FileText className="w-4 h-4" />}
                     className="w-full font-bold justify-center shadow-xs"
                   >
-                    Leer Nota Completa & Editar
+                    Abrir y Editar Nota
                   </Button>
                 </>
               );
@@ -1258,22 +1249,10 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
               const workItem = selectedNode.rawItem as Work;
               return (
                 <>
-                  <div className="space-y-1 text-xs bg-[#FAF8F5] p-3 rounded-2xl border border-[#E2E8F0]">
-                    <p>
-                      Estado:{' '}
-                      <strong className="text-[#E11D48]">
-                        {workItem.status === 'PLANIFICACION'
-                          ? 'Planificación'
-                          : workItem.status === 'INVESTIGACION'
-                          ? 'Investigando Fuentes'
-                          : workItem.status === 'REDACTANDO'
-                          ? 'Redactando Borrador'
-                          : workItem.status === 'EN_REVISION'
-                          ? 'En Revisión'
-                          : 'Entregado'}
-                      </strong>
-                    </p>
-                    <p>Entrega: <strong>{new Date(workItem.deadline).toLocaleDateString()}</strong></p>
+                  <div className="space-y-1.5 text-xs bg-[#FAF8F5] p-3 rounded-2xl border border-[#E2E8F0]">
+                    <p>Tipo: <strong>{workItem.type}</strong></p>
+                    <p>Estado: <strong>{workItem.status}</strong></p>
+                    {workItem.deadline && <p>Entrega: <strong>{workItem.deadline}</strong></p>}
                   </div>
                   {onOpenWork && (
                     <Button
@@ -1298,9 +1277,6 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
                   {courseItem.teacherName && (
                     <p>Docente: <strong>{courseItem.teacherName}</strong></p>
                   )}
-                  <span className="text-[11px] text-[#64748B] block pt-0.5">
-                    {selectedNode.connectionsCount} trabajos y notas vinculadas en el grafo
-                  </span>
                 </div>
               );
             })()}
@@ -1309,10 +1285,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
               const conceptItem = selectedNode.rawItem as Concept;
               return (
                 <div className="space-y-2 text-xs bg-[#FAF8F5] p-3 rounded-2xl border border-[#E2E8F0]">
-                  <p className="leading-relaxed">{conceptItem.description || 'Concepto teórico clave de psicología.'}</p>
-                  <span className="text-[11px] text-[#0D9488] font-bold block pt-0.5">
-                    💡 {selectedNode.connectionsCount} notas asociadas a este constructo
-                  </span>
+                  <p className="leading-relaxed">{conceptItem.description || 'Concepto teórico clave.'}</p>
                 </div>
               );
             })()}
@@ -1335,4 +1308,10 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
       )}
     </div>
   );
+
+  if (isFullscreen && typeof document !== 'undefined') {
+    return createPortal(graphContent, document.body);
+  }
+
+  return graphContent;
 };
