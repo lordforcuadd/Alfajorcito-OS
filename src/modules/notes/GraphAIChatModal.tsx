@@ -1,23 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import {
   Sparkles,
   Send,
   Bot,
   User,
   X,
-  HelpCircle,
   BookOpen,
   GraduationCap,
   Layers,
   ArrowRight,
   RefreshCw,
-  Zap
+  Zap,
+  HeartHandshake
 } from 'lucide-react';
 import { Modal } from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
 import { FormattedNoteContent } from './WikiLinkRenderer';
 import { queryGraphAssistant } from '../../services/aiService';
-import type { Note, Concept, Course, Work, Source } from '../../types';
+import { db } from '../../db';
+import type { Note, Concept, Course, Work, Source, UserProfile } from '../../types';
 
 export interface GraphAIChatModalProps {
   isOpen: boolean;
@@ -39,13 +41,6 @@ interface ChatMessage {
   modelUsed?: string;
 }
 
-const SAMPLE_QUESTIONS = [
-  '¿Cómo se conecta mi Proyecto de Tesis con el curso de Psicología Clínica?',
-  'Sintetiza los conceptos teóricos de Regulación Emocional y Autoeficacia',
-  '¿Qué notas de psicometría peruana tengo y qué coeficientes recomiendan?',
-  '¿Qué vacíos conceptuales o temas no conectados detectas en mi grafo?'
-];
-
 export const GraphAIChatModal: React.FC<GraphAIChatModalProps> = ({
   isOpen,
   onClose,
@@ -57,19 +52,16 @@ export const GraphAIChatModal: React.FC<GraphAIChatModalProps> = ({
   onNavigateToNote,
   onNavigateToWork
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      sender: 'ai',
-      text: `¡Hola! Soy tu **Asistente de Navegación del Grafo**. 
+  const userProfile = useLiveQuery(async () => {
+    const rec = await db.settings.get('user_profile');
+    return rec?.value as UserProfile | undefined;
+  });
 
-Puedo razonar sobre todas tus notas conectadas, asignaturas de la USMP, proyectos de investigación y conceptos clave. Puedes preguntarme sobre relaciones teóricas, metodología psicométrica o pedirme que detecte áreas que necesitan más apuntes.
+  const studentName = userProfile?.name || 'Saory';
+  const cycle = userProfile?.currentCycle || '8vo Ciclo';
+  const specialty = userProfile?.specialty === 'CLINICA' ? 'Psicología Clínica' : userProfile?.specialty || 'Psicología';
 
-Todos los conceptos y notas que mencione estarán enlazados como [[Nombre]] para que puedas abrirlos de inmediato.`,
-      timestamp: Date.now(),
-      modelUsed: 'Alfajorcito Knowledge Engine'
-    }
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -77,6 +69,27 @@ Todos los conceptos y notas que mencione estarán enlazados como [[Nombre]] para
   const activeNotes = notes.filter((n) => n.paraCategory !== 'ARCHIVE');
   const activeWorks = works.filter((w) => !w.isArchived);
   const activeCourses = courses.filter((c) => !c.isArchived);
+
+  // Initialize personalized welcome message
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([
+        {
+          id: 'welcome',
+          sender: 'ai',
+          text: `¡Hola **${studentName}**! 🌟 Qué gusto saludarte.
+
+Estoy conectado a todo tu **Segundo Cerebro** de **${specialty}** en la USMP (${cycle}). 
+
+Conozco tus notas, asignaturas en curso, conceptos teóricos y tu proyecto de investigación sobre Regulación Emocional y Autoeficacia. Pregúntame con total libertad lo que necesites explorar o relacionar.
+
+Cualquier nota o concepto que mencione tendrá su enlace directo como [[Nombre]] para que puedas abrirlo con un clic en tu grafo.`,
+          timestamp: Date.now(),
+          modelUsed: 'Alfajorcito Companion Engine'
+        }
+      ]);
+    }
+  }, [studentName, cycle, specialty, messages.length]);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -104,7 +117,8 @@ Todos los conceptos y notas que mencione estarán enlazados como [[Nombre]] para
         concepts,
         courses: activeCourses,
         works: activeWorks,
-        sources
+        sources,
+        userProfile
       });
 
       const aiMsg: ChatMessage = {
@@ -120,7 +134,7 @@ Todos los conceptos y notas que mencione estarán enlazados como [[Nombre]] para
       const errorMsg: ChatMessage = {
         id: `error-${Date.now()}`,
         sender: 'ai',
-        text: 'Ocurrió un inconveniente al consultar el grafo de conocimiento. Intenta nuevamente.',
+        text: `Disculpa ${studentName}, ocurrió un inconveniente al consultar el grafo. Por favor intenta preguntarme de nuevo.`,
         timestamp: Date.now()
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -134,7 +148,7 @@ Todos los conceptos y notas que mencione estarán enlazados como [[Nombre]] para
       isOpen={isOpen}
       onClose={onClose}
       title="Asistente IA del Grafo"
-      subtitle="Razona, sintetiza y navega sobre el conocimiento interconectado de tu Segundo Cerebro"
+      subtitle={`Conectado al Segundo Cerebro de ${studentName} • ${cycle}`}
       maxWidth="2xl"
     >
       <div className="space-y-4">
@@ -156,31 +170,12 @@ Todos los conceptos y notas que mencione estarán enlazados como [[Nombre]] para
           </div>
 
           <span className="text-[10px] font-bold text-[#00695C] bg-[#E0F2F1] px-2 py-0.5 rounded-full border border-[#80CBC4]/60">
-            Grafo Indexado
+            {studentName} • USMP
           </span>
-        </div>
-
-        {/* Quick Suggestion Chips */}
-        <div className="space-y-1">
-          <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block">
-            Consultas sugeridas sobre tu grafo:
-          </span>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 tab-scroll-pc flex-nowrap">
-            {SAMPLE_QUESTIONS.map((q, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSendMessage(q)}
-                disabled={isLoading}
-                className="px-2.5 py-1 rounded-xl bg-[#F8FAFC] hover:bg-[#F1F5F9] border border-[#E2E8F0] hover:border-[#CBD5E1] text-[11px] text-[#334155] font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 active:scale-[0.98] disabled:opacity-50"
-              >
-                {q}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Chat Thread */}
-        <div className="max-h-[380px] min-h-[220px] overflow-y-auto space-y-3.5 p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2E8F0] shadow-2xs">
+        <div className="max-h-[440px] min-h-[260px] overflow-y-auto space-y-3.5 p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2E8F0] shadow-2xs">
           {messages.map((msg) => (
             <div
               key={msg.id}

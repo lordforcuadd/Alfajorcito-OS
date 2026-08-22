@@ -15,6 +15,7 @@ export interface GraphQueryContext {
   courses: Course[];
   works: Work[];
   sources?: Source[];
+  userProfile?: UserProfile;
 }
 
 export interface GraphQueryResult {
@@ -612,6 +613,25 @@ export async function queryGraphAssistant(
   const activeCourses = (context.courses || []).filter((c) => !c.isArchived);
   const activeWorks = (context.works || []).filter((w) => !w.isArchived);
 
+  // Retrieve user profile if not passed
+  let userProfile = context.userProfile;
+  if (!userProfile) {
+    try {
+      const rec = await db.settings.get('user_profile');
+      if (rec?.value) userProfile = rec.value as UserProfile;
+    } catch {
+      // Gracefully handled
+    }
+  }
+
+  const studentName = userProfile?.name || 'Saory';
+  const institution = userProfile?.institution || 'Universidad de San Martín de Porres (USMP)';
+  const faculty = userProfile?.faculty || 'Facultad de Ciencias de la Comunicación, Turismo y Psicología (FCCTP)';
+  const cycle = userProfile?.currentCycle || 'VIII Ciclo (8vo Ciclo)';
+  const specialty = userProfile?.specialty === 'CLINICA' ? 'Psicología Clínica' : userProfile?.specialty || 'Psicología';
+  const thesisTitle = userProfile?.thesisTitle || 'Regulación Emocional, Autoeficacia Académica y Sintomatología Ansiosa en Estudiantes de la USMP';
+  const internshipGoal = userProfile?.internshipSite || 'Postulación a Sedes de Internado USMP (Hospitales MINSA/EsSalud, CSMC)';
+
   // Extract quick matching items for highlighting
   const queryLower = userQuery.toLowerCase();
   const matchedConcepts = activeConcepts
@@ -646,11 +666,17 @@ export async function queryGraphAssistant(
         .map((c) => `- [[${c.name}]] (${c.code || 'FCCTP USMP'} - ${c.period || '8vo Ciclo'})`)
         .join('\n');
 
-      const prompt = `Eres el Asistente Inteligente de Navegación del Segundo Cerebro de Alfajorcito OS (diseñado para la carrera de Psicología de la USMP).
-Tu tarea es razonar sobre el Grafo de Conocimiento conectado del estudiante, sintetizar respuestas precisas y revelar conexiones conceptuales cruzadas entre cursos, trabajos y notas.
+      const prompt = `Eres el Asistente Académico y Compañero Intelectual del Segundo Cerebro de ${studentName}.
+Conoces profundamente a ${studentName} y su trayectoria universitaria:
+- Estudiante: ${studentName}
+- Universidad & Facultad: ${institution} (${faculty})
+- Carrera & Área: Psicología — ${specialty}
+- Ciclo Actual: ${cycle} (en etapa decisiva de consolidación hacia el Internado I y Tesis)
+- Proyecto de Investigación / Tesis: "${thesisTitle}"
+- Meta Formativa Próxima: ${internshipGoal}
 
 ══════════════════════════════════════════
-GRAFO DE CONOCIMIENTO INDEXADO DEL ESTUDIANTE:
+GRAFO DE CONOCIMIENTO INDEXADO DE ${studentName.toUpperCase()}:
 ══════════════════════════════════════════
 📌 ASIGNATURAS / CURSOS:
 ${coursesSummary || 'No hay cursos activos'}
@@ -665,15 +691,16 @@ ${conceptsSummary || 'No hay conceptos registrados'}
 ${notesSummary || 'No hay notas activas'}
 
 ══════════════════════════════════════════
-INSTRUCCIONES CLAVE DE RESPUESTA:
+PERSONALIDAD Y REGLAS DE RESPUESTA:
 ══════════════════════════════════════════
-1. Responde con tono académico, pedagógico, motivador y claro en español.
-2. IMPORTANTE: Cada vez que menciones una Nota, Concepto, Curso o Trabajo registrado, escríbelo EXACTAMENTE en formato de enlace wiki con corchetes dobles: [[Nombre Exacto]]. De esta manera el estudiante podrá hacer clic y navegar directo en el grafo interactivo.
-3. Cruza la información teórica con la práctica (por ejemplo, cómo los conceptos de Psicología Clínica se articulan con la Tesis o con la Deontología).
-4. Si la pregunta busca vacíos en el grafo, sugiere nuevos constructos o notas que convendría investigar.
-5. Emplea formato Markdown con viñetas y títulos claros.
+1. SÉ CÁLIDO, EMPÁTICO Y MOTIVADOR: Trata a ${studentName} por su nombre de forma natural. Eres su aliado de estudio y mentor intelectual, no una máquina fría ni distante.
+2. RIGOR CONCEPTUAL CON CERCANÍA: Explica los conceptos de psicología (clínica, psicometría, intervención grupal, deontología) con profundidad académica pero de manera accesible, pedagógica y estimulante.
+3. ENLACES CLICABLES OBLIGATORIOS: Cada vez que menciones una Nota, Concepto, Curso o Trabajo registrado en su grafo, escríbelo EXACTAMENTE en formato de corchetes dobles: [[Nombre Exacto]]. Así ${studentName} podrá hacer clic para abrir la nota o inspeccionar el nodo en su grafo interactivo.
+4. CONEXIÓN TRANSVERSAL: Ayúdale a ver cómo sus asignaturas del ciclo se entrelazan entre sí (por ejemplo, cómo sus notas de Psicología Clínica sustentan su Proyecto de Tesis o sus reflexiones éticas).
+5. RECOMENDACIONES: Si detectas vacíos en su mapa conceptual, sugiere nuevos constructos o notas que convendría profundizar.
+6. Emplea formato Markdown elegante con viñetas claras.
 
-PREGUNTA DEL ESTUDIANTE:
+PREGUNTA DE ${studentName.toUpperCase()}:
 "${userQuery}"`;
 
       const response = await callLLM(prompt, settings);
