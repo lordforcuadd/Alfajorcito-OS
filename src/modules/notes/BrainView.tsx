@@ -203,7 +203,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
             {[
               { id: 'ALL', label: `Todas (${notes.length})` },
               { id: 'ATOMIC', label: `Ideas Rápidas (${notes.filter((n) => n.paraCategory === 'ATOMIC').length})` },
-              { id: 'PROJECT', label: `Proyectos & Tesis (${notes.filter((n) => n.paraCategory === 'PROJECT').length})` },
+              { id: 'PROJECT', label: `Proyectos & Trabajos (${notes.filter((n) => n.paraCategory === 'PROJECT').length})` },
               { id: 'AREA', label: `Materias (${notes.filter((n) => n.paraCategory === 'AREA').length})` },
               { id: 'RESOURCE', label: `Recursos (${notes.filter((n) => n.paraCategory === 'RESOURCE').length})` },
               { id: 'ARCHIVE', label: `Archivadas (${notes.filter((n) => n.paraCategory === 'ARCHIVE').length})` }
@@ -238,6 +238,42 @@ export const BrainView: React.FC<BrainViewProps> = ({
                 // Count wiki-links in content
                 const wikiLinkMatches = (note.content.match(/\[\[(.*?)\]\]/g) || []).length;
 
+                const categoryBadge = (() => {
+                  switch (note.paraCategory) {
+                    case 'PROJECT':
+                      return (
+                        <span className="text-[11px] font-bold text-[#6A1B9A] bg-[#F3E5F5] px-2.5 py-0.5 rounded-lg border border-[#CE93D8]/50 truncate max-w-[150px]">
+                          Proyecto / Trabajo
+                        </span>
+                      );
+                    case 'AREA':
+                      return (
+                        <span className="text-[11px] font-bold text-[#1565C0] bg-[#E3F2FD] px-2.5 py-0.5 rounded-lg border border-[#90CAF9]/50 truncate max-w-[150px]">
+                          Materia
+                        </span>
+                      );
+                    case 'RESOURCE':
+                      return (
+                        <span className="text-[11px] font-bold text-[#00695C] bg-[#E0F2F1] px-2.5 py-0.5 rounded-lg border border-[#80CBC4]/50 truncate max-w-[150px]">
+                          Recurso
+                        </span>
+                      );
+                    case 'ARCHIVE':
+                      return (
+                        <span className="text-[11px] font-bold text-[#5A6275] bg-[#F5F1EB] px-2.5 py-0.5 rounded-lg border border-[#EBE5DF] truncate max-w-[150px]">
+                          Archivada
+                        </span>
+                      );
+                    case 'ATOMIC':
+                    default:
+                      return (
+                        <span className="text-[11px] font-bold text-[#8C3A32] bg-[#FDF2F0] px-2.5 py-0.5 rounded-lg border border-[#E8A598]/40 truncate max-w-[150px]">
+                          Idea Rápida
+                        </span>
+                      );
+                  }
+                })();
+
                 return (
                   <Card
                     key={note.id}
@@ -247,17 +283,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
                   >
                     <div className="space-y-2.5">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold text-[#8C3A32] bg-[#FDF2F0] px-2.5 py-0.5 rounded-lg border border-[#E8A598]/40 truncate max-w-[150px]">
-                          {note.paraCategory === 'ATOMIC'
-                            ? 'Idea Rápida'
-                            : note.paraCategory === 'PROJECT'
-                            ? 'Proyecto / Tesis'
-                            : note.paraCategory === 'AREA'
-                            ? 'Materia'
-                            : note.paraCategory === 'RESOURCE'
-                            ? 'Recurso'
-                            : 'Archivo'}
-                        </span>
+                        {categoryBadge}
                         {course && (
                           <span className="text-[11px] font-semibold text-[#5A6275] bg-[#F5F1EB] px-2 py-0.5 rounded-lg border border-[#EBE5DF] truncate max-w-[140px]">
                             {course.code || course.name}

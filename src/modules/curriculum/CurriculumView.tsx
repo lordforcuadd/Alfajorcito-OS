@@ -186,6 +186,13 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
         className="flex items-center gap-2 pb-1.5 tab-scroll-pc flex-nowrap"
       >
         {[
+          { cycle: 1, label: 'I Ciclo' },
+          { cycle: 2, label: 'II Ciclo' },
+          { cycle: 3, label: 'III Ciclo' },
+          { cycle: 4, label: 'IV Ciclo' },
+          { cycle: 5, label: 'V Ciclo' },
+          { cycle: 6, label: 'VI Ciclo' },
+          { cycle: 7, label: 'VII Ciclo' },
           { cycle: 8, label: 'VIII Ciclo (8vo - Actual)' },
           { cycle: 9, label: 'IX Ciclo (9no - Internado I)' },
           { cycle: 10, label: 'X Ciclo (10mo - Internado II & Tesis)' }

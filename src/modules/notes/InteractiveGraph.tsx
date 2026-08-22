@@ -70,9 +70,9 @@ export const GRAPH_PALETTE = {
     radius: 20
   },
   work: {
-    base: '#E11D48',         // Vivid Ruby Crimson (Thesis / Projects)
+    base: '#E11D48',         // Vivid Ruby Crimson (Assignments / Projects)
     glow: 'rgba(225, 29, 72, 0.45)',
-    label: 'Tesis',
+    label: 'Trabajos',
     radius: 15
   },
   concept: {
@@ -997,6 +997,14 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
         </div>
       </div>
 
+      {/* Floating Clarity Hint */}
+      {!selectedNode && (
+        <div className="absolute top-12 left-1/2 -translate-x-1/2 pointer-events-none z-10 hidden sm:flex items-center gap-1.5 px-3 py-1 bg-white/90 backdrop-blur-md border border-[#CBD5E1] rounded-full shadow-2xs text-[11px] font-semibold text-[#475569] animate-fade-in">
+          <Sparkles className="w-3 h-3 text-[#7C3AED]" />
+          <span>Haz clic en un nodo para inspeccionar sus conexiones y abrir su contenido</span>
+        </div>
+      )}
+
       {/* 2. Bottom High-Contrast Type Filter Pills (Compact & Horizontally Scrollable on PC & Mobile) */}
       <div
         onWheel={(e) => {
@@ -1076,7 +1084,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
                   {selectedNode.type === 'course'
                     ? 'Asignatura FCCTP'
                     : selectedNode.type === 'work'
-                    ? 'Trabajo o Proyecto de Tesis'
+                    ? 'Trabajo o Asignación'
                     : selectedNode.type === 'concept'
                     ? 'Concepto Teórico'
                     : 'Nota de Estudio'}
@@ -1120,7 +1128,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
                         {noteItem.paraCategory === 'ATOMIC'
                           ? 'Idea Rápida'
                           : noteItem.paraCategory === 'PROJECT'
-                          ? 'Proyecto / Tesis'
+                          ? 'Proyecto / Trabajo'
                           : noteItem.paraCategory === 'AREA'
                           ? 'Materia'
                           : noteItem.paraCategory === 'RESOURCE'

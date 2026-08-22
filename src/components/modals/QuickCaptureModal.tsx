@@ -514,10 +514,10 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
               onChange={(e) => setNotePara(e.target.value as ParaCategory)}
             >
               <option value="ATOMIC">Idea Rápida</option>
-              <option value="PROJECT">Proyecto / Tesis</option>
+              <option value="PROJECT">Proyecto / Trabajo</option>
               <option value="AREA">Materia</option>
-              <option value="RESOURCE">Material de Estudio</option>
-              <option value="ARCHIVE">Archivo</option>
+              <option value="RESOURCE">Recurso de Estudio</option>
+              <option value="ARCHIVE">Archivada</option>
             </Select>
 
             <Select

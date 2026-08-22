@@ -166,17 +166,27 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
         {/* Mode Switcher & Category Ribbon */}
         <div className="flex items-center justify-between gap-2 border-b border-[#EBE5DF] pb-3 flex-wrap">
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-extrabold text-[#8C3A32] uppercase tracking-wider bg-[#FDF2F0] border border-[#E8A598]/50 px-2.5 py-1 rounded-xl">
-              {note.paraCategory === 'ATOMIC'
-                ? 'Idea Rápida'
-                : note.paraCategory === 'PROJECT'
-                ? 'Proyecto / Tesis'
-                : note.paraCategory === 'AREA'
-                ? 'Materia'
-                : note.paraCategory === 'RESOURCE'
-                ? 'Recurso de Estudio'
-                : 'Archivo'}
-            </span>
+            {note.paraCategory === 'PROJECT' ? (
+              <span className="text-[11px] font-extrabold uppercase tracking-wider bg-[#F3E5F5] text-[#6A1B9A] border border-[#CE93D8]/50 px-2.5 py-1 rounded-xl">
+                Proyecto / Trabajo
+              </span>
+            ) : note.paraCategory === 'AREA' ? (
+              <span className="text-[11px] font-extrabold uppercase tracking-wider bg-[#E3F2FD] text-[#1565C0] border border-[#90CAF9]/50 px-2.5 py-1 rounded-xl">
+                Materia
+              </span>
+            ) : note.paraCategory === 'RESOURCE' ? (
+              <span className="text-[11px] font-extrabold uppercase tracking-wider bg-[#E0F2F1] text-[#00695C] border border-[#80CBC4]/50 px-2.5 py-1 rounded-xl">
+                Recurso de Estudio
+              </span>
+            ) : note.paraCategory === 'ARCHIVE' ? (
+              <span className="text-[11px] font-extrabold uppercase tracking-wider bg-[#F5F1EB] text-[#5A6275] border border-[#EBE5DF] px-2.5 py-1 rounded-xl">
+                Archivada
+              </span>
+            ) : (
+              <span className="text-[11px] font-extrabold uppercase tracking-wider bg-[#FDF2F0] text-[#8C3A32] border border-[#E8A598]/50 px-2.5 py-1 rounded-xl">
+                Idea Rápida
+              </span>
+            )}
             {currentWork && (
               <span className="text-[11px] font-bold text-[#2B2D42] bg-[#F5F1EB] px-2.5 py-1 rounded-xl border border-[#EBE5DF] break-words leading-snug max-w-[220px]">
                 {currentWork.title}
@@ -327,10 +337,10 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
                 onChange={(e) => setEditCategory(e.target.value as ParaCategory)}
               >
                 <option value="ATOMIC">Idea Rápida</option>
-                <option value="PROJECT">Proyecto / Tesis</option>
+                <option value="PROJECT">Proyecto / Trabajo</option>
                 <option value="AREA">Materia</option>
                 <option value="RESOURCE">Recurso de Estudio</option>
-                <option value="ARCHIVE">Archivo</option>
+                <option value="ARCHIVE">Archivada</option>
               </Select>
 
               <Select
