@@ -1066,7 +1066,11 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onWheel={handleWheel}
-        className={`w-full block touch-none ${
+        className={`w-full block touch-none transition-all ${
+          isFullscreen
+            ? 'h-screen w-screen'
+            : 'h-[500px] sm:h-[620px] lg:h-[700px]'
+        } ${
           draggedNode
             ? 'cursor-grabbing'
             : hoveredNode
@@ -1075,19 +1079,19 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
             ? 'cursor-grabbing'
             : 'cursor-grab'
         }`}
-        style={{
-          height: isFullscreen ? '100vh' : window.innerWidth < 640 ? '460px' : '580px'
-        }}
       />
 
-      {/* 4. Selected Node Detail Inspector Drawer */}
+      {/* 4. Selected Node Detail Inspector (Responsive Bottom Sheet on Mobile & Floating Glass Card on Desktop) */}
       {selectedNode && (
-        <div className="absolute top-12 right-2.5 left-2.5 sm:left-auto sm:right-3 sm:w-80 z-20 bg-white/98 backdrop-blur-md border border-[#CBD5E1] rounded-3xl shadow-2xl p-4 space-y-2.5 animate-fade-in">
-          <div className="flex items-start justify-between gap-2 border-b border-[#E2E8F0] pb-2">
+        <div className="absolute z-20 transition-all animate-fade-in bottom-0 left-0 right-0 max-h-[65vh] overflow-y-auto rounded-t-3xl sm:bottom-auto sm:left-auto sm:top-14 sm:right-3 sm:w-88 sm:max-h-[82vh] sm:rounded-3xl bg-white/98 backdrop-blur-xl border-t sm:border border-[#CBD5E1] shadow-2xl p-4 sm:p-5 space-y-3">
+          {/* Mobile Sheet Drag Handle Indicator */}
+          <div className="w-10 h-1 bg-[#CBD5E1] rounded-full mx-auto sm:hidden mb-1" />
+
+          <div className="flex items-start justify-between gap-2 border-b border-[#E2E8F0] pb-2.5">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 mb-0.5">
+              <div className="flex items-center gap-1.5 mb-1">
                 <span
-                  className="w-2.5 h-2.5 rounded-full shrink-0 border border-white"
+                  className="w-2.5 h-2.5 rounded-full shrink-0 border border-white shadow-2xs"
                   style={{ backgroundColor: selectedNode.color }}
                 />
                 <span
@@ -1103,13 +1107,13 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
                     : 'Nota de Estudio'}
                 </span>
               </div>
-              <h4 className="font-extrabold text-xs sm:text-sm text-[#0F172A] leading-snug line-clamp-2 break-words">
+              <h4 className="font-extrabold text-sm sm:text-base text-[#0F172A] leading-snug line-clamp-2 break-words">
                 {selectedNode.label}
               </h4>
             </div>
             <button
               onClick={() => setSelectedNode(null)}
-              className="p-1 hover:bg-[#F1F5F9] rounded-xl text-[#64748B] hover:text-[#0F172A] transition-colors cursor-pointer shrink-0"
+              className="p-1.5 hover:bg-[#F1F5F9] rounded-xl text-[#64748B] hover:text-[#0F172A] transition-colors cursor-pointer shrink-0"
               title="Cerrar detalles del nodo"
               aria-label="Cerrar detalles del nodo"
             >
@@ -1118,12 +1122,12 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
           </div>
 
           {/* Node specifics */}
-          <div className="text-xs text-[#475569] space-y-2">
+          <div className="text-xs text-[#475569] space-y-2.5">
             {selectedNode.type === 'note' && (() => {
               const noteItem = selectedNode.rawItem as Note;
               return (
                 <>
-                  <div className="max-h-44 overflow-y-auto p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2E8F0] shadow-2xs break-words">
+                  <div className="max-h-48 overflow-y-auto p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2E8F0] shadow-2xs break-words scroll-touch">
                     <FormattedNoteContent
                       content={noteItem.content}
                       notes={notes}
@@ -1134,10 +1138,10 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
                       onNavigateToWork={onOpenWork}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-[10px]">
+                  <div className="flex items-center justify-between text-[11px] font-medium text-[#64748B] pt-0.5">
                     <span>
                       Categoría:{' '}
-                      <strong>
+                      <strong className="text-[#0F172A]">
                         {noteItem.paraCategory === 'ATOMIC'
                           ? 'Idea Rápida'
                           : noteItem.paraCategory === 'PROJECT'
@@ -1149,14 +1153,16 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
                           : 'Archivada'}
                       </strong>
                     </span>
-                    <span>{selectedNode.connectionsCount} enlaces</span>
+                    <span className="bg-[#F1F5F9] px-2 py-0.5 rounded-lg font-bold text-[#475569]">
+                      {selectedNode.connectionsCount} enlaces
+                    </span>
                   </div>
                   <Button
                     variant="primary"
-                    size="sm"
+                    size="md"
                     onClick={() => onOpenNote(noteItem)}
-                    icon={<FileText className="w-3.5 h-3.5" />}
-                    className="w-full font-bold"
+                    icon={<FileText className="w-4 h-4" />}
+                    className="w-full font-bold justify-center shadow-xs"
                   >
                     Leer Nota Completa & Editar
                   </Button>
@@ -1168,7 +1174,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
               const workItem = selectedNode.rawItem as Work;
               return (
                 <>
-                  <div className="space-y-0.5 text-[11px]">
+                  <div className="space-y-1 text-xs bg-[#FAF8F5] p-3 rounded-2xl border border-[#E2E8F0]">
                     <p>
                       Estado:{' '}
                       <strong className="text-[#E11D48]">
@@ -1188,10 +1194,10 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
                   {onOpenWork && (
                     <Button
                       variant="primary"
-                      size="sm"
+                      size="md"
                       onClick={() => onOpenWork(workItem.id)}
-                      icon={<GraduationCap className="w-3.5 h-3.5" />}
-                      className="w-full"
+                      icon={<GraduationCap className="w-4 h-4" />}
+                      className="w-full font-bold justify-center shadow-xs"
                     >
                       Abrir Espacio de Trabajo
                     </Button>
@@ -1203,13 +1209,13 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
             {selectedNode.type === 'course' && (() => {
               const courseItem = selectedNode.rawItem as Course;
               return (
-                <div className="space-y-1 text-[11px]">
+                <div className="space-y-1.5 text-xs bg-[#FAF8F5] p-3 rounded-2xl border border-[#E2E8F0]">
                   <p>Periodo: <strong>{courseItem.period}</strong></p>
                   {courseItem.teacherName && (
                     <p>Docente: <strong>{courseItem.teacherName}</strong></p>
                   )}
-                  <span className="text-[10px] text-[#64748B] block pt-0.5">
-                    {selectedNode.connectionsCount} trabajos y notas vinculadas
+                  <span className="text-[11px] text-[#64748B] block pt-0.5">
+                    {selectedNode.connectionsCount} trabajos y notas vinculadas en el grafo
                   </span>
                 </div>
               );
@@ -1218,10 +1224,10 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
             {selectedNode.type === 'concept' && (() => {
               const conceptItem = selectedNode.rawItem as Concept;
               return (
-                <div className="space-y-1 text-[11px]">
-                  <p className="line-clamp-2">{conceptItem.description || 'Concepto clave de psicología.'}</p>
-                  <span className="text-[10px] text-[#64748B] block pt-0.5">
-                    {selectedNode.connectionsCount} notas conectadas
+                <div className="space-y-2 text-xs bg-[#FAF8F5] p-3 rounded-2xl border border-[#E2E8F0]">
+                  <p className="leading-relaxed">{conceptItem.description || 'Concepto teórico clave de psicología.'}</p>
+                  <span className="text-[11px] text-[#0D9488] font-bold block pt-0.5">
+                    💡 {selectedNode.connectionsCount} notas asociadas a este constructo
                   </span>
                 </div>
               );

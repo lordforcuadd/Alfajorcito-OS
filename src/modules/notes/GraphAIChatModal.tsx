@@ -8,11 +8,12 @@ import {
   X,
   BookOpen,
   GraduationCap,
-  Layers,
-  ArrowRight,
   RefreshCw,
-  Zap,
-  HeartHandshake
+  Copy,
+  Check,
+  RotateCcw,
+  Lightbulb,
+  FileText
 } from 'lucide-react';
 import { Modal } from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
@@ -64,30 +65,35 @@ export const GraphAIChatModal: React.FC<GraphAIChatModalProps> = ({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const activeNotes = notes.filter((n) => n.paraCategory !== 'ARCHIVE');
   const activeWorks = works.filter((w) => !w.isArchived);
   const activeCourses = courses.filter((c) => !c.isArchived);
 
   // Initialize personalized welcome message
+  const initWelcome = () => {
+    return [
+      {
+        id: 'welcome',
+        sender: 'ai' as const,
+        text: `¡Hola **${studentName}**! 🌟
+Estoy conectada a tu Segundo Cerebro de **${specialty}** en la USMP (${cycle}). 
+
+Conozco tus apuntes, asignaturas en curso, conceptos teóricos y tu proyecto de investigación sobre Regulación Emocional y Autoeficacia.
+
+Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nombre]] para que puedas abrirlo con un clic. ¿En qué te gustaría profundizar hoy?`,
+        timestamp: Date.now(),
+        modelUsed: 'Alfajorcito Companion Engine'
+      }
+    ];
+  };
+
   useEffect(() => {
     if (messages.length === 0) {
-      setMessages([
-        {
-          id: 'welcome',
-          sender: 'ai',
-          text: `¡Hola **${studentName}**! 🌟 Qué gusto saludarte.
-
-Estoy conectado a todo tu **Segundo Cerebro** de **${specialty}** en la USMP (${cycle}). 
-
-Conozco tus notas, asignaturas en curso, conceptos teóricos y tu proyecto de investigación sobre Regulación Emocional y Autoeficacia. Pregúntame con total libertad lo que necesites explorar o relacionar.
-
-Cualquier nota o concepto que mencione tendrá su enlace directo como [[Nombre]] para que puedas abrirlo con un clic en tu grafo.`,
-          timestamp: Date.now(),
-          modelUsed: 'Alfajorcito Companion Engine'
-        }
-      ]);
+      setMessages(initWelcome());
     }
   }, [studentName, cycle, specialty, messages.length]);
 
@@ -95,6 +101,21 @@ Cualquier nota o concepto que mencione tendrá su enlace directo como [[Nombre]]
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
+
+  const handleCopyMessage = async (msgId: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(msgId);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleResetChat = () => {
+    setMessages(initWelcome());
+    setInputText('');
+  };
 
   const handleSendMessage = async (queryToSend?: string) => {
     const text = (queryToSend || inputText).trim();
@@ -141,42 +162,56 @@ Cualquier nota o concepto que mencione tendrá su enlace directo como [[Nombre]]
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
+
+  const sampleStarters = [
+    { label: '💡 Conectar Autoeficacia con mi Tesis', query: '¿Cómo se conecta el concepto de Autoeficacia Académica con mi proyecto de tesis y la regulación emocional?' },
+    { label: '📚 Resumir notas de Psicología Clínica', query: 'Sintetiza las ideas principales de mis notas activas sobre Psicología Clínica.' },
+    { label: '📝 ¿Qué entregables tengo pendientes?', query: '¿Cuáles son mis trabajos y entregables activos de este ciclo?' }
+  ];
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Asistente IA del Grafo"
-      subtitle={`Conectado al Segundo Cerebro de ${studentName} • ${cycle}`}
+      subtitle={`Segundo Cerebro de ${studentName} • ${cycle}`}
       maxWidth="2xl"
     >
-      <div className="space-y-4">
+      <div className="flex flex-col h-[76vh] sm:h-[580px] max-h-[82vh] -mx-4 -my-4 sm:-mx-6 sm:-my-6 p-4 sm:p-6 space-y-3">
         {/* Knowledge Stats Index Bar */}
-        <div className="flex items-center justify-between gap-2 p-2.5 rounded-2xl bg-gradient-to-r from-[#FDF2F0] via-white to-[#E0F2F1] border border-[#CBD5E1] text-xs flex-wrap">
-          <div className="flex items-center gap-2 text-[#475569] font-medium flex-wrap">
-            <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-[#E2E8F0] shadow-2xs font-bold text-[#D97706]">
-              📝 {activeNotes.length} notas activas
+        <div className="flex items-center justify-between gap-2 p-2 rounded-2xl bg-[#FAF8F5] border border-[#CBD5E1] text-xs shrink-0 flex-wrap">
+          <div className="flex items-center gap-1.5 text-[#475569] font-medium flex-wrap overflow-x-auto tab-scroll-pc py-0.5">
+            <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-[#E2E8F0] shadow-2xs font-bold text-[#D97706] text-[11px] whitespace-nowrap">
+              📝 {activeNotes.length} notas
             </span>
-            <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-[#E2E8F0] shadow-2xs font-bold text-[#0D9488]">
+            <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-[#E2E8F0] shadow-2xs font-bold text-[#0D9488] text-[11px] whitespace-nowrap">
               💡 {concepts.length} conceptos
             </span>
-            <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-[#E2E8F0] shadow-2xs font-bold text-[#7C3AED]">
+            <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-[#E2E8F0] shadow-2xs font-bold text-[#7C3AED] text-[11px] whitespace-nowrap">
               🎓 {activeCourses.length} cursos
             </span>
-            <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-[#E2E8F0] shadow-2xs font-bold text-[#E11D48]">
+            <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-[#E2E8F0] shadow-2xs font-bold text-[#E11D48] text-[11px] whitespace-nowrap">
               📁 {activeWorks.length} trabajos
             </span>
           </div>
 
-          <span className="text-[10px] font-bold text-[#00695C] bg-[#E0F2F1] px-2 py-0.5 rounded-full border border-[#80CBC4]/60">
-            {studentName} • USMP
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+            <button
+              onClick={handleResetChat}
+              className="flex items-center gap-1 px-2 py-1 rounded-xl bg-white hover:bg-[#F1F5F9] border border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] text-[11px] font-semibold transition-colors cursor-pointer shadow-2xs"
+              title="Reiniciar conversación"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span className="hidden xs:inline">Reiniciar</span>
+            </button>
+          </div>
         </div>
 
         {/* Chat Thread */}
-        <div className="max-h-[440px] min-h-[260px] overflow-y-auto space-y-3.5 p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2E8F0] shadow-2xs">
+        <div className="flex-1 overflow-y-auto min-h-0 space-y-3.5 p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2E8F0] shadow-2xs scroll-touch overscroll-contain">
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -189,9 +224,9 @@ Cualquier nota o concepto que mencione tendrá su enlace directo como [[Nombre]]
               )}
 
               <div
-                className={`max-w-[88%] sm:max-w-[80%] rounded-2xl p-3.5 space-y-1 text-xs sm:text-sm leading-relaxed shadow-2xs ${
+                className={`max-w-[90%] sm:max-w-[82%] rounded-2xl p-3.5 space-y-1.5 text-xs sm:text-sm leading-relaxed shadow-2xs transition-all ${
                   msg.sender === 'user'
-                    ? 'bg-[#E8A598] text-[#2B2D42] font-semibold rounded-tr-xs'
+                    ? 'bg-gradient-to-r from-[#E8A598] to-[#D98880] text-[#2B2D42] font-semibold rounded-tr-xs'
                     : 'bg-white text-[#1E293B] border border-[#E2E8F0] rounded-tl-xs'
                 }`}
               >
@@ -212,13 +247,35 @@ Cualquier nota o concepto que mencione tendrá su enlace directo como [[Nombre]]
                     }}
                   />
                 ) : (
-                  <p>{msg.text}</p>
+                  <p className="break-words">{msg.text}</p>
                 )}
 
-                {msg.modelUsed && (
-                  <div className="pt-1.5 border-t border-[#F1F5F9] flex items-center justify-between text-[10px] text-[#94A3B8]">
-                    <span>Generado con: <strong className="text-[#0D9488]">{msg.modelUsed}</strong></span>
-                    <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                {msg.sender === 'ai' && (
+                  <div className="pt-2 mt-1 border-t border-[#F1F5F9] flex items-center justify-between text-[10px] text-[#94A3B8] gap-2">
+                    <span className="truncate">
+                      {msg.modelUsed ? (
+                        <>Modelo: <strong className="text-[#0D9488]">{msg.modelUsed}</strong></>
+                      ) : (
+                        <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      )}
+                    </span>
+                    <button
+                      onClick={() => handleCopyMessage(msg.id, msg.text)}
+                      className="flex items-center gap-1 px-1.5 py-0.5 rounded-md hover:bg-[#F1F5F9] text-[#64748B] hover:text-[#0F172A] transition-colors cursor-pointer shrink-0"
+                      title="Copiar respuesta"
+                    >
+                      {copiedId === msg.id ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-600" />
+                          <span className="text-emerald-600 font-bold">Copiado</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Copiar</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 )}
               </div>
@@ -246,22 +303,40 @@ Cualquier nota o concepto que mencione tendrá su enlace directo como [[Nombre]]
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Suggestion Starter Chips when chat has only welcome message */}
+        {messages.length <= 1 && (
+          <div className="flex items-center gap-1.5 overflow-x-auto tab-scroll-pc py-1 shrink-0">
+            {sampleStarters.map((s, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSendMessage(s.query)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white hover:bg-[#FDF2F0] border border-[#CBD5E1] text-[11px] font-semibold text-[#475569] hover:text-[#8C3A32] hover:border-[#E8A598] transition-all cursor-pointer whitespace-nowrap shadow-2xs shrink-0"
+              >
+                <span>{s.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Input Bar */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
             handleSendMessage();
           }}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 shrink-0"
         >
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder="Pregúntale a la IA sobre relaciones, conceptos o notas de tu grafo..."
-            disabled={isLoading}
-            className="flex-1 px-4 py-2.5 rounded-2xl border border-[#CBD5E1] bg-white text-xs sm:text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0D9488] disabled:opacity-50"
-          />
+          <div className="relative flex-1">
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder="Pregúntale a la IA sobre relaciones, conceptos o notas de tu grafo..."
+              disabled={isLoading}
+              className="w-full px-4 py-2.5 rounded-2xl border border-[#CBD5E1] bg-white text-xs sm:text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0D9488] focus:border-transparent disabled:opacity-50 shadow-xs"
+            />
+          </div>
           <Button
             type="submit"
             variant="primary"
@@ -269,9 +344,9 @@ Cualquier nota o concepto que mencione tendrá su enlace directo como [[Nombre]]
             disabled={!inputText.trim() || isLoading}
             isLoading={isLoading}
             icon={<Send className="w-4 h-4" />}
-            className="font-bold shrink-0 bg-[#0D9488] hover:bg-[#0F766E] border-none text-white shadow-xs"
+            className="font-bold shrink-0 bg-[#0D9488] hover:bg-[#0F766E] border-none text-white shadow-xs px-4"
           >
-            Preguntar
+            <span className="hidden sm:inline">Preguntar</span>
           </Button>
         </form>
       </div>
