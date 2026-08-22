@@ -82,10 +82,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
 
     const paraCategorySpanish: Record<string, string> = {
       ATOMIC: 'Idea Rápida',
-      PROJECT: 'Tesis',
+      PROJECT: 'Proyecto / Trabajo',
       AREA: 'Materia',
-      RESOURCE: 'Recurso',
-      ARCHIVE: 'Archivo'
+      RESOURCE: 'Recurso de Estudio',
+      ARCHIVE: 'Archivada'
     };
 
     const inquiryStatusSpanish: Record<string, string> = {

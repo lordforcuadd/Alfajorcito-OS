@@ -26,6 +26,7 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { FormattedNoteContent } from './WikiLinkRenderer';
+import { GraphAIChatModal } from './GraphAIChatModal';
 import type { Note, Concept, Course, Work } from '../../types';
 
 export interface InteractiveGraphProps {
@@ -119,6 +120,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isPhysicsRunning, setIsPhysicsRunning] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
 
   // Type Filters
   const [filterTypes, setFilterTypes] = useState<Record<string, boolean>>({
@@ -127,6 +129,11 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     concept: true,
     note: true
   });
+
+  // Filter out archived items so the graph stays focused on active knowledge
+  const activeNotes = useMemo(() => notes.filter((n) => n.paraCategory !== 'ARCHIVE'), [notes]);
+  const activeWorks = useMemo(() => works.filter((w) => !w.isArchived), [works]);
+  const activeCourses = useMemo(() => courses.filter((c) => !c.isArchived), [courses]);
 
   // Nodes & Edges mutable physics storage
   const nodesRef = useRef<GraphNode[]>([]);
@@ -148,9 +155,9 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
 
     // 1. Courses (Major Hubs)
     if (filterTypes.course) {
-      courses.forEach((c, idx) => {
+      activeCourses.forEach((c, idx) => {
         const existing = existingNodesMap.get(c.id);
-        const angle = (idx / Math.max(1, courses.length)) * Math.PI * 2;
+        const angle = (idx / Math.max(1, activeCourses.length)) * Math.PI * 2;
         const dist = Math.min(width, height) * 0.32;
         const node: GraphNode = {
           id: c.id,
@@ -172,9 +179,9 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
       });
     }
 
-    // 2. Works & Thesis (Sub-Hubs)
+    // 2. Works (Sub-Hubs)
     if (filterTypes.work) {
-      works.forEach((w) => {
+      activeWorks.forEach((w) => {
         const existing = existingNodesMap.get(w.id);
         const parentCourse = nodeMap.get(w.courseId);
         const baseX = parentCourse ? parentCourse.x + (Math.random() - 0.5) * 80 : centerX;
@@ -223,9 +230,9 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
       });
     }
 
-    // 4. Notes (Satellites)
+    // 4. Notes (Satellites - Archived notes excluded)
     if (filterTypes.note) {
-      notes.forEach((n) => {
+      activeNotes.forEach((n) => {
         const existing = existingNodesMap.get(n.id);
         let parentX = centerX;
         let parentY = centerY;
@@ -261,7 +268,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     const newEdges: GraphEdge[] = [];
 
     // Works -> Courses
-    works.forEach((w) => {
+    activeWorks.forEach((w) => {
       const wNode = nodeMap.get(w.id);
       const cNode = nodeMap.get(w.courseId);
       if (wNode && cNode) {
@@ -277,7 +284,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     });
 
     // Notes -> Works, Courses, Concepts
-    notes.forEach((n) => {
+    activeNotes.forEach((n) => {
       const nNode = nodeMap.get(n.id);
       if (!nNode) return;
 
@@ -935,11 +942,17 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
 
         {/* Action Controls Toolbar (Compact & Sleek) */}
         <div className="pointer-events-auto flex items-center gap-1 bg-white/90 backdrop-blur-md border border-[#CBD5E1] px-1.5 py-1 rounded-2xl shadow-xs shrink-0 ml-auto">
-          <div className="hidden md:flex items-center gap-1.5 px-2 py-0.5 text-xs font-extrabold text-[#0F172A]">
-            <Network className="w-3.5 h-3.5 text-[#7C3AED]" />
-            <span>Grafo</span>
-          </div>
-          <div className="hidden md:block w-px h-3.5 bg-[#E2E8F0] mx-0.5" />
+          {/* AI Graph Assistant Button */}
+          <button
+            onClick={() => setIsAIChatOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-[#0D9488] to-[#14B8A6] hover:from-[#0F766E] hover:to-[#0D9488] text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-[0.98]"
+            title="Consultar Segundo Cerebro con IA"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Asistente IA</span>
+          </button>
+
+          <div className="w-px h-3.5 bg-[#E2E8F0] mx-0.5" />
 
           {/* Zoom In */}
           <button
@@ -1016,10 +1029,10 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
       >
         <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-md border border-[#CBD5E1] p-1 rounded-2xl shadow-xs shrink-0">
           {[
-            { key: 'course', label: GRAPH_PALETTE.course.label, color: GRAPH_PALETTE.course.base, count: courses.length },
-            { key: 'work', label: GRAPH_PALETTE.work.label, color: GRAPH_PALETTE.work.base, count: works.length },
+            { key: 'course', label: GRAPH_PALETTE.course.label, color: GRAPH_PALETTE.course.base, count: activeCourses.length },
+            { key: 'work', label: GRAPH_PALETTE.work.label, color: GRAPH_PALETTE.work.base, count: activeWorks.length },
             { key: 'concept', label: GRAPH_PALETTE.concept.label, color: GRAPH_PALETTE.concept.base, count: concepts.length },
-            { key: 'note', label: GRAPH_PALETTE.note.label, color: GRAPH_PALETTE.note.base, count: notes.length }
+            { key: 'note', label: GRAPH_PALETTE.note.label, color: GRAPH_PALETTE.note.base, count: activeNotes.length }
           ].map((item) => (
             <button
               key={item.key}
@@ -1132,8 +1145,8 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
                           : noteItem.paraCategory === 'AREA'
                           ? 'Materia'
                           : noteItem.paraCategory === 'RESOURCE'
-                          ? 'Recurso'
-                          : 'Archivo'}
+                          ? 'Recurso de Estudio'
+                          : 'Archivada'}
                       </strong>
                     </span>
                     <span>{selectedNode.connectionsCount} enlaces</span>
@@ -1215,6 +1228,20 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
             })()}
           </div>
         </div>
+      )}
+
+      {/* 5. Graph AI Copilot / Chatbot Modal */}
+      {isAIChatOpen && (
+        <GraphAIChatModal
+          isOpen={isAIChatOpen}
+          onClose={() => setIsAIChatOpen(false)}
+          notes={notes}
+          concepts={concepts}
+          courses={courses}
+          works={works}
+          onNavigateToNote={onOpenNote}
+          onNavigateToWork={onOpenWork}
+        />
       )}
     </div>
   );

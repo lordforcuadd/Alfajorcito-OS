@@ -322,7 +322,41 @@ Se identifican esquemas nucleares de incompetencia personal ("No soy lo suficien
     isArchived: false
   };
 
-  await db.works.bulkPut([work1, work2, work3]);
+  const work4: Work = {
+    id: 'work-talento-competencias',
+    courseId: 'course-talento-usmp',
+    title: 'Plan Estratégico de Evaluación del Desempeño y Clima Laboral por Competencias STAR',
+    type: 'ENSAYO',
+    status: 'PLANIFICACION',
+    deadline: now + dayMs * 14,
+    citationStyle: 'APA_7',
+    maxSourceAgeYears: 5,
+    minRequiredSources: 5,
+    formatRequirements: 'Propuesta de gestión del talento humano para organizaciones de salud en Lima Metropolitana. Incluye diccionario de competencias por nivel, diseño de Assessment Center, entrevistas por incidentes críticos STAR y batería de diagnóstico de clima y prevención de burnout.',
+    rawInstructions: 'Diseñar un plan integral de evaluación y desarrollo del talento humano fundamentado en modelos contemporáneos de psicología organizacional.',
+    createdAt: now - dayMs * 4,
+    updatedAt: now - dayMs * 1,
+    isArchived: false
+  };
+
+  const work5: Work = {
+    id: 'work-psicoeducativa-dificultades',
+    courseId: 'course-educativa-usmp',
+    title: 'Informe Psicopedagógico e Intervención en Dificultades de Comprensión Lectora y Autoeficacia',
+    type: 'MONOGRAFIA',
+    status: 'REDACTANDO',
+    deadline: now + dayMs * 18,
+    citationStyle: 'APA_7',
+    maxSourceAgeYears: 5,
+    minRequiredSources: 6,
+    formatRequirements: 'Batería psicopedagógica de evaluación (PROLEC-SE-R), perfil de fortalezas y debilidades, programa de adaptaciones curriculares y plan de orientación vocacional.',
+    rawInstructions: 'Elaborar un informe psicopedagógico integral con estudio de caso simulado y propuesta de intervención escolar.',
+    createdAt: now - dayMs * 5,
+    updatedAt: now - dayMs * 1,
+    isArchived: false
+  };
+
+  await db.works.bulkPut([work1, work2, work3, work4, work5]);
 
   // 3. Consultas Reales al Docente con Respuestas Oficiales
   const inquiry1: InquiryToTeacher = {
@@ -357,9 +391,25 @@ Se identifican esquemas nucleares de incompetencia personal ("No soy lo suficien
     updatedAt: now - dayMs * 2
   };
 
-  await db.inquiries.bulkPut([inquiry1, inquiry2]);
+  const inquiry3: InquiryToTeacher = {
+    id: 'inquiry-cpsp-consentimiento',
+    workId: work1.id,
+    courseId: 'course-etica-usmp',
+    topic: 'Protocolo de Asentimiento y Consentimiento Informado en Estudiantes Universitarios y Ética de Datos',
+    rawQuestion: 'Dr. Oswaldo Orellana, ¿cuál es el requisito formal del Comité de Ética para la aplicación de encuestas online anónimas en Google Forms?',
+    formalQuestion: 'Estimado Dr. Oswaldo Orellana Manrique:\nJunto con saludarle, le escribo para solicitar orientación sobre el formato de Consentimiento Informado para la muestra de universitarios.\n\nAl realizarse la recolección psicométrica mediante formulario institucional virtual, ¿se requiere firma manuscrita digitalizada o es suficiente la cláusula de aceptación previa voluntaria y anónima como filtro de ingreso?\n\nMuchas gracias.',
+    status: 'ANSWERED',
+    askedDate: now - dayMs * 3,
+    teacherAnswer: 'Estimada estudiante: Para investigaciones no invasivas de bajo riesgo en universitarios mayores de edad, el Comité de Ética de la FCCTP USMP admite la cláusula de aceptación obligatoria previa ("He leído los términos y acepto participar voluntariamente") antes de desplegar los reactivos, resguardando la no recopilación de correos ni datos identificatorios.',
+    answeredDate: now - dayMs * 1,
+    bindingDecision: 'Aprobado consentimiento virtual con casilla de aceptación obligatoria anónima.',
+    createdAt: now - dayMs * 3,
+    updatedAt: now - dayMs * 1
+  };
 
-  // 4. Fuentes Científicas Reales Indexadas en Psicología y Contexto Peruano (Liberabit USMP, PUCP, Scopus)
+  await db.inquiries.bulkPut([inquiry1, inquiry2, inquiry3]);
+
+  // 4. Fuentes Científicas Reales Indexadas en Psicología y Contexto Peruano (Liberabit USMP, PUCP, Scopus, APA)
   const source1: Source = {
     id: 'src-merino-2022',
     workIds: [work1.id],
@@ -484,7 +534,71 @@ Se identifican esquemas nucleares de incompetencia personal ("No soy lo suficien
     updatedAt: now - dayMs * 2
   };
 
-  await db.sources.bulkPut([source1, source2, source3, source4, source5]);
+  const source6: Source = {
+    id: 'src-bandura-1997',
+    workIds: [work1.id, work5.id],
+    title: 'Self-efficacy: The exercise of control',
+    authors: [
+      { firstName: 'Albert', lastName: 'Bandura' }
+    ],
+    year: 1997,
+    type: 'BOOK',
+    publication: 'W. H. Freeman and Company',
+    pages: '1-604',
+    abstract: 'Foundational treatise on self-efficacy beliefs, social cognitive theory, human agency, academic perseverance, and emotional resilience under stress.',
+    keywords: ['Self-Efficacy', 'Social Cognitive Theory', 'Academic Achievement', 'Perceived Control'],
+    accessedAt: now - dayMs * 4,
+    verificationStatus: 'VERIFIED',
+    verificationProvider: 'CROSSREF',
+    historicalContextApproved: true,
+    createdAt: now - dayMs * 8,
+    updatedAt: now - dayMs * 2
+  };
+
+  const source7: Source = {
+    id: 'src-linehan-2015',
+    workIds: [work3.id],
+    title: 'DBT Skills Training Manual (2nd ed.)',
+    authors: [
+      { firstName: 'Marsha M.', lastName: 'Linehan' }
+    ],
+    year: 2015,
+    type: 'BOOK',
+    publication: 'The Guilford Press',
+    pages: '1-504',
+    abstract: 'Comprehensive evidence-based modules for mindfulness, distress tolerance, emotion regulation, and interpersonal effectiveness.',
+    keywords: ['DBT', 'Emotion Regulation', 'Mindfulness', 'Group Therapy', 'Distress Tolerance'],
+    accessedAt: now - dayMs * 3,
+    verificationStatus: 'VERIFIED',
+    verificationProvider: 'CROSSREF',
+    historicalContextApproved: true,
+    createdAt: now - dayMs * 7,
+    updatedAt: now - dayMs * 2
+  };
+
+  const source8: Source = {
+    id: 'src-lazarus-1984',
+    workIds: [work1.id, work3.id],
+    title: 'Stress, appraisal, and coping',
+    authors: [
+      { firstName: 'Richard S.', lastName: 'Lazarus' },
+      { firstName: 'Susan', lastName: 'Folkman' }
+    ],
+    year: 1984,
+    type: 'BOOK',
+    publication: 'Springer Publishing Company',
+    pages: '1-445',
+    abstract: 'The cognitive appraisal theory of stress: primary appraisal of threat, secondary appraisal of coping resources, and problem-focused vs emotion-focused coping.',
+    keywords: ['Stress Appraisal', 'Coping Strategies', 'Cognitive Model', 'Psychological Adaptation'],
+    accessedAt: now - dayMs * 4,
+    verificationStatus: 'VERIFIED',
+    verificationProvider: 'CROSSREF',
+    historicalContextApproved: true,
+    createdAt: now - dayMs * 9,
+    updatedAt: now - dayMs * 2
+  };
+
+  await db.sources.bulkPut([source1, source2, source3, source4, source5, source6, source7, source8]);
 
   // 5. Ideas Extraídas
   const idea1: Idea = {
@@ -511,7 +625,43 @@ Se identifican esquemas nucleares de incompetencia personal ("No soy lo suficien
     updatedAt: now - dayMs * 4
   };
 
-  await db.ideas.bulkPut([idea1, idea2]);
+  const idea3: Idea = {
+    id: 'idea-beck-automatic-thoughts',
+    sourceId: source4.id,
+    workId: work2.id,
+    rawQuote: 'Automatic thoughts are the rapid, evaluative thoughts that pop into our heads in response to specific triggers. Identifying and testing these thoughts through cognitive restructuring leads to lasting therapeutic change.',
+    pageOrLocation: 'p. 42',
+    extractedCoreIdea: 'Los pensamientos automáticos distorsionados generan y perpetúan el malestar emocional; cuestionar su evidencia empírica permite la reestructuración cognitiva.',
+    tags: ['tcc', 'pensamientos-automaticos', 'beck', 'clinica'],
+    createdAt: now - dayMs * 3,
+    updatedAt: now - dayMs * 3
+  };
+
+  const idea4: Idea = {
+    id: 'idea-bandura-agency',
+    sourceId: source6.id,
+    workId: work1.id,
+    rawQuote: 'Perceived self-efficacy refers to beliefs in one capabilities to organize and execute the courses of action required to produce given attainments.',
+    pageOrLocation: 'p. 3',
+    extractedCoreIdea: 'La autoeficacia percibida modula el esfuerzo, la perseverancia y las respuestas emocionales frente a los desafíos académicos.',
+    tags: ['autoeficacia', 'bandura', 'rendimiento', 'tesis'],
+    createdAt: now - dayMs * 4,
+    updatedAt: now - dayMs * 4
+  };
+
+  const idea5: Idea = {
+    id: 'idea-linehan-mindfulness',
+    sourceId: source7.id,
+    workId: work3.id,
+    rawQuote: 'Mindfulness skills in DBT are the vehicle for balancing emotion mind and reasonable mind to achieve wise mind, facilitating effective emotional modulation in interpersonal settings.',
+    pageOrLocation: 'p. 65',
+    extractedCoreIdea: 'Las habilidades de atención plena en terapia grupal permiten modular la reactividad emocional mediante la integración de la mente sabia.',
+    tags: ['dbt', 'mindfulness', 'terapia-grupal', 'regulacion'],
+    createdAt: now - dayMs * 3,
+    updatedAt: now - dayMs * 3
+  };
+
+  await db.ideas.bulkPut([idea1, idea2, idea3, idea4, idea5]);
 
   // 6. Paráfrasis Fieles
   const paraphrase1: Paraphrase = {
@@ -538,7 +688,31 @@ Se identifican esquemas nucleares de incompetencia personal ("No soy lo suficien
     updatedAt: now - dayMs * 3
   };
 
-  await db.paraphrases.bulkPut([paraphrase1, paraphrase2]);
+  const paraphrase3: Paraphrase = {
+    id: 'para-beck-reestructuracion',
+    ideaId: idea3.id,
+    sourceId: source4.id,
+    workId: work2.id,
+    ownInterpretation: 'En TCC examinamos los pensamientos negativos automáticos para cambiarlos por interpretaciones más objetivas y adaptativas.',
+    finalParaphrase: 'El procedimiento de reestructuración cognitiva en la terapia cognitivo-conductual consiste en someter a examen empírico las cogniciones automáticas disfuncionales, promoviendo explicaciones alternativas más realistas y reduciendo la sintomatología ansiosa.',
+    fidelityReviewStatus: 'CONFIRMED_FAITHFUL',
+    createdAt: now - dayMs * 2,
+    updatedAt: now - dayMs * 2
+  };
+
+  const paraphrase4: Paraphrase = {
+    id: 'para-bandura-autoeficacia',
+    ideaId: idea4.id,
+    sourceId: source6.id,
+    workId: work1.id,
+    ownInterpretation: 'Creer que uno es capaz de cumplir metas académicas protege contra el estrés universitario.',
+    finalParaphrase: 'La convicción del estudiante en sus propios recursos de autorregulación y desempeño académico constituye un factor protector fundamental contra la frustración y el agotamiento psicológico.',
+    fidelityReviewStatus: 'CONFIRMED_FAITHFUL',
+    createdAt: now - dayMs * 3,
+    updatedAt: now - dayMs * 3
+  };
+
+  await db.paraphrases.bulkPut([paraphrase1, paraphrase2, paraphrase3, paraphrase4]);
 
   // 7. Citas en APA 7ma Edición
   const citation1: Citation = {
@@ -569,7 +743,35 @@ Se identifican esquemas nucleares de incompetencia personal ("No soy lo suficien
     updatedAt: now - dayMs * 3
   };
 
-  await db.citations.bulkPut([citation1, citation2]);
+  const citation3: Citation = {
+    id: 'cite-beck-apa',
+    paraphraseId: paraphrase3.id,
+    ideaId: idea3.id,
+    sourceId: source4.id,
+    workId: work2.id,
+    style: 'APA_7',
+    inTextNarrative: 'Beck (2021)',
+    inTextParenthetical: '(Beck, 2021, p. 42)',
+    fullReferenceFormatted: 'Beck, J. S. (2021). Cognitive behavior therapy: Basics and beyond (3rd ed.). The Guilford Press.',
+    createdAt: now - dayMs * 2,
+    updatedAt: now - dayMs * 2
+  };
+
+  const citation4: Citation = {
+    id: 'cite-bandura-apa',
+    paraphraseId: paraphrase4.id,
+    ideaId: idea4.id,
+    sourceId: source6.id,
+    workId: work1.id,
+    style: 'APA_7',
+    inTextNarrative: 'Bandura (1997)',
+    inTextParenthetical: '(Bandura, 1997, p. 3)',
+    fullReferenceFormatted: 'Bandura, A. (1997). Self-efficacy: The exercise of control. W. H. Freeman and Company.',
+    createdAt: now - dayMs * 3,
+    updatedAt: now - dayMs * 3
+  };
+
+  await db.citations.bulkPut([citation1, citation2, citation3, citation4]);
 
   // 8. Conceptos Clave de Psicología (Grafo de Conocimiento)
   const concepts: Concept[] = [
@@ -610,6 +812,30 @@ Se identifican esquemas nucleares de incompetencia personal ("No soy lo suficien
       name: 'Coeficiente Omega de McDonald',
       description: 'Indicador psicométrico de fiabilidad por consistencia interna que no asume tau-equivalencia estricta en los ítems.',
       color: '#90CAF9',
+      createdAt: now - dayMs * 15,
+      updatedAt: now - dayMs * 15
+    },
+    {
+      id: 'concept-alianza-terapeutica',
+      name: 'Alianza Terapéutica y Rapport Clínico',
+      description: 'Vínculo colaborativo y confianza mutua establecida entre el psicoterapeuta y el consultante como predictor del éxito clínico.',
+      color: '#A5D6A7',
+      createdAt: now - dayMs * 15,
+      updatedAt: now - dayMs * 15
+    },
+    {
+      id: 'concept-terapia-grupal',
+      name: 'Dinámica de Grupos y Psicoterapia Vivencial',
+      description: 'Procesos de cohesión, universalidad del sufrimiento, aprendizaje interpersonal y catarsis guiada en grupos de apoyo.',
+      color: '#80DEEA',
+      createdAt: now - dayMs * 15,
+      updatedAt: now - dayMs * 15
+    },
+    {
+      id: 'concept-competencias-star',
+      name: 'Entrevista por Competencias STAR',
+      description: 'Metodología estructurada de evaluación del talento basada en Situación, Tarea, Acción y Resultado.',
+      color: '#FFE082',
       createdAt: now - dayMs * 15,
       updatedAt: now - dayMs * 15
     }
@@ -693,7 +919,122 @@ Es el estándar exigido en tesis de licenciatura de la [[Facultad de Ciencias de
     updatedAt: now - dayMs * 1
   };
 
-  await db.notes.bulkPut([note1, note2, note3]);
+  const note4: Note = {
+    id: 'note-tcc-ansiedad-social',
+    slug: 'formulacion-cognitiva-tcc-ansiedad-social-beck',
+    title: 'Formulación de Caso Clínico según Modelo de Beck',
+    content: `# Formulación de Caso Clínico según Modelo de Beck
+
+La conceptualización cognitiva de un caso de fobia o ansiedad social requiere articular:
+1. **Historia de desarrollo**: Experiencias tempranas de rechazo o sobreprotección.
+2. **Creencias nucleares**: "Soy defectuoso" o "Soy incompetente".
+3. **Reglas condicionales**: "Si muestro inseguridad, los demás me rechazarán".
+4. **Pensamientos automáticos**: Catastrofización en tiempo real.
+
+Técnica de intervención central: [[Reestructuración Cognitiva (TCC de Beck)]] complementada con una sólida [[Alianza Terapéutica y Rapport Clínico]].
+
+#clinica #tcc #beck #ansiedad #saludmental`,
+    paraCategory: 'PROJECT',
+    courseId: 'course-salud-usmp',
+    workId: work2.id,
+    sourceIds: [source4.id],
+    conceptIds: ['concept-reestructuracion-cognitiva', 'concept-alianza-terapeutica'],
+    tags: ['#clinica', '#tcc', '#beck', '#ansiedad'],
+    backlinks: [],
+    isPinned: false,
+    createdAt: now - dayMs * 4,
+    updatedAt: now - dayMs * 1
+  };
+
+  const note5: Note = {
+    id: 'note-dinamica-grupal',
+    slug: 'tecnicas-intervencion-grupal-y-dinamicas',
+    title: 'Técnicas de Intervención Grupal y Dinámicas Vivenciales',
+    content: `# Técnicas de Intervención Grupal y Dinámicas Vivenciales
+
+En la conducción de talleres psicoeducativos universitarios, la [[Dinámica de Grupos y Psicoterapia Vivencial]] promueve la cohesión y el aprendizaje vicario.
+
+Se combinan ejercicios de desensibilización, role-playing y técnicas de [[Regulación Emocional (Modelo de Gross)]] para reducir el estrés pre-exámenes.
+
+#grupal #intervencion #psicoterapia #fcctp`,
+    paraCategory: 'AREA',
+    courseId: 'course-grupal-usmp',
+    workId: work3.id,
+    sourceIds: [source7.id],
+    conceptIds: ['concept-terapia-grupal', 'concept-regulacion-emocional'],
+    tags: ['#grupal', '#intervencion', '#psicoterapia'],
+    backlinks: [],
+    isPinned: false,
+    createdAt: now - dayMs * 3,
+    updatedAt: now - dayMs * 1
+  };
+
+  const note6: Note = {
+    id: 'note-star-talento',
+    slug: 'gestion-talento-humano-entrevista-star',
+    title: 'Gestión del Talento Humano por Competencias STAR',
+    content: `# Gestión del Talento Humano por Competencias STAR
+
+La metodología [[Entrevista por Competencias STAR]] evalúa comportamientos pasados observables en cuatro dimensiones:
+- **Situación**: Contexto y desafío.
+- **Tarea**: Objetivo y responsabilidad asignada.
+- **Acción**: Conductas específicas desplegadas.
+- **Resultado**: Logro cuantitativo y cualitativo.
+
+Aplicado a organizaciones hospitalarias y clínicas en Lima.
+
+#organizacional #talento #competencias #usmp`,
+    paraCategory: 'AREA',
+    courseId: 'course-talento-usmp',
+    workId: work4.id,
+    sourceIds: [],
+    conceptIds: ['concept-competencias-star'],
+    tags: ['#organizacional', '#talento', '#competencias'],
+    backlinks: [],
+    isPinned: false,
+    createdAt: now - dayMs * 3,
+    updatedAt: now - dayMs * 1
+  };
+
+  const note7: Note = {
+    id: 'note-atomic-supresion-reevaluacion',
+    slug: 'diferencia-entre-supresion-y-reevaluacion',
+    title: 'Diferencia entre Supresión y Reevaluación Emocional',
+    content: `# Diferencia entre Supresión y Reevaluación Emocional
+
+- **Reevaluación cognitiva**: Actúa antes de que la emoción se desborde. Modifica la valoración cognitiva del estresor y reduce el coste psicofisiológico.
+- **Supresión expresiva**: Inhibe la conducta externa pero mantiene elevada la activación simpática (ritmo cardíaco, cortisol) y deteriora la memoria de trabajo.
+
+Conectado a: [[Regulación Emocional (Modelo de Gross)]] y [[Autoeficacia Percibida (Bandura)]].`,
+    paraCategory: 'ATOMIC',
+    courseId: 'course-tesis-2-usmp',
+    sourceIds: [source2.id],
+    conceptIds: ['concept-regulacion-emocional', 'concept-autoeficacia-academica'],
+    tags: ['#atomic', '#psicologia', '#emociones'],
+    backlinks: ['note-regulacion-universitarios'],
+    isPinned: false,
+    createdAt: now - dayMs * 2,
+    updatedAt: now - dayMs * 1
+  };
+
+  const note8: Note = {
+    id: 'note-archive-procesos-pasados',
+    slug: 'resumen-procesos-cognitivos-1-ciclo-pasado',
+    title: 'Resumen de Procesos Cognitivos I (Ciclo 2 - Pasado)',
+    content: `# Resumen de Procesos Cognitivos I (Ciclo 2 - Pasado)
+
+Apuntes históricos de los modelos de memoria de Atkinson-Shiffrin y Baddeley. Nota conservada con fines de archivo histórico académico.`,
+    paraCategory: 'ARCHIVE',
+    sourceIds: [],
+    conceptIds: [],
+    tags: ['#archivo', '#historico', '#ciclo2'],
+    backlinks: [],
+    isPinned: false,
+    createdAt: now - dayMs * 100,
+    updatedAt: now - dayMs * 90
+  };
+
+  await db.notes.bulkPut([note1, note2, note3, note4, note5, note6, note7, note8]);
 
   // 10. Tareas Académicas Reales de 8vo Ciclo FCCTP USMP
   const tasks: Task[] = [
@@ -741,6 +1082,18 @@ Es el estándar exigido en tesis de licenciatura de la [[Facultad de Ciencias de
       courseId: 'course-grupal-usmp',
       title: 'Diseñar matriz de 8 sesiones del programa de intervención grupal en regulación afectiva',
       dueDate: now + dayMs * 6,
+      priority: 'MEDIUM',
+      isCompleted: false,
+      category: 'WRITING',
+      createdAt: now - dayMs * 2,
+      updatedAt: now - dayMs * 1
+    },
+    {
+      id: 'task-talento-1',
+      workId: work4.id,
+      courseId: 'course-talento-usmp',
+      title: 'Elaborar guía de entrevista STAR para puesto de psicólogo clínico hospitalario',
+      dueDate: now + dayMs * 11,
       priority: 'MEDIUM',
       isCompleted: false,
       category: 'WRITING',

@@ -1,5 +1,5 @@
 import { db } from '../db';
-import type { AISettings, InstructionAnalysis, CitationStyle, UserProfile } from '../types';
+import type { AISettings, InstructionAnalysis, CitationStyle, UserProfile, Note, Concept, Course, Work, Source } from '../types';
 
 export interface AIResponse<T> {
   success: boolean;
@@ -7,6 +7,22 @@ export interface AIResponse<T> {
   error?: string;
   isOfflineHeuristic: boolean;
   modelUsed?: string;
+}
+
+export interface GraphQueryContext {
+  notes: Note[];
+  concepts: Concept[];
+  courses: Course[];
+  works: Work[];
+  sources?: Source[];
+}
+
+export interface GraphQueryResult {
+  answer: string;
+  modelUsed: string;
+  matchedConcepts: string[];
+  matchedNotes: string[];
+  isOfflineHeuristic: boolean;
 }
 
 export interface ParaphraseFidelityResult {
@@ -583,3 +599,149 @@ async function callLLM(prompt: string, settings: AISettings): Promise<string | n
 
   return null;
 }
+
+// ─── KNOWLEDGE GRAPH AI COPILOT / CHATBOT ───
+export async function queryGraphAssistant(
+  userQuery: string,
+  context: GraphQueryContext,
+  passedSettings?: AISettings
+): Promise<GraphQueryResult> {
+  const settings = await getEffectiveAISettings(passedSettings);
+  const activeNotes = (context.notes || []).filter((n) => n.paraCategory !== 'ARCHIVE');
+  const activeConcepts = context.concepts || [];
+  const activeCourses = (context.courses || []).filter((c) => !c.isArchived);
+  const activeWorks = (context.works || []).filter((w) => !w.isArchived);
+
+  // Extract quick matching items for highlighting
+  const queryLower = userQuery.toLowerCase();
+  const matchedConcepts = activeConcepts
+    .filter((c) => queryLower.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(queryLower))
+    .map((c) => c.name);
+  const matchedNotes = activeNotes
+    .filter((n) => queryLower.includes(n.title.toLowerCase()) || n.title.toLowerCase().includes(queryLower))
+    .map((n) => n.title);
+
+  // 1. Try Online LLM First
+  if (settings.provider !== 'offline_heuristics' && (settings.apiKey || settings.provider === 'ollama')) {
+    try {
+      const conceptsSummary = activeConcepts
+        .map((c) => `- [[${c.name}]]: ${c.description || 'Concepto clave de psicología'}`)
+        .join('\n');
+
+      const notesSummary = activeNotes
+        .map((n) => {
+          const cleanSnippet = n.content.replace(/[#*`_]/g, '').slice(0, 220).replace(/\s+/g, ' ');
+          return `- [[${n.title}]] (Categoría: ${n.paraCategory}, Tags: ${(n.tags || []).join(', ')}): "${cleanSnippet}..."`;
+        })
+        .join('\n');
+
+      const worksSummary = activeWorks
+        .map((w) => {
+          const course = activeCourses.find((c) => c.id === w.courseId);
+          return `- [[${w.title}]] (Curso: ${course?.name || 'Asignatura'}, Tipo: ${w.type}, Estado: ${w.status})`;
+        })
+        .join('\n');
+
+      const coursesSummary = activeCourses
+        .map((c) => `- [[${c.name}]] (${c.code || 'FCCTP USMP'} - ${c.period || '8vo Ciclo'})`)
+        .join('\n');
+
+      const prompt = `Eres el Asistente Inteligente de Navegación del Segundo Cerebro de Alfajorcito OS (diseñado para la carrera de Psicología de la USMP).
+Tu tarea es razonar sobre el Grafo de Conocimiento conectado del estudiante, sintetizar respuestas precisas y revelar conexiones conceptuales cruzadas entre cursos, trabajos y notas.
+
+══════════════════════════════════════════
+GRAFO DE CONOCIMIENTO INDEXADO DEL ESTUDIANTE:
+══════════════════════════════════════════
+📌 ASIGNATURAS / CURSOS:
+${coursesSummary || 'No hay cursos activos'}
+
+📁 TRABAJOS Y ENTREGABLES:
+${worksSummary || 'No hay trabajos activos'}
+
+💡 CONCEPTOS TEÓRICOS:
+${conceptsSummary || 'No hay conceptos registrados'}
+
+📝 NOTAS DE ESTUDIO CONECTADAS:
+${notesSummary || 'No hay notas activas'}
+
+══════════════════════════════════════════
+INSTRUCCIONES CLAVE DE RESPUESTA:
+══════════════════════════════════════════
+1. Responde con tono académico, pedagógico, motivador y claro en español.
+2. IMPORTANTE: Cada vez que menciones una Nota, Concepto, Curso o Trabajo registrado, escríbelo EXACTAMENTE en formato de enlace wiki con corchetes dobles: [[Nombre Exacto]]. De esta manera el estudiante podrá hacer clic y navegar directo en el grafo interactivo.
+3. Cruza la información teórica con la práctica (por ejemplo, cómo los conceptos de Psicología Clínica se articulan con la Tesis o con la Deontología).
+4. Si la pregunta busca vacíos en el grafo, sugiere nuevos constructos o notas que convendría investigar.
+5. Emplea formato Markdown con viñetas y títulos claros.
+
+PREGUNTA DEL ESTUDIANTE:
+"${userQuery}"`;
+
+      const response = await callLLM(prompt, settings);
+      if (response && response.trim()) {
+        const modelLabel = settings.provider === 'gemini' ? getActiveGeminiModelUsed() : (settings.modelName || settings.provider);
+        return {
+          answer: response.trim(),
+          modelUsed: modelLabel,
+          matchedConcepts,
+          matchedNotes,
+          isOfflineHeuristic: false
+        };
+      }
+    } catch (err) {
+      console.warn('LLM graph assistant query failed, falling back to heuristics:', err);
+    }
+  }
+
+  // 2. Offline Heuristic Semantic Synthesizer
+  const relevantNotes = activeNotes.filter((n) => {
+    const q = queryLower.trim();
+    if (!q) return true;
+    return (
+      n.title.toLowerCase().includes(q) ||
+      n.content.toLowerCase().includes(q) ||
+      (n.tags || []).some((t) => t.toLowerCase().includes(q))
+    );
+  });
+
+  const relevantConcepts = activeConcepts.filter((c) => {
+    const q = queryLower.trim();
+    if (!q) return true;
+    return c.name.toLowerCase().includes(q) || (c.description || '').toLowerCase().includes(q);
+  });
+
+  let heuristicAnswer = '';
+
+  if (relevantConcepts.length > 0 || relevantNotes.length > 0) {
+    heuristicAnswer += `### 🧠 Síntesis de tu Grafo de Conocimiento\n\n`;
+    if (relevantConcepts.length > 0) {
+      heuristicAnswer += `**Conceptos Teóricos Relacionados:**\n`;
+      relevantConcepts.forEach((c) => {
+        heuristicAnswer += `- **[[${c.name}]]**: ${c.description}\n`;
+      });
+      heuristicAnswer += `\n`;
+    }
+
+    if (relevantNotes.length > 0) {
+      heuristicAnswer += `**Notas y Apuntes Conectados:**\n`;
+      relevantNotes.slice(0, 4).forEach((n) => {
+        const course = activeCourses.find((c) => c.id === n.courseId);
+        const snippet = n.content.replace(/[#*`_]/g, '').slice(0, 140).trim();
+        heuristicAnswer += `- **[[${n.title}]]** ${course ? `_(${course.code})_` : ''}: ${snippet}...\n`;
+      });
+      heuristicAnswer += `\n`;
+    }
+
+    heuristicAnswer += `💡 *Tip: Puedes hacer clic en cualquiera de los enlaces [[entre corchetes]] para abrir directamente la nota o inspeccionar el nodo en el grafo.*`;
+  } else {
+    heuristicAnswer = `### 🔍 Exploración del Grafo\n\nNo encontré una coincidencia exacta para "${userQuery}" en las notas o conceptos actuales.\n\n**Sugerencias:**\n- Revisa si el término está redactado con otra palabra clave (ej. *Regulación Emocional*, *Tesis*, *TCC*, *Psicometría*).\n- Puedes crear un nuevo concepto haciendo clic en **"Nuevo Concepto"** en la parte superior.`;
+  }
+
+  return {
+    answer: heuristicAnswer,
+    modelUsed: 'Heurística Local Offline',
+    matchedConcepts,
+    matchedNotes,
+    isOfflineHeuristic: true
+  };
+}
+
