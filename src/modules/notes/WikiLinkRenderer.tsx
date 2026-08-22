@@ -96,6 +96,8 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
       // 1. Is [[Wiki-Link]]
       if (part.startsWith('[[') && part.endsWith(']]')) {
         const linkTitle = part.slice(2, -2).trim();
+        if (!linkTitle) return null;
+
         const exists = targetSet.has(linkTitle.toLowerCase());
         const isConcept = concepts.some((c) => c.name.toLowerCase() === linkTitle.toLowerCase());
         const isWork = works.some((w) => w.title.toLowerCase() === linkTitle.toLowerCase());
@@ -162,17 +164,29 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
     });
   };
 
+  // Clean and normalize content (clean empty wiki links and isolated floating bullets)
+  const normalizedContent = (content || '')
+    .replace(/\[\[\s*\]\]/g, '')
+    .replace(/\n\s*•\s*\n\s*/g, '\n• ')
+    .replace(/\n\s*-\s*\n\s*/g, '\n- ')
+    .replace(/\n\s*\*\s*\n\s*/g, '\n* ');
+
   // Split content by lines/blocks
-  const lines = content.split('\n');
+  const lines = normalizedContent.split('\n');
 
   return (
-    <div className={`space-y-2.5 text-xs sm:text-sm text-[#2B2D42] leading-relaxed ${className}`}>
+    <div className={`space-y-2 text-xs sm:text-sm text-[#2B2D42] leading-relaxed ${className}`}>
       {lines.map((line, lineIdx) => {
         const trimmed = line.trim();
 
         // Empty line
         if (!trimmed) {
-          return <div key={lineIdx} className="h-1.5" />;
+          return <div key={lineIdx} className="h-1" />;
+        }
+
+        // Horizontal Rule
+        if (trimmed === '---' || trimmed === '***' || trimmed === '══════════════════════════════════════════') {
+          return <hr key={lineIdx} className="border-t border-[#EBE5DF] my-2" />;
         }
 
         // H1 Heading
@@ -202,23 +216,27 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
           );
         }
 
-        // Bullet List
-        if (line.startsWith('- ') || line.startsWith('* ')) {
+        // Bullet List (supports -, *, •, and numbered items)
+        const bulletMatch = line.match(/^(\s*)([-*•]|\d+\.)\s+(.*)$/);
+        if (bulletMatch) {
+          const marker = bulletMatch[2];
+          const isNumbered = /^\d+\./.test(marker);
           return (
-            <div key={lineIdx} className="flex items-start gap-2 pl-2">
-              <span className="text-[#D98880] font-bold text-sm leading-tight">•</span>
-              <div className="flex-1 min-w-0">{renderInlineText(line.slice(2), `li-${lineIdx}`)}</div>
+            <div key={lineIdx} className="flex items-start gap-2 pl-1.5 my-0.5">
+              <span className={`font-bold text-xs shrink-0 select-none ${isNumbered ? 'text-[#8C3A32]' : 'text-[#D98880]'}`}>
+                {isNumbered ? marker : '•'}
+              </span>
+              <div className="flex-1 min-w-0">{renderInlineText(bulletMatch[3], `li-${lineIdx}`)}</div>
             </div>
           );
         }
 
-        // Numbered List
-        const numMatch = line.match(/^(\d+)\.\s(.*)$/);
-        if (numMatch) {
+        // Standalone bullet with text directly following or indented
+        if (line.startsWith('- ') || line.startsWith('* ') || line.startsWith('• ')) {
           return (
-            <div key={lineIdx} className="flex items-start gap-2 pl-2">
-              <span className="text-[#8C3A32] font-bold text-xs shrink-0 mt-0.5">{numMatch[1]}.</span>
-              <div className="flex-1 min-w-0">{renderInlineText(numMatch[2], `num-${lineIdx}`)}</div>
+            <div key={lineIdx} className="flex items-start gap-2 pl-1.5 my-0.5">
+              <span className="text-[#D98880] font-bold text-xs shrink-0 select-none">•</span>
+              <div className="flex-1 min-w-0">{renderInlineText(line.slice(2), `li-${lineIdx}`)}</div>
             </div>
           );
         }

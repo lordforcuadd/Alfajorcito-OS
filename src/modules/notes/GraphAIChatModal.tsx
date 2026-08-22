@@ -118,7 +118,8 @@ Cualquier nota o concepto que mencione tendrá su enlace directo como [[Nombre]]
         courses: activeCourses,
         works: activeWorks,
         sources,
-        userProfile
+        userProfile,
+        history: messages.map((m) => ({ sender: m.sender, text: m.text }))
       });
 
       const aiMsg: ChatMessage = {
