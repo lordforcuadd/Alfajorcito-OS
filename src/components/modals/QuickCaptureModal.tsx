@@ -397,7 +397,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         updatedAt: now
       });
 
-      showToast('Pregunta guardada', 'Guardada en Preguntas al Profe.', 'success');
+      showToast('Consulta guardada', 'Guardada en Consultas al Docente.', 'success');
       setInquiryTopic('');
       setInquiryRawQuestion('');
       setInquiryFormalPreview('');
@@ -473,7 +473,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
           { id: 'work', label: 'Trabajo / Tesis', icon: <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> },
           { id: 'course', label: 'Curso', icon: <BookMarked className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> },
           { id: 'source', label: 'Fuente / Paper', icon: <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> },
-          { id: 'inquiry', label: 'Pregunta Profe', icon: <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> },
+          { id: 'inquiry', label: 'Consulta Docente', icon: <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> },
           { id: 'task', label: 'Tarea', icon: <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> }
         ].map((tab) => (
           <button

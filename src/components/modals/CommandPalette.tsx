@@ -340,11 +340,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
                       {item.icon}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                        <h4 className="text-xs sm:text-sm font-bold text-[#2B2D42] truncate">
+                      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap min-w-0">
+                        <h4 className="text-xs sm:text-sm font-bold text-[#2B2D42] truncate min-w-0 flex-1">
                           {item.title}
                         </h4>
-                        <Badge variant={item.badgeVariant} size="sm">
+                        <Badge variant={item.badgeVariant} size="sm" className="shrink-0">
                           {item.badgeText}
                         </Badge>
                       </div>

@@ -504,19 +504,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {recentNotes.length === 0 ? (
                 <p className="text-xs text-[#8D99AE] py-3 italic">Aún no hay notas atómicas registradas.</p>
               ) : (
-                recentNotes.map((note) => (
-                  <div
-                    key={note.id}
-                    onClick={() => onOpenNote(note.id)}
-                    className="p-2.5 rounded-xl bg-[#F5F1EB]/60 hover:bg-[#FDF2F0] transition-colors cursor-pointer space-y-1"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-bold text-[#8C3A32] uppercase truncate">{note.paraCategory}</span>
-                      <span className="text-[10px] text-[#8D99AE] font-mono shrink-0">[[wiki]]</span>
+                recentNotes.map((note) => {
+                  const paraLabel =
+                    note.paraCategory === 'PROJECT'
+                      ? 'Proyecto'
+                      : note.paraCategory === 'AREA'
+                      ? 'Materia'
+                      : note.paraCategory === 'RESOURCE'
+                      ? 'Recurso'
+                      : note.paraCategory === 'ARCHIVE'
+                      ? 'Archivada'
+                      : 'Idea Rápida';
+
+                  return (
+                    <div
+                      key={note.id}
+                      onClick={() => onOpenNote(note.id)}
+                      className="p-2.5 rounded-xl bg-[#F5F1EB]/60 hover:bg-[#FDF2F0] transition-colors cursor-pointer space-y-1"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold text-[#8C3A32] uppercase truncate">{paraLabel}</span>
+                        <span className="text-[10px] text-[#8D99AE] font-mono shrink-0">[[wiki]]</span>
+                      </div>
+                      <p className="text-xs font-semibold text-[#2B2D42] line-clamp-1">{note.title}</p>
                     </div>
-                    <p className="text-xs font-semibold text-[#2B2D42] line-clamp-1">{note.title}</p>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>

@@ -272,9 +272,9 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
       <Tabs
         tabs={[
           { id: 'overview', label: 'Resumen', icon: <GraduationCap className="w-4 h-4" /> },
-          { id: 'instructions', label: 'Indicaciones del Profe', icon: <FileText className="w-4 h-4" /> },
+          { id: 'instructions', label: 'Indicaciones del Docente', icon: <FileText className="w-4 h-4" /> },
           { id: 'checklist', label: 'Tareas & Criterios', icon: <CheckSquare className="w-4 h-4" />, badge: tasks.filter(t => !t.isCompleted).length },
-          { id: 'inquiries', label: 'Preguntas al Profe', icon: <HelpCircle className="w-4 h-4" />, badge: inquiries.length },
+          { id: 'inquiries', label: 'Consultas al Docente', icon: <HelpCircle className="w-4 h-4" />, badge: inquiries.length },
           { id: 'sources', label: 'Fuentes y Libros', icon: <BookOpen className="w-4 h-4" />, badge: workSources.length },
           { id: 'draft', label: 'Redacción & Citas', icon: <FileText className="w-4 h-4" /> },
           { id: 'export', label: 'Exportar a Google Docs', icon: <Share2 className="w-4 h-4" /> }

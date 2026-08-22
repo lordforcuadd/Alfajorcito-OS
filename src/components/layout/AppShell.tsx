@@ -232,10 +232,10 @@ export const AppShell: React.FC<AppShellProps> = ({
           className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
             currentTab === 'works' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
           }`}
-          title="Tesis"
+          title="Trabajos"
         >
           <GraduationCap className="w-4.5 h-4.5" />
-          <span className="text-[9px] truncate">Tesis</span>
+          <span className="text-[9px] truncate">Trabajos</span>
         </button>
 
         <button

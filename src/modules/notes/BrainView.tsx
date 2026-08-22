@@ -294,7 +294,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
                     case 'RESOURCE':
                       return (
                         <span className="text-[11px] font-bold text-[#00695C] bg-[#E0F2F1] px-2.5 py-0.5 rounded-lg border border-[#80CBC4]/50 truncate max-w-[150px]">
-                          Recurso
+                          Recurso de Estudio
                         </span>
                       );
                     case 'ARCHIVE':

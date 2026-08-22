@@ -1011,7 +1011,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
       </div>
 
       {/* Floating Clarity Hint */}
-      {!selectedNode && (
+      {!selectedNode && !searchQuery && !isMobileSearchOpen && (
         <div className="absolute top-12 left-1/2 -translate-x-1/2 pointer-events-none z-10 hidden sm:flex items-center gap-1.5 px-3 py-1 bg-white/90 backdrop-blur-md border border-[#CBD5E1] rounded-full shadow-2xs text-[11px] font-semibold text-[#475569] animate-fade-in">
           <Sparkles className="w-3 h-3 text-[#7C3AED]" />
           <span>Haz clic en un nodo para inspeccionar sus conexiones y abrir su contenido</span>
@@ -1103,7 +1103,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
                     : 'Nota de Estudio'}
                 </span>
               </div>
-              <h4 className="font-extrabold text-xs sm:text-sm text-[#0F172A] leading-snug truncate">
+              <h4 className="font-extrabold text-xs sm:text-sm text-[#0F172A] leading-snug line-clamp-2 break-words">
                 {selectedNode.label}
               </h4>
             </div>
@@ -1123,7 +1123,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
               const noteItem = selectedNode.rawItem as Note;
               return (
                 <>
-                  <div className="max-h-44 overflow-y-auto p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2E8F0] shadow-2xs">
+                  <div className="max-h-44 overflow-y-auto p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2E8F0] shadow-2xs break-words">
                     <FormattedNoteContent
                       content={noteItem.content}
                       notes={notes}

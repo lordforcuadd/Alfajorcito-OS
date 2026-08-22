@@ -281,7 +281,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
                           {bNote.title}
                         </span>
                         <span className="text-[10px] text-[#8D99AE]">
-                          {bNote.paraCategory === 'PROJECT' ? 'Tesis' : 'Nota'}
+                          {bNote.paraCategory === 'PROJECT' ? 'Trabajo' : 'Nota'}
                         </span>
                       </div>
                       <span className="text-xs text-[#D98880] font-bold shrink-0 ml-2">→</span>
@@ -357,7 +357,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
               </Select>
 
               <Select
-                label="Trabajo / Tesis"
+                label="Trabajo Asignado"
                 value={editWorkId}
                 onChange={(e) => setEditWorkId(e.target.value)}
               >
