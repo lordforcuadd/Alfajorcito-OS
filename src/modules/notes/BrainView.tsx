@@ -46,6 +46,9 @@ export const BrainView: React.FC<BrainViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isNewConceptModalOpen, setIsNewConceptModalOpen] = useState(false);
+  const [newConceptName, setNewConceptName] = useState('');
+  const [newConceptDesc, setNewConceptDesc] = useState('');
 
   // Live queries
   const notes = useLiveQuery(() => db.notes.toArray()) || [];
@@ -81,6 +84,31 @@ export const BrainView: React.FC<BrainViewProps> = ({
     }
   };
 
+  // Save Concept
+  const handleSaveConcept = async () => {
+    if (!newConceptName.trim()) {
+      showToast('Nombre requerido', 'Ingresa el nombre del concepto teórico.', 'warning');
+      return;
+    }
+    const now = Date.now();
+    await db.concepts.add({
+      id: `concept-${Math.random().toString(36).substring(2, 9)}`,
+      name: newConceptName.trim(),
+      description: newConceptDesc.trim() || 'Concepto clave de psicología.',
+      color: '#0D9488',
+      createdAt: now,
+      updatedAt: now
+    });
+    showToast(
+      'Concepto creado',
+      `"${newConceptName.trim()}" agregado al grafo. Conéctalo usando [[${newConceptName.trim()}]] en tus notas.`,
+      'success'
+    );
+    setNewConceptName('');
+    setNewConceptDesc('');
+    setIsNewConceptModalOpen(false);
+  };
+
   // Filtered Notes
   const filteredNotes = notes.filter((n) => {
     if (paraFilter !== 'ALL' && n.paraCategory !== paraFilter) return false;
@@ -111,7 +139,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <Button
             variant="secondary"
             size="md"
@@ -122,6 +150,16 @@ export const BrainView: React.FC<BrainViewProps> = ({
             title="Descargar para Obsidian (.zip)"
           >
             Exportar Obsidian
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={() => setIsNewConceptModalOpen(true)}
+            icon={<Sparkles className="w-4 h-4 text-[#0D9488]" />}
+            className="w-full sm:w-auto font-bold"
+          >
+            Nuevo Concepto
           </Button>
 
           <Button
@@ -345,6 +383,47 @@ export const BrainView: React.FC<BrainViewProps> = ({
         courses={courses}
         works={works}
       />
+
+      {/* New Concept Creation Modal */}
+      {isNewConceptModalOpen && (
+        <Modal
+          isOpen={isNewConceptModalOpen}
+          onClose={() => setIsNewConceptModalOpen(false)}
+          title="Nuevo Concepto Teórico"
+          subtitle="Registra constructos, variables o teorías clave para conectar en tu Grafo"
+          maxWidth="md"
+        >
+          <div className="space-y-4">
+            <Input
+              label="Nombre del Concepto o Constructo *"
+              placeholder="e.g. Regulación Emocional, Autoeficacia, TCC, Burnout..."
+              value={newConceptName}
+              onChange={(e) => setNewConceptName(e.target.value)}
+            />
+            <TextArea
+              label="Definición o Marco Teórico"
+              placeholder="Describe brevemente el significado científico o teórico de este concepto..."
+              rows={3}
+              value={newConceptDesc}
+              onChange={(e) => setNewConceptDesc(e.target.value)}
+            />
+            <div className="p-3 rounded-2xl bg-[#E0F2F1]/60 border border-[#80CBC4]/60 text-xs text-[#004D40] space-y-1">
+              <span className="font-bold block">💡 ¿Cómo se conecta con tus notas?</span>
+              <p>
+                Al crear un concepto, aparecerá como un nodo verde teal en el Grafo. Puedes vincular cualquier nota a este concepto escribiendo <code className="font-mono bg-white px-1 py-0.5 rounded border border-[#80CBC4] text-[#00695C]">[[{newConceptName.trim() || 'Nombre del Concepto'}]]</code> dentro del texto de la nota.
+              </p>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-[#EBE5DF]">
+              <Button variant="ghost" onClick={() => setIsNewConceptModalOpen(false)} className="w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <Button variant="primary" onClick={handleSaveConcept} className="w-full sm:w-auto font-bold">
+                Guardar Concepto
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
