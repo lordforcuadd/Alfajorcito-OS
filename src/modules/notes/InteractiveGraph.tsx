@@ -863,6 +863,22 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     setIsPanning(false);
   };
 
+  // Double Click Handler (Centers camera on node or resets view)
+  const handleDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const { x, y } = getGraphCoords(e.clientX, e.clientY);
+    const clickedNode = getNodeAt(x, y);
+    if (clickedNode) {
+      const { width, height } = dimensionsRef.current;
+      setPan({
+        x: width / 2 - clickedNode.x * zoom,
+        y: height / 2 - clickedNode.y * zoom
+      });
+      setSelectedNode(clickedNode);
+    } else {
+      handleResetView();
+    }
+  };
+
   // Reset Zoom & Fit
   const handleResetView = () => {
     setZoom(1);
@@ -1062,13 +1078,14 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
         </div>
       </div>
 
-      {/* 3. Interactive Canvas with Touch and Mouse support */}
+      {/* 3. Interactive Canvas with Touch, Mouse and Double-Click support */}
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onDoubleClick={handleDoubleClick}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

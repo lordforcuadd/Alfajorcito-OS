@@ -404,10 +404,18 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
                   </span>
                   <div className="space-y-1.5">
                     {worksInCourse.map((w) => (
-                      <div key={w.id} className="flex items-center justify-between text-xs p-2 rounded-xl bg-[#FAF8F5] border border-[#EBE5DF]">
-                        <span className="font-bold text-[#2B2D42] truncate">{w.title}</span>
+                      <button
+                        key={w.id}
+                        onClick={() => {
+                          setInspectedCourse(null);
+                          if (onOpenWork) onOpenWork(w.id);
+                        }}
+                        className="w-full flex items-center justify-between text-xs p-2.5 rounded-xl bg-[#FAF8F5] hover:bg-[#FDF2F0] border border-[#EBE5DF] hover:border-[#E8A598] transition-all cursor-pointer text-left group shadow-2xs"
+                        title="Abrir espacio de trabajo"
+                      >
+                        <span className="font-bold text-[#2B2D42] group-hover:text-[#8C3A32] truncate flex-1 mr-2">{w.title}</span>
                         <WorkStatusBadge status={w.status} size="sm" />
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
