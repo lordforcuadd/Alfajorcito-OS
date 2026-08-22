@@ -219,9 +219,9 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
       subtitle={`Segundo Cerebro de ${studentName} • ${cycle}`}
       maxWidth="2xl"
     >
-      <div className="flex flex-col h-[76vh] sm:h-[580px] max-h-[82vh] -mx-4 -my-4 sm:-mx-6 sm:-my-6 p-4 sm:p-6 space-y-3">
+      <div className="flex flex-col h-[65vh] sm:h-[500px] max-h-[70vh] space-y-3">
         {/* Knowledge Stats Index Bar */}
-        <div className="flex items-center justify-between gap-2 p-2 rounded-2xl bg-[#FAF8F5] border border-[#CBD5E1] text-xs shrink-0 flex-wrap">
+        <div className="flex items-center justify-between gap-1.5 p-2 rounded-2xl bg-[#FAF8F5] border border-[#CBD5E1] text-xs shrink-0 flex-wrap">
           <div className="flex items-center gap-1.5 text-[#475569] font-medium flex-wrap overflow-x-auto tab-scroll-pc py-0.5">
             <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-[#E2E8F0] shadow-2xs font-bold text-[#D97706] text-[11px] whitespace-nowrap">
               📝 {activeNotes.length} notas
@@ -237,33 +237,31 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-            <button
-              onClick={handleResetChat}
-              className="flex items-center gap-1 px-2 py-1 rounded-xl bg-white hover:bg-[#F1F5F9] border border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] text-[11px] font-semibold transition-colors cursor-pointer shadow-2xs"
-              title="Reiniciar conversación"
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span className="hidden xs:inline">Reiniciar</span>
-            </button>
-          </div>
+          <button
+            onClick={handleResetChat}
+            className="flex items-center gap-1 px-2 py-1 rounded-xl bg-white hover:bg-[#F1F5F9] border border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] text-[11px] font-semibold transition-colors cursor-pointer shadow-2xs shrink-0 ml-auto"
+            title="Reiniciar conversación"
+          >
+            <RotateCcw className="w-3 h-3" />
+            <span className="hidden xs:inline">Reiniciar</span>
+          </button>
         </div>
 
         {/* Chat Thread */}
-        <div className="flex-1 overflow-y-auto min-h-0 space-y-3.5 p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2E8F0] shadow-2xs scroll-touch overscroll-contain">
+        <div className="flex-1 overflow-y-auto min-h-0 space-y-3 p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2E8F0] shadow-2xs scroll-touch overscroll-contain">
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex gap-2.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex gap-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {msg.sender === 'ai' && (
-                <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-[#0D9488] to-[#14B8A6] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
-                  <Bot className="w-4 h-4" />
+                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-xl bg-gradient-to-tr from-[#0D9488] to-[#14B8A6] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                  <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
               )}
 
               <div
-                className={`max-w-[90%] sm:max-w-[82%] rounded-2xl p-3.5 space-y-1.5 text-xs sm:text-sm leading-relaxed shadow-2xs transition-all ${
+                className={`max-w-[92%] sm:max-w-[84%] rounded-2xl p-3 sm:p-3.5 space-y-1.5 text-xs sm:text-sm leading-relaxed shadow-2xs transition-all ${
                   msg.sender === 'user'
                     ? 'bg-gradient-to-r from-[#E8A598] to-[#D98880] text-[#2B2D42] font-semibold rounded-tr-xs'
                     : 'bg-white text-[#1E293B] border border-[#E2E8F0] rounded-tl-xs'
@@ -320,21 +318,21 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
               </div>
 
               {msg.sender === 'user' && (
-                <div className="w-7 h-7 rounded-xl bg-[#2B2D42] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
-                  <User className="w-4 h-4" />
+                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-xl bg-[#2B2D42] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                  <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
               )}
             </div>
           ))}
 
           {isLoading && (
-            <div className="flex gap-2.5 justify-start animate-fade-in">
-              <div className="w-7 h-7 rounded-xl bg-[#0D9488] text-white flex items-center justify-center shrink-0 animate-pulse">
-                <Bot className="w-4 h-4" />
+            <div className="flex gap-2 justify-start animate-fade-in">
+              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-xl bg-[#0D9488] text-white flex items-center justify-center shrink-0 animate-pulse">
+                <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <div className="bg-white border border-[#E2E8F0] rounded-2xl rounded-tl-xs p-3 text-xs text-[#64748B] flex items-center gap-2 shadow-2xs">
+              <div className="bg-white border border-[#E2E8F0] rounded-2xl rounded-tl-xs p-2.5 text-xs text-[#64748B] flex items-center gap-2 shadow-2xs">
                 <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#0D9488]" />
-                <span>Navegando y sintetizando el grafo de conocimiento...</span>
+                <span>Navegando y sintetizando el grafo...</span>
               </div>
             </div>
           )}
@@ -344,7 +342,7 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
 
         {/* Suggestion Starter Chips when chat has only welcome message */}
         {messages.length <= 1 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto tab-scroll-pc py-1 shrink-0">
+          <div className="flex items-center gap-1.5 overflow-x-auto tab-scroll-pc py-0.5 shrink-0">
             {sampleStarters.map((s, idx) => (
               <button
                 key={idx}
@@ -363,7 +361,7 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
             e.preventDefault();
             handleSendMessage();
           }}
-          className="flex items-center gap-2 shrink-0"
+          className="flex items-center gap-2 shrink-0 pt-0.5"
         >
           <div className="relative flex-1">
             <input
@@ -371,9 +369,9 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder="Pregúntale a la IA sobre relaciones, conceptos o notas de tu grafo..."
+              placeholder="Pregunta sobre relaciones, conceptos o notas de tu grafo..."
               disabled={isLoading}
-              className="w-full px-4 py-2.5 rounded-2xl border border-[#CBD5E1] bg-white text-xs sm:text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0D9488] focus:border-transparent disabled:opacity-50 shadow-xs"
+              className="w-full px-3.5 py-2 sm:py-2.5 rounded-2xl border border-[#CBD5E1] bg-white text-xs sm:text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0D9488] focus:border-transparent disabled:opacity-50 shadow-xs"
             />
           </div>
           <Button
@@ -382,8 +380,8 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
             size="md"
             disabled={!inputText.trim() || isLoading}
             isLoading={isLoading}
-            icon={<Send className="w-4 h-4" />}
-            className="font-bold shrink-0 bg-[#0D9488] hover:bg-[#0F766E] border-none text-white shadow-xs px-4"
+            icon={<Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+            className="font-bold shrink-0 bg-[#0D9488] hover:bg-[#0F766E] border-none text-white shadow-xs px-3 sm:px-4"
           >
             <span className="hidden sm:inline">Preguntar</span>
           </Button>

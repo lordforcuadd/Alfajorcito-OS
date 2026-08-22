@@ -386,17 +386,18 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     return active ? getConnectedNodeIds(active) : null;
   }, [selectedNode, hoveredNode, getConnectedNodeIds]);
 
-  // Canvas DPI Setup & Resize Observer
+  // Canvas DPI Setup & Resize Observer (1:1 Pixel Accuracy on Mobile & PC)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const updateSize = () => {
-      const parent = canvas.parentElement;
-      if (!parent) return;
-      const width = parent.clientWidth || 800;
-      const height = isFullscreen ? window.innerHeight - 80 : window.innerWidth < 640 ? 460 : 580;
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.floor(rect.width);
+      const height = Math.floor(rect.height);
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      if (width === 0 || height === 0) return;
 
       if (
         dimensionsRef.current.width !== width ||
@@ -411,9 +412,20 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
 
     updateSize();
     const ro = new ResizeObserver(updateSize);
-    if (canvas.parentElement) ro.observe(canvas.parentElement);
+    ro.observe(canvas);
 
-    return () => ro.disconnect();
+    // Native non-passive wheel listener to prevent "Unable to preventDefault inside passive event listener" error
+    const onNativeWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
+      setZoom((prev) => Math.min(3.2, Math.max(0.35, prev * zoomFactor)));
+    };
+    canvas.addEventListener('wheel', onNativeWheel, { passive: false });
+
+    return () => {
+      ro.disconnect();
+      canvas.removeEventListener('wheel', onNativeWheel);
+    };
   }, [isFullscreen]);
 
   // Main Canvas Render & Physics Loop
@@ -851,13 +863,6 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     setIsPanning(false);
   };
 
-  // Zoom Handler (Wheel)
-  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
-    setZoom((prev) => Math.min(3.2, Math.max(0.35, prev * zoomFactor)));
-  };
-
   // Reset Zoom & Fit
   const handleResetView = () => {
     setZoom(1);
@@ -870,8 +875,10 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full rounded-3xl bg-[#FAF8F5] border border-[#E2E8F0] overflow-hidden shadow-xs select-none transition-all ${
-        isFullscreen ? 'fixed inset-0 z-50 h-screen rounded-none' : ''
+      className={`relative w-full rounded-3xl bg-[#FAF8F5] border border-[#CBD5E1] overflow-hidden shadow-xs select-none transition-all ${
+        isFullscreen
+          ? 'fixed inset-0 z-50 h-screen w-screen rounded-none'
+          : 'h-[440px] xs:h-[500px] sm:h-[580px] lg:h-[640px] max-h-[85vh]'
       }`}
     >
       {/* 1. Header Toolbar (Single Clean Responsive Row - Never Covers the Graph!) */}
@@ -1065,12 +1072,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onWheel={handleWheel}
-        className={`w-full block touch-none transition-all ${
-          isFullscreen
-            ? 'h-screen w-screen'
-            : 'h-[500px] sm:h-[620px] lg:h-[700px]'
-        } ${
+        className={`w-full h-full block touch-none ${
           draggedNode
             ? 'cursor-grabbing'
             : hoveredNode
