@@ -421,6 +421,29 @@ export function getActiveGeminiModelUsed(): string {
   return activeGeminiModelUsed;
 }
 
+// Memory cache of verified working model per (API Key + Requested Model) combination
+const verifiedGeminiModelCache = new Map<string, string>();
+
+// Query available models from Gemini ListModels endpoint
+async function discoverSupportedGeminiModels(key: string): Promise<string[]> {
+  try {
+    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`;
+    const listRes = await fetch(listUrl, { signal: AbortSignal.timeout(6000) });
+    if (listRes.ok) {
+      const listData = await listRes.json();
+      return (listData.models || [])
+        .filter((m: { supportedGenerationMethods?: string[] }) =>
+          (m.supportedGenerationMethods || []).includes('generateContent')
+        )
+        .map((m: { name?: string }) => (m.name || '').replace(/^models\//, ''))
+        .filter(Boolean);
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
 async function callGemini(
   prompt: string,
   apiKey: string,
@@ -428,115 +451,127 @@ async function callGemini(
   temperature: number = 0.2
 ): Promise<string | null> {
   const key = apiKey.trim();
-  let requestedModel = (modelName || '').trim();
+  let requestedModel = (modelName || '').trim().replace(/^models\//, '');
+  const cacheKey = `${key}:${requestedModel}`;
 
-  // Strip prefixes if user pasted full path
-  if (requestedModel.startsWith('models/')) {
-    requestedModel = requestedModel.replace(/^models\//, '');
+  // 1. Try cached verified model first (instant, 0 errors!)
+  const cachedModel = verifiedGeminiModelCache.get(cacheKey);
+  if (cachedModel) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${cachedModel}:generateContent?key=${key}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature }
+        }),
+        signal: AbortSignal.timeout(12000)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        activeGeminiModelUsed = `${cachedModel} (v1beta)`;
+        return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+      }
+    } catch {
+      verifiedGeminiModelCache.delete(cacheKey);
+    }
   }
 
-  // Pre-configured priority candidates
-  const candidates: string[] = [
-    requestedModel,
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-latest',
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-exp',
-    'gemini-1.5-flash-8b',
-    'gemini-1.5-flash-002',
-    'gemini-1.5-flash-001',
-    'gemini-1.5-pro',
-    'gemini-pro'
-  ].filter((m): m is string => Boolean(m && m.length > 0));
+  // 2. Discover exact models available for this API Key
+  const discovered = await discoverSupportedGeminiModels(key);
 
-  const uniqueCandidates = Array.from(new Set(candidates));
-  const apiVersions: ('v1beta' | 'v1')[] = ['v1beta', 'v1'];
+  // 3. Build candidate list prioritizing user choice and fast flash models
+  const candidateList: string[] = [];
+  if (requestedModel && (discovered.length === 0 || discovered.includes(requestedModel))) {
+    candidateList.push(requestedModel);
+  }
+
+  const preferredOrder = [
+    'gemini-3.5-flash-lite',
+    'gemini-3.5-flash',
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-flash-latest',
+    'gemini-flash-lite-latest',
+    'gemini-3.6-flash',
+    'gemini-3.7-flash',
+    'gemini-2.5-pro',
+    'gemini-3-flash-preview',
+    'gemini-1.5-flash'
+  ];
+
+  for (const pref of preferredOrder) {
+    if (discovered.includes(pref) && !candidateList.includes(pref)) {
+      candidateList.push(pref);
+    }
+  }
+
+  // Add any remaining discovered models (excluding TTS/Image/Embedding)
+  for (const d of discovered) {
+    if (
+      !candidateList.includes(d) &&
+      !d.includes('tts') &&
+      !d.includes('image') &&
+      !d.includes('embedding') &&
+      !d.includes('clip')
+    ) {
+      candidateList.push(d);
+    }
+  }
+
+  // Fallback defaults if discovery failed
+  if (candidateList.length === 0) {
+    candidateList.push(
+      requestedModel || 'gemini-3.5-flash-lite',
+      'gemini-2.5-flash',
+      'gemini-flash-latest',
+      'gemini-1.5-flash'
+    );
+  }
+
   let lastError: Error | null = null;
 
-  for (const apiVer of apiVersions) {
-    for (const model of uniqueCandidates) {
+  // 4. Try candidates in order
+  for (const model of candidateList) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature }
+        }),
+        signal: AbortSignal.timeout(12000)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        verifiedGeminiModelCache.set(cacheKey, model);
+        activeGeminiModelUsed = `${model} (v1beta)`;
+        return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+      }
+
+      const errText = await res.text();
+      let parsedErrMsg = '';
       try {
-        const url = `https://generativelanguage.googleapis.com/${apiVer}/models/${model}:generateContent?key=${key}`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature }
-          }),
-          signal: AbortSignal.timeout(10000)
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          activeGeminiModelUsed = `${model} (${apiVer})`;
-          return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
-        }
-
-        const errText = await res.text();
-        let parsedErrMsg = '';
-        try {
-          const parsed = JSON.parse(errText);
-          parsedErrMsg = parsed.error?.message || '';
-        } catch {
-          parsedErrMsg = errText;
-        }
-
-        // If it's a 404 or unsupported model for this endpoint, keep trying other candidates
-        if (res.status === 404 || parsedErrMsg.includes('not found') || parsedErrMsg.includes('not supported')) {
-          lastError = new Error(parsedErrMsg || `Modelo ${model} no disponible en ${apiVer}`);
-          continue;
-        } else {
-          // If it's an API Key invalid error (400/403), throw immediately so user knows to check their key
-          throw new Error(parsedErrMsg || `HTTP ${res.status}: ${res.statusText}`);
-        }
-      } catch (e) {
-        if (e instanceof Error && (e.message.includes('API_KEY_INVALID') || e.message.includes('API key not valid'))) {
-          throw e;
-        }
-        lastError = e instanceof Error ? e : new Error(String(e));
+        const parsed = JSON.parse(errText);
+        parsedErrMsg = parsed.error?.message || '';
+      } catch {
+        parsedErrMsg = errText;
       }
-    }
-  }
 
-  // Multi-model discovery fallback: Query ListModels for this exact key
-  try {
-    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`;
-    const listRes = await fetch(listUrl, { signal: AbortSignal.timeout(6000) });
-    if (listRes.ok) {
-      const listData = await listRes.json();
-      const availableModels = (listData.models || [])
-        .filter((m: { supportedGenerationMethods?: string[] }) =>
-          (m.supportedGenerationMethods || []).includes('generateContent')
-        )
-        .map((m: { name?: string }) => (m.name || '').replace(/^models\//, ''))
-        .filter(Boolean);
-
-      for (const discoveredModel of availableModels) {
-        try {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${discoveredModel}:generateContent?key=${key}`;
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { temperature }
-            }),
-            signal: AbortSignal.timeout(10000)
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            activeGeminiModelUsed = `${discoveredModel} (v1beta)`;
-            return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
-          }
-        } catch {
-          // Continue to next discovered model
-        }
+      if (parsedErrMsg.includes('API_KEY_INVALID') || parsedErrMsg.includes('API key not valid')) {
+        throw new Error(parsedErrMsg);
       }
+      lastError = new Error(parsedErrMsg || `HTTP ${res.status}: ${res.statusText}`);
+    } catch (e) {
+      if (e instanceof Error && (e.message.includes('API_KEY_INVALID') || e.message.includes('API key not valid'))) {
+        throw e;
+      }
+      lastError = e instanceof Error ? e : new Error(String(e));
     }
-  } catch {
-    // Gracefully handled
   }
 
   if (lastError) throw lastError;
