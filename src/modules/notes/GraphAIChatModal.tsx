@@ -75,44 +75,6 @@ export const GraphAIChatModal: React.FC<GraphAIChatModalProps> = ({
   const activeWorks = works.filter((w) => !w.isArchived);
   const activeCourses = courses.filter((c) => !c.isArchived);
 
-  // Dynamic sample starter chips based on actual data
-  const sampleStarters = React.useMemo(() => {
-    const list: { label: string; query: string }[] = [];
-
-    if (concepts.length > 0) {
-      list.push({
-        label: `💡 Explorar ${concepts[0].name}`,
-        query: `¿Cómo se conecta el concepto [[${concepts[0].name}]] con el resto de mis notas y asignaturas registradas?`
-      });
-    }
-
-    if (thesisTitle && concepts.length > 1) {
-      list.push({
-        label: `🔬 Aporte a mi Tesis`,
-        query: `¿De qué manera puedo fundamentar mi proyecto "${thesisTitle}" integrando el concepto de [[${concepts[1].name}]]?`
-      });
-    } else if (activeCourses.length > 0) {
-      list.push({
-        label: `🎓 Notas de ${activeCourses[0].name}`,
-        query: `Sintetiza las notas e ideas clave que tengo guardadas para la asignatura [[${activeCourses[0].name}]].`
-      });
-    }
-
-    if (activeWorks.length > 0) {
-      list.push({
-        label: `📁 Revisar ${activeWorks[0].title}`,
-        query: `¿Cuáles son los requerimientos, fuentes y estado de mi trabajo [[${activeWorks[0].title}]]?`
-      });
-    } else {
-      list.push({
-        label: `📝 Resumen de mi Grafo`,
-        query: `¿Cuáles son los principales temas y conexiones que tengo registrados en mi Segundo Cerebro?`
-      });
-    }
-
-    return list;
-  }, [concepts, thesisTitle, activeCourses, activeWorks]);
-
   // Initialize personalized welcome message
   const initWelcome = () => {
     const specialtyText = specialty ? ` de **${specialty}**` : '';
@@ -339,21 +301,6 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
 
           <div ref={messagesEndRef} />
         </div>
-
-        {/* Suggestion Starter Chips when chat has only welcome message */}
-        {messages.length <= 1 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto tab-scroll-pc py-0.5 shrink-0">
-            {sampleStarters.map((s, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSendMessage(s.query)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white hover:bg-[#FDF2F0] border border-[#CBD5E1] text-[11px] font-semibold text-[#475569] hover:text-[#8C3A32] hover:border-[#E8A598] transition-all cursor-pointer whitespace-nowrap shadow-2xs shrink-0"
-              >
-                <span>{s.label}</span>
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* Input Bar */}
         <form
