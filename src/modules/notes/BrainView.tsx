@@ -12,6 +12,7 @@ import {
   BookOpen,
   GraduationCap,
   Sparkles,
+  Lightbulb,
   Layers,
   Network
 } from 'lucide-react';
@@ -156,7 +157,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
             variant="secondary"
             size="md"
             onClick={() => setIsNewConceptModalOpen(true)}
-            icon={<Sparkles className="w-4 h-4 text-[#0D9488]" />}
+            icon={<Lightbulb className="w-4 h-4 text-[#0D9488]" />}
             className="w-full sm:w-auto font-bold"
           >
             Nuevo Concepto
