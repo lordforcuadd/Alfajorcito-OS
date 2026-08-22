@@ -58,9 +58,11 @@ export const GraphAIChatModal: React.FC<GraphAIChatModalProps> = ({
     return rec?.value as UserProfile | undefined;
   });
 
-  const studentName = userProfile?.name || 'Saory';
-  const cycle = userProfile?.currentCycle || '8vo Ciclo';
-  const specialty = userProfile?.specialty === 'CLINICA' ? 'Psicología Clínica' : userProfile?.specialty || 'Psicología';
+  const studentName = userProfile?.name || 'Estudiante';
+  const cycle = userProfile?.currentCycle || '';
+  const specialty = userProfile?.specialty === 'CLINICA' ? 'Psicología Clínica' : userProfile?.specialty || userProfile?.major || 'Psicología';
+  const thesisTitle = userProfile?.thesisTitle || '';
+  const institution = userProfile?.institution || 'Universidad';
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
@@ -73,16 +75,59 @@ export const GraphAIChatModal: React.FC<GraphAIChatModalProps> = ({
   const activeWorks = works.filter((w) => !w.isArchived);
   const activeCourses = courses.filter((c) => !c.isArchived);
 
+  // Dynamic sample starter chips based on actual data
+  const sampleStarters = React.useMemo(() => {
+    const list: { label: string; query: string }[] = [];
+
+    if (concepts.length > 0) {
+      list.push({
+        label: `💡 Explorar ${concepts[0].name}`,
+        query: `¿Cómo se conecta el concepto [[${concepts[0].name}]] con el resto de mis notas y asignaturas registradas?`
+      });
+    }
+
+    if (thesisTitle && concepts.length > 1) {
+      list.push({
+        label: `🔬 Aporte a mi Tesis`,
+        query: `¿De qué manera puedo fundamentar mi proyecto "${thesisTitle}" integrando el concepto de [[${concepts[1].name}]]?`
+      });
+    } else if (activeCourses.length > 0) {
+      list.push({
+        label: `🎓 Notas de ${activeCourses[0].name}`,
+        query: `Sintetiza las notas e ideas clave que tengo guardadas para la asignatura [[${activeCourses[0].name}]].`
+      });
+    }
+
+    if (activeWorks.length > 0) {
+      list.push({
+        label: `📁 Revisar ${activeWorks[0].title}`,
+        query: `¿Cuáles son los requerimientos, fuentes y estado de mi trabajo [[${activeWorks[0].title}]]?`
+      });
+    } else {
+      list.push({
+        label: `📝 Resumen de mi Grafo`,
+        query: `¿Cuáles son los principales temas y conexiones que tengo registrados en mi Segundo Cerebro?`
+      });
+    }
+
+    return list;
+  }, [concepts, thesisTitle, activeCourses, activeWorks]);
+
   // Initialize personalized welcome message
   const initWelcome = () => {
+    const specialtyText = specialty ? ` de **${specialty}**` : '';
+    const instText = institution ? ` en la ${institution}` : '';
+    const cycleText = cycle ? ` (${cycle})` : '';
+    const thesisText = thesisTitle ? ` y tu proyecto de investigación "${thesisTitle}"` : '';
+
     return [
       {
         id: 'welcome',
         sender: 'ai' as const,
         text: `¡Hola **${studentName}**! 🌟
-Estoy conectada a tu Segundo Cerebro de **${specialty}** en la USMP (${cycle}). 
+Estoy conectada a tu Segundo Cerebro${specialtyText}${instText}${cycleText}. 
 
-Conozco tus apuntes, asignaturas en curso, conceptos teóricos y tu proyecto de investigación sobre Regulación Emocional y Autoeficacia.
+Conozco tus apuntes, asignaturas en curso, conceptos teóricos${thesisText}.
 
 Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nombre]] para que puedas abrirlo con un clic. ¿En qué te gustaría profundizar hoy?`,
         timestamp: Date.now(),
@@ -95,7 +140,7 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
     if (messages.length === 0) {
       setMessages(initWelcome());
     }
-  }, [studentName, cycle, specialty, messages.length]);
+  }, [studentName, cycle, specialty, institution, thesisTitle, messages.length]);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -165,12 +210,6 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
-
-  const sampleStarters = [
-    { label: '💡 Conectar Autoeficacia con mi Tesis', query: '¿Cómo se conecta el concepto de Autoeficacia Académica con mi proyecto de tesis y la regulación emocional?' },
-    { label: '📚 Resumir notas de Psicología Clínica', query: 'Sintetiza las ideas principales de mis notas activas sobre Psicología Clínica.' },
-    { label: '📝 ¿Qué entregables tengo pendientes?', query: '¿Cuáles son mis trabajos y entregables activos de este ciclo?' }
-  ];
 
   return (
     <Modal

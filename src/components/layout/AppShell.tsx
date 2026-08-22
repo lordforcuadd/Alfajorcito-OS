@@ -41,11 +41,11 @@ export const AppShell: React.FC<AppShellProps> = ({
   // Dynamic user profile from IndexedDB (Live reactivity on settings edit!)
   const userProfileRecord = useLiveQuery(() => db.settings.get('user_profile'));
   const profile = (userProfileRecord?.value as UserProfile | undefined) || {
-    name: 'Saory',
-    institution: 'Universidad de San Martín de Porres (USMP)',
-    faculty: 'Facultad de Ciencias de la Comunicación, Turismo y Psicología',
-    major: 'Psicología',
-    currentCycle: 'VIII Ciclo (8vo Ciclo)',
+    name: 'Estudiante',
+    institution: 'Universidad',
+    faculty: 'Facultad',
+    major: 'Carrera',
+    currentCycle: 'Ciclo Actual',
     defaultCitationStyle: 'APA_7'
   };
 
@@ -79,7 +79,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   const navItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
     { id: 'dashboard', label: 'Inicio', icon: <LayoutDashboard className="w-5 h-5" /> },
     { id: 'works', label: 'Trabajos & Tesis', icon: <GraduationCap className="w-5 h-5" /> },
-    { id: 'curriculum', label: 'Malla USMP', icon: <Award className="w-5 h-5" /> },
+    { id: 'curriculum', label: profile.institution?.includes('USMP') ? 'Malla USMP' : 'Malla Curricular', icon: <Award className="w-5 h-5" /> },
     { id: 'research', label: 'Fuentes & Papers', icon: <BookOpen className="w-5 h-5" /> },
     { id: 'brain', label: 'Segundo Cerebro', icon: <Brain className="w-5 h-5" /> },
     { id: 'pipeline', label: 'Citas & Referencias', icon: <GitFork className="w-5 h-5" /> }
@@ -183,7 +183,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             aria-label="Abrir buscador global"
           >
             <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8D99AE] shrink-0" />
-            <span className="truncate">Buscar<span className="hidden sm:inline"> tesis, DSM-5-TR, fuentes, notas, APA 7...</span></span>
+            <span className="truncate">Buscar<span className="hidden sm:inline"> trabajos, fuentes, notas, conceptos, citas...</span></span>
             <kbd className="hidden sm:inline-block ml-auto text-[10px] bg-[#F5F1EB] text-[#5A6275] px-1.5 py-0.5 rounded font-mono border border-[#EBE5DF]">
               Ctrl K
             </kbd>

@@ -660,13 +660,23 @@ export async function queryGraphAssistant(
     }
   }
 
-  const studentName = userProfile?.name || 'Saory';
-  const institution = userProfile?.institution || 'Universidad de San Martín de Porres (USMP)';
-  const faculty = userProfile?.faculty || 'Facultad de Ciencias de la Comunicación, Turismo y Psicología (FCCTP)';
-  const cycle = userProfile?.currentCycle || 'VIII Ciclo (8vo Ciclo)';
-  const specialty = userProfile?.specialty === 'CLINICA' ? 'Psicología Clínica' : userProfile?.specialty || 'Psicología';
-  const thesisTitle = userProfile?.thesisTitle || 'Regulación Emocional, Autoeficacia Académica y Sintomatología Ansiosa en Estudiantes de la USMP';
-  const internshipGoal = userProfile?.internshipSite || 'Postulación a Sedes de Internado USMP (Hospitales MINSA/EsSalud, CSMC)';
+  const studentName = userProfile?.name || 'Estudiante';
+  const institution = userProfile?.institution || 'Institución Universitaria';
+  const faculty = userProfile?.faculty || '';
+  const cycle = userProfile?.currentCycle || '';
+  const specialty = userProfile?.specialty === 'CLINICA' ? 'Psicología Clínica' : userProfile?.specialty || userProfile?.major || 'Psicología';
+  const thesisTitle = userProfile?.thesisTitle || '';
+  const internshipGoal = userProfile?.internshipSite || '';
+
+  const profileLines = [
+    studentName ? `- Estudiante: ${studentName}` : '',
+    institution ? `- Universidad / Institución: ${institution}` : '',
+    faculty ? `- Facultad: ${faculty}` : '',
+    specialty ? `- Carrera / Especialidad: ${specialty}` : '',
+    cycle ? `- Ciclo Académico: ${cycle}` : '',
+    thesisTitle ? `- Proyecto de Tesis / Investigación: "${thesisTitle}"` : '',
+    internshipGoal ? `- Meta de Formación / Prácticas: ${internshipGoal}` : ''
+  ].filter(Boolean).join('\n');
 
   // Extract quick matching items for highlighting
   const queryLower = userQuery.toLowerCase();
@@ -681,7 +691,7 @@ export async function queryGraphAssistant(
   if (settings.provider !== 'offline_heuristics' && (settings.apiKey || settings.provider === 'ollama')) {
     try {
       const conceptsSummary = activeConcepts
-        .map((c) => `- [[${c.name}]]: ${c.description || 'Concepto clave de psicología'}`)
+        .map((c) => `- [[${c.name}]]: ${c.description || 'Concepto clave'}`)
         .join('\n');
 
       const notesSummary = activeNotes
@@ -699,7 +709,7 @@ export async function queryGraphAssistant(
         .join('\n');
 
       const coursesSummary = activeCourses
-        .map((c) => `- [[${c.name}]] (${c.code || 'FCCTP USMP'} - ${c.period || '8vo Ciclo'})`)
+        .map((c) => `- [[${c.name}]] (${c.code || 'Curso'} - ${c.period || 'Periodo Activo'})`)
         .join('\n');
 
       const recentHistory = (context.history || [])
@@ -708,8 +718,9 @@ export async function queryGraphAssistant(
         .map((h) => `${h.sender === 'user' ? studentName : 'Asistente'}: ${h.text.trim()}`)
         .join('\n\n');
 
-      const prompt = `Eres el Asistente Académico del Segundo Cerebro de ${studentName} (carrera de Psicología en la USMP).
-Conoces su contexto académico como marco de referencia: ${institution} (${faculty}), Psicología — ${specialty}, ${cycle}.
+      const prompt = `Eres el Asistente Académico y Compañero de Razonamiento del Segundo Cerebro de ${studentName}.
+Contexto Académico Registrado del Estudiante:
+${profileLines}
 
 ══════════════════════════════════════════
 GRAFO DE CONOCIMIENTO INDEXADO:

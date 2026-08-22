@@ -24,10 +24,10 @@ export function generateGoogleDocsRichHTML(
   }).join('\n');
 
   // APA 7 Official Cover Page Header (Dynamic from UserProfile)
-  const institutionName = escapeHtml(profile?.institution || 'Universidad de San Martín de Porres (USMP)');
-  const facultyName = escapeHtml(profile?.faculty || 'Facultad de Ciencias de la Comunicación, Turismo y Psicología');
-  const studentName = escapeHtml(profile?.name || 'Saory');
-  const cycleInfo = escapeHtml(String(profile?.currentCycle || 'VIII Ciclo (8vo Ciclo)'));
+  const institutionName = escapeHtml(profile?.institution || 'Institución Universitaria');
+  const facultyName = escapeHtml(profile?.faculty || 'Facultad Académica');
+  const studentName = escapeHtml(profile?.name || 'Estudiante');
+  const cycleInfo = escapeHtml(String(profile?.currentCycle || 'Ciclo Académico'));
   const safeWorkTitle = escapeHtml(work.title);
   const safeCourseName = escapeHtml(courseName || 'Asignatura');
   const safeTeacherName = teacherName ? escapeHtml(teacherName) : '';
