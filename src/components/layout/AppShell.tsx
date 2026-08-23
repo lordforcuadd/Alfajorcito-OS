@@ -50,30 +50,98 @@ export const AppShell: React.FC<AppShellProps> = ({
     defaultCitationStyle: 'APA_7'
   };
 
-  const pusheenMoods = [
-    { id: 'classic', src: '/pusheen/pusheen-classic.png', label: `¡Vamos por ese 20, ${profile.name}! 🐾` },
-    { id: 'study', src: '/pusheen/pusheen-study.png', label: '¡Tomando notas atómicas! 📝' },
-    { id: 'book', src: '/pusheen/pusheen-book.png', label: '¡Revisando literatura científica! 📖' },
-    { id: 'laptop', src: '/pusheen/pusheen-laptop.png', label: '¡Redactando tesis con todo! 💻' },
-    { id: 'party', src: '/pusheen/pusheen-party.png', label: '¡Todo al día en la USMP! 🎉' },
-    { id: 'rainbow', src: '/pusheen/pusheen-rainbow.png', label: '¡Segundo Cerebro activado! ✨' },
-    { id: 'unicorn', src: '/pusheen/pusheen-unicorn.png', label: '¡Citas APA 7 dominadas! 🌟' },
-    { id: 'sleep', src: '/pusheen/pusheen-sleep.png', label: '¡Recuerda descansar también! 💤' }
+  // Video Animation States generated with Gemini Omni
+  const pusheenAnimations = [
+    {
+      id: 'idle',
+      title: 'Acompañante',
+      webp: '/pusheen/anim-idle.webp',
+      webm: '/pusheen/anim-idle.webm',
+      phrases: [`¡Vamos por ese 20, ${profile.name}! 🐾`, '¡Miau! Lista para estudiar 🍰', '¡Orgullo USMP! 🌟']
+    },
+    {
+      id: 'laptop',
+      title: 'Tesis & Redacción',
+      webp: '/pusheen/anim-laptop.webp',
+      webm: '/pusheen/anim-laptop.webm',
+      phrases: ['¡Redactando entregables a full! 💻', '¡Tu tesis va tomando forma! 📝', '¡Tipeando sin parar! ✨']
+    },
+    {
+      id: 'book',
+      title: 'Lectura & Fuentes',
+      webp: '/pusheen/anim-book.webp',
+      webm: '/pusheen/anim-book.webm',
+      phrases: ['¡Revisando literatura con rigor APA 7! 📖', '¡Analizando papers y fuentes! 🔍', '¡Segundo Cerebro en acción! 🧠']
+    },
+    {
+      id: 'party',
+      title: 'Celebración',
+      webp: '/pusheen/anim-party.webp',
+      webm: '/pusheen/anim-party.webm',
+      phrases: ['¡Objetivo académico cumplido! 🎉', '¡Excelente avance hoy! 🥳', '¡Tesis aprobada con 20! 🎓']
+    },
+    {
+      id: 'sleep',
+      title: 'Descanso',
+      webp: '/pusheen/anim-sleep.webp',
+      webm: '/pusheen/anim-sleep.webm',
+      phrases: ['¡Zzz... tomando un merecido descanso! 💤', '¡Pausa activa para despejar la mente! ☕', '¡Recargando energía! 😴']
+    }
   ];
 
-  const [moodIndex, setMoodIndex] = useState(0);
+  const [animIndex, setAnimIndex] = useState(0);
   const [pusheenMessage, setPusheenMessage] = useState<string | null>(null);
   const [isPusheenPopping, setIsPusheenPopping] = useState(false);
+  const [manualOverrideUntil, setManualOverrideUntil] = useState(0);
 
-  const currentMood = pusheenMoods[moodIndex];
+  // Contextual Auto-State based on Active Tab
+  useEffect(() => {
+    if (Date.now() < manualOverrideUntil) return;
+    if (currentTab === 'works') {
+      setAnimIndex(1); // laptop
+    } else if (currentTab === 'research' || currentTab === 'curriculum' || currentTab === 'pipeline') {
+      setAnimIndex(2); // book
+    } else if (currentTab === 'brain') {
+      setAnimIndex(3); // party
+    } else {
+      setAnimIndex(0); // idle
+    }
+  }, [currentTab, manualOverrideUntil]);
+
+  // Inactivity / Idle Sleep Detector (2.5 minutes)
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    const resetIdleTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        setAnimIndex(4); // sleep
+        setPusheenMessage('¡Zzz... en modo descanso! Tócame para despertar 🐾');
+        setTimeout(() => setPusheenMessage(null), 4000);
+      }, 150000); // 2.5 minutes
+    };
+
+    const events = ['mousemove', 'keydown', 'touchstart', 'scroll'];
+    events.forEach((ev) => window.addEventListener(ev, resetIdleTimer));
+    resetIdleTimer();
+
+    return () => {
+      clearTimeout(timer);
+      events.forEach((ev) => window.removeEventListener(ev, resetIdleTimer));
+    };
+  }, []);
+
+  const currentAnim = pusheenAnimations[animIndex];
 
   const handlePusheenInteract = () => {
     setIsPusheenPopping(true);
-    const nextIndex = (moodIndex + 1) % pusheenMoods.length;
-    setMoodIndex(nextIndex);
-    setPusheenMessage(pusheenMoods[nextIndex].label);
+    setManualOverrideUntil(Date.now() + 15000); // 15 seconds manual lock
+    const nextIndex = (animIndex + 1) % pusheenAnimations.length;
+    setAnimIndex(nextIndex);
+    const phrases = pusheenAnimations[nextIndex].phrases;
+    const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+    setPusheenMessage(randomPhrase);
     setTimeout(() => setIsPusheenPopping(false), 500);
-    setTimeout(() => setPusheenMessage(null), 3200);
+    setTimeout(() => setPusheenMessage(null), 3500);
   };
 
   useEffect(() => {
@@ -191,19 +259,30 @@ export const AppShell: React.FC<AppShellProps> = ({
             type="button"
             onClick={handlePusheenInteract}
             className="group relative flex flex-col items-center justify-center p-3 rounded-3xl bg-gradient-to-b from-[#FAF8F5]/80 via-white to-[#FDF2F0]/60 border border-[#E8A598]/30 hover:border-[#E8A598] hover:shadow-xs transition-all duration-300 cursor-pointer"
-            title="¡Toca a Pusheen para interactuar!"
+            title={`Pusheen: ${currentAnim.title} (Clic para interactuar)`}
             aria-label="Tocar a Pusheen"
           >
-            <div className={`w-24 h-24 lg:w-28 lg:h-28 flex items-center justify-center ${isPusheenPopping ? 'animate-omni-pop' : 'animate-omni-float'}`}>
-              <img
-                src={currentMood.src}
-                alt="Pusheen Mascota"
-                className="w-full h-full object-contain filter drop-shadow-sm group-hover:drop-shadow-md transition-all select-none pointer-events-none"
-              />
+            <div className={`w-28 h-28 lg:w-32 lg:h-32 flex items-center justify-center relative overflow-hidden ${isPusheenPopping ? 'animate-omni-pop' : 'animate-omni-float'}`}>
+              <video
+                key={currentAnim.id}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-contain filter drop-shadow-sm group-hover:drop-shadow-md select-none pointer-events-none"
+                poster={currentAnim.webp}
+              >
+                <source src={currentAnim.webm} type="video/webm" />
+                <img
+                  src={currentAnim.webp}
+                  alt={`Pusheen: ${currentAnim.title}`}
+                  className="w-full h-full object-contain filter drop-shadow-sm group-hover:drop-shadow-md select-none pointer-events-none"
+                />
+              </video>
             </div>
-            <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold text-[#8C3A32]/80 group-hover:text-[#8C3A32] transition-colors">
+            <div className="flex items-center gap-1.5 mt-1.5 px-2.5 py-0.5 rounded-full bg-[#FAF8F5] border border-[#E8A598]/40 text-[10px] font-bold text-[#8C3A32]/90 group-hover:text-[#8C3A32] group-hover:border-[#8C3A32]/40 transition-colors shadow-2xs">
               <img src="/pusheen/pusheen-paw.png" alt="paw" className="w-3.5 h-3.5 object-contain inline-block" />
-              <span>Toca a Pusheen</span>
+              <span>{currentAnim.title}</span>
             </div>
           </button>
         </div>

@@ -289,12 +289,12 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
 
           {isLoading && (
             <div className="flex gap-2 justify-start animate-fade-in">
-              <div className="w-8 h-8 rounded-xl bg-[#FDF2F0] border border-[#E8A598]/60 flex items-center justify-center shrink-0 p-0.5">
-                <img src="/pusheen/pusheen-party.png" alt="Pusheen pensando" className="w-full h-full object-contain animate-bounce" />
+              <div className="w-9 h-9 rounded-xl bg-[#FDF2F0] border border-[#E8A598]/60 flex items-center justify-center shrink-0 p-0.5 overflow-hidden shadow-xs">
+                <img src="/pusheen/anim-laptop.webp" alt="Pusheen pensando" className="w-full h-full object-contain" />
               </div>
               <div className="bg-white border border-[#E2E8F0] rounded-2xl rounded-tl-xs p-2.5 text-xs text-[#64748B] flex items-center gap-2 shadow-2xs">
                 <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#8C3A32]" />
-                <span>Pusheen está navegando y sintetizando tu grafo...</span>
+                <span>Pusheen está navegando y sintetizando tu grafo en tiempo real...</span>
               </div>
             </div>
           )}
