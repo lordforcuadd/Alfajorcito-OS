@@ -217,8 +217,8 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
               className={`flex gap-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {msg.sender === 'ai' && (
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-xl bg-gradient-to-tr from-[#0D9488] to-[#14B8A6] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
-                  <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#FDF2F0] border border-[#E8A598]/60 flex items-center justify-center shrink-0 shadow-xs mt-0.5 overflow-hidden p-0.5">
+                  <img src="/pusheen/pusheen-classic.png" alt="Pusheen IA" className="w-full h-full object-contain drop-shadow-xs" />
                 </div>
               )}
 
@@ -253,7 +253,7 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
                   <div className="pt-2 mt-1 border-t border-[#F1F5F9] flex items-center justify-between text-[10px] text-[#94A3B8] gap-2">
                     <span className="truncate">
                       {msg.modelUsed ? (
-                        <>Modelo: <strong className="text-[#0D9488]">{msg.modelUsed}</strong></>
+                        <>Modelo: <strong className="text-[#8C3A32]">{msg.modelUsed}</strong></>
                       ) : (
                         <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       )}
@@ -280,8 +280,8 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
               </div>
 
               {msg.sender === 'user' && (
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-xl bg-[#2B2D42] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
-                  <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#2B2D42] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                  <User className="w-4 h-4" />
                 </div>
               )}
             </div>
@@ -289,12 +289,12 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
 
           {isLoading && (
             <div className="flex gap-2 justify-start animate-fade-in">
-              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-xl bg-[#0D9488] text-white flex items-center justify-center shrink-0 animate-pulse">
-                <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <div className="w-8 h-8 rounded-xl bg-[#FDF2F0] border border-[#E8A598]/60 flex items-center justify-center shrink-0 p-0.5">
+                <img src="/pusheen/pusheen-party.png" alt="Pusheen pensando" className="w-full h-full object-contain animate-bounce" />
               </div>
               <div className="bg-white border border-[#E2E8F0] rounded-2xl rounded-tl-xs p-2.5 text-xs text-[#64748B] flex items-center gap-2 shadow-2xs">
-                <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#0D9488]" />
-                <span>Navegando y sintetizando el grafo...</span>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#8C3A32]" />
+                <span>Pusheen está navegando y sintetizando tu grafo...</span>
               </div>
             </div>
           )}

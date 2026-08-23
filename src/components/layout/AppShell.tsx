@@ -11,7 +11,8 @@ import {
   WifiOff,
   GitFork,
   Award,
-  UserCheck
+  Sparkles,
+  Heart
 } from 'lucide-react';
 import { Button } from '../common/Button';
 import { db } from '../../db';
@@ -37,16 +38,37 @@ export const AppShell: React.FC<AppShellProps> = ({
   children
 }) => {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const [pusheenMood, setPusheenMood] = useState<'classic' | 'party' | 'rainbow'>('classic');
+  const [pusheenMessage, setPusheenMessage] = useState<string | null>(null);
+  const [isPusheenBouncing, setIsPusheenBouncing] = useState(false);
 
   // Dynamic user profile from IndexedDB (Live reactivity on settings edit!)
   const userProfileRecord = useLiveQuery(() => db.settings.get('user_profile'));
   const profile = (userProfileRecord?.value as UserProfile | undefined) || {
     name: 'Estudiante',
-    institution: 'Universidad',
-    faculty: 'Facultad',
-    major: 'Carrera',
-    currentCycle: 'Ciclo Actual',
+    institution: 'Universidad de San Martín de Porres',
+    faculty: 'Facultad de Ciencias de la Comunicación, Turismo y Psicología',
+    major: 'Psicología',
+    currentCycle: '8vo Ciclo',
     defaultCitationStyle: 'APA_7'
+  };
+
+  const pusheenPhrases = [
+    `¡Vamos, ${profile.name}! 🐾`,
+    '¡Tu tesis va con todo! 🎓',
+    '¡Segundo Cerebro activado! ✨',
+    '¡APA 7 sin errores! 📖',
+    '¡Miau! Modo estudio 🍰',
+    '¡Orgullo USMP! 🌟'
+  ];
+
+  const handlePusheenInteract = () => {
+    setIsPusheenBouncing(true);
+    setPusheenMood((prev) => (prev === 'classic' ? 'party' : prev === 'party' ? 'rainbow' : 'classic'));
+    const randomPhrase = pusheenPhrases[Math.floor(Math.random() * pusheenPhrases.length)];
+    setPusheenMessage(randomPhrase);
+    setTimeout(() => setIsPusheenBouncing(false), 600);
+    setTimeout(() => setPusheenMessage(null), 3000);
   };
 
   useEffect(() => {
@@ -77,29 +99,64 @@ export const AppShell: React.FC<AppShellProps> = ({
   }, [onOpenSearch, onOpenQuickCapture]);
 
   const navItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'dashboard', label: 'Inicio', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { id: 'works', label: 'Trabajos & Tesis', icon: <GraduationCap className="w-5 h-5" /> },
-    { id: 'curriculum', label: profile.institution?.includes('USMP') ? 'Malla USMP' : 'Malla Curricular', icon: <Award className="w-5 h-5" /> },
-    { id: 'research', label: 'Fuentes & Papers', icon: <BookOpen className="w-5 h-5" /> },
-    { id: 'brain', label: 'Segundo Cerebro', icon: <Brain className="w-5 h-5" /> },
-    { id: 'pipeline', label: 'Citas & Referencias', icon: <GitFork className="w-5 h-5" /> }
+    { id: 'dashboard', label: 'Inicio', icon: <LayoutDashboard className="w-4.5 h-4.5" /> },
+    { id: 'works', label: 'Trabajos & Tesis', icon: <GraduationCap className="w-4.5 h-4.5" /> },
+    { id: 'curriculum', label: profile.institution?.includes('USMP') ? 'Malla USMP' : 'Malla Curricular', icon: <Award className="w-4.5 h-4.5" /> },
+    { id: 'research', label: 'Fuentes & Papers', icon: <BookOpen className="w-4.5 h-4.5" /> },
+    { id: 'brain', label: 'Segundo Cerebro', icon: <Brain className="w-4.5 h-4.5" /> },
+    { id: 'pipeline', label: 'Citas & Referencias', icon: <GitFork className="w-4.5 h-4.5" /> }
   ];
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-[#2B2D42] flex flex-col md:flex-row pb-20 md:pb-0">
-      {/* Desktop / Tablet Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 lg:w-72 bg-white border-r border-[#EBE5DF] h-screen sticky top-0 shrink-0 z-30 p-5 justify-between">
-        <div className="space-y-6">
-          {/* Logo Brand (Dynamic from Profile) */}
-          <div className="flex items-center gap-3 px-2">
-            <div className="w-11 h-11 rounded-2xl bg-[#FDF2F0] border border-[#E8A598]/60 flex items-center justify-center shadow-xs shrink-0 p-1.5">
-              <img src="/alfajor.svg" alt="Alfajorcito OS" className="w-full h-full object-contain drop-shadow-xs" />
+      {/* Desktop / Tablet Modern Sidebar */}
+      <aside className="hidden md:flex flex-col w-64 lg:w-72 bg-white/95 backdrop-blur-md border-r border-[#EBE5DF] h-screen sticky top-0 shrink-0 z-30 p-4 lg:p-5 justify-between select-none">
+        <div className="space-y-4 lg:space-y-5">
+          {/* Logo Brand Header with Cute Mascot */}
+          <div className="flex items-center justify-between p-2 rounded-2xl bg-gradient-to-r from-[#FDF2F0] to-[#FAF8F5] border border-[#E8A598]/40 shadow-2xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-10 h-10 rounded-2xl bg-white border border-[#E8A598]/60 flex items-center justify-center shadow-xs shrink-0 p-1">
+                <img src="/alfajor.svg" alt="Alfajorcito OS" className="w-full h-full object-contain drop-shadow-xs" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="font-extrabold text-sm lg:text-base tracking-tight text-[#2B2D42] truncate">Alfajorcito OS</h1>
+                <p className="text-[10px] text-[#8C3A32] font-bold truncate">
+                  {profile.institution || 'USMP'} · {profile.currentCycle || '8vo Ciclo'}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="font-extrabold text-base tracking-tight text-[#2B2D42] truncate">Alfajorcito OS</h1>
-              <p className="text-[11px] text-[#5A6275] font-semibold truncate">
-                {profile.faculty || profile.major} • {profile.currentCycle}
-              </p>
+
+            {/* Pusheen Mini Interactive Mascot */}
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={handlePusheenInteract}
+                className={`w-9 h-9 rounded-xl bg-white border border-[#E8A598]/50 hover:border-[#8C3A32] flex items-center justify-center shadow-2xs transition-all cursor-pointer overflow-hidden p-0.5 group ${
+                  isPusheenBouncing ? 'scale-115 rotate-6' : 'hover:scale-105'
+                }`}
+                title="¡Haz clic en Pusheen para interactuar!"
+                aria-label="Interactuar con Pusheen"
+              >
+                <img
+                  src={
+                    pusheenMood === 'party'
+                      ? '/pusheen/pusheen-party.png'
+                      : pusheenMood === 'rainbow'
+                      ? '/pusheen/pusheen-rainbow.png'
+                      : '/pusheen/pusheen-classic.png'
+                  }
+                  alt="Pusheen"
+                  className="w-full h-full object-contain"
+                />
+              </button>
+
+              {/* Speech Bubble on Click */}
+              {pusheenMessage && (
+                <div className="absolute top-11 right-0 z-50 bg-[#2B2D42] text-white text-[10px] font-bold px-2.5 py-1 rounded-xl shadow-lg whitespace-nowrap animate-fade-in border border-white/20">
+                  <div className="absolute -top-1 right-3.5 w-2 h-2 bg-[#2B2D42] rotate-45" />
+                  {pusheenMessage}
+                </div>
+              )}
             </div>
           </div>
 
@@ -108,13 +165,16 @@ export const AppShell: React.FC<AppShellProps> = ({
             onClick={onOpenQuickCapture}
             variant="primary"
             size="md"
-            className="w-full justify-center shadow-xs"
-            icon={<Plus className="w-4 h-4" />}
+            className="w-full justify-center shadow-xs font-bold py-2.5 text-xs lg:text-sm"
+            icon={<Plus className="w-4 h-4 stroke-[2.5]" />}
           >
-            Captura Rápida
+            <span>Captura Rápida</span>
+            <kbd className="hidden lg:inline-block ml-auto text-[9px] bg-black/15 text-white px-1.5 py-0.5 rounded font-mono">
+              Ctrl J
+            </kbd>
           </Button>
 
-          {/* Nav Links */}
+          {/* Nav Links with Paw Tap Interactivity */}
           <nav className="space-y-1">
             {navItems.map((item) => {
               const isActive = currentTab === item.id;
@@ -122,38 +182,49 @@ export const AppShell: React.FC<AppShellProps> = ({
                 <button
                   key={item.id}
                   onClick={() => onTabChange(item.id)}
-                  className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-150 cursor-pointer select-none ${
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 lg:py-3 rounded-2xl text-xs lg:text-sm font-bold transition-all duration-150 cursor-pointer group relative overflow-hidden ${
                     isActive
-                      ? 'bg-[#FDF2F0] text-[#8C3A32] border border-[#E8A598]/40 shadow-2xs'
+                      ? 'bg-[#FDF2F0] text-[#8C3A32] border border-[#E8A598]/60 shadow-2xs'
                       : 'text-[#5A6275] hover:text-[#2B2D42] hover:bg-[#F5F1EB]'
                   }`}
                 >
-                  <span className={isActive ? 'text-[#D98880]' : 'text-[#8D99AE]'}>{item.icon}</span>
-                  <span>{item.label}</span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className={`transition-transform duration-200 ${isActive ? 'text-[#8C3A32] scale-110' : 'text-[#8D99AE] group-hover:text-[#2B2D42] group-hover:scale-105'}`}>
+                      {item.icon}
+                    </span>
+                    <span className="truncate">{item.label}</span>
+                  </div>
+
+                  {/* Active Indicator with Cute Pusheen Paw */}
+                  {isActive && (
+                    <span className="text-[11px] animate-fade-in text-[#8C3A32]" title="Sección activa">
+                      🐾
+                    </span>
+                  )}
                 </button>
               );
             })}
           </nav>
         </div>
 
-        {/* Clean Single Profile / Settings Trigger */}
-        <div className="pt-4 border-t border-[#EBE5DF]">
+        {/* Sidebar Footer: Profile & Settings Trigger */}
+        <div className="pt-3 border-t border-[#EBE5DF] space-y-2">
           <button
             onClick={onOpenSettings}
-            className="w-full flex items-center justify-between p-2.5 rounded-2xl bg-[#F5F1EB]/60 hover:bg-[#F5F1EB] border border-[#EBE5DF] transition-all cursor-pointer group"
+            className="w-full flex items-center justify-between p-2.5 rounded-2xl bg-[#FAF8F5] hover:bg-[#FDF2F0] border border-[#EBE5DF] hover:border-[#E8A598]/60 transition-all cursor-pointer group shadow-2xs"
             title="Configuración de Perfil e IA"
             aria-label="Configuración de Perfil e IA"
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-white border border-[#EBE5DF] flex items-center justify-center text-xs font-bold text-[#8C3A32] shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-white border border-[#E8A598]/60 flex items-center justify-center text-xs font-black text-[#8C3A32] shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
                 {profile.name ? profile.name.charAt(0).toUpperCase() : 'U'}
               </div>
               <div className="text-left min-w-0">
-                <span className="text-xs font-bold text-[#2B2D42] block truncate">{profile.name}</span>
-                <span className="text-[10px] text-[#8D99AE] block truncate">{profile.currentCycle}</span>
+                <span className="text-xs font-extrabold text-[#2B2D42] block truncate group-hover:text-[#8C3A32]">{profile.name}</span>
+                <span className="text-[10px] text-[#8D99AE] block truncate">{profile.currentCycle || '8vo Ciclo'}</span>
               </div>
             </div>
-            <Settings className="w-4 h-4 text-[#8D99AE] group-hover:text-[#2B2D42] transition-colors shrink-0" />
+            <Settings className="w-4 h-4 text-[#8D99AE] group-hover:text-[#8C3A32] group-hover:rotate-45 transition-all shrink-0" />
           </button>
         </div>
       </aside>

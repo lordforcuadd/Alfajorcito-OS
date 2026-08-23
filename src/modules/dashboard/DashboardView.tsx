@@ -228,16 +228,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Q1: ¿Qué debo hacer hoy? */}
         <Card variant="elevated" className="h-full flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#EBE5DF] hover:border-[#E8A598]/70 hover:shadow-md transition-all">
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F5F1EB]">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-[#FDF2F0] text-[#D98880] flex items-center justify-center shrink-0">
-                  <Clock className="w-4 h-4" />
+            <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#F5F1EB]">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="w-7 h-7 rounded-lg bg-[#FDF2F0] text-[#D98880] flex items-center justify-center shrink-0">
+                  <Clock className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="font-extrabold text-sm text-[#2B2D42] truncate">¿Qué debo hacer hoy?</h3>
+                <h3 className="font-extrabold text-xs sm:text-sm text-[#2B2D42] leading-tight">
+                  ¿Qué debo hacer hoy?
+                </h3>
               </div>
-              <Badge variant="rose" size="sm" className="shrink-0">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-[#FDF2F0] text-[#8C3A32] border border-[#E8A598]/50 shrink-0">
                 {todayTasks.length} pendientes
-              </Badge>
+              </span>
             </div>
 
             <div className="space-y-2">
@@ -288,16 +290,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Q2: ¿Qué se acerca? */}
         <Card variant="elevated" className="h-full flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#EBE5DF] hover:border-[#FFB300]/70 hover:shadow-md transition-all">
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F5F1EB]">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-[#FFF8E1] text-[#FFB300] flex items-center justify-center shrink-0">
-                  <Calendar className="w-4 h-4" />
+            <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#F5F1EB]">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="w-7 h-7 rounded-lg bg-[#FFF8E1] text-[#FFB300] flex items-center justify-center shrink-0">
+                  <Calendar className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="font-extrabold text-sm text-[#2B2D42] truncate">¿Qué se acerca?</h3>
+                <h3 className="font-extrabold text-xs sm:text-sm text-[#2B2D42] leading-tight">
+                  ¿Qué se acerca?
+                </h3>
               </div>
-              <Badge variant="amber" size="sm" className="shrink-0">
-                Próximos 14 días
-              </Badge>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-[#FFF8E1] text-[#B78103] border border-[#FFE082] shrink-0">
+                14 días
+              </span>
             </div>
 
             <div className="space-y-2">
@@ -321,9 +325,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <p className="text-xs font-bold text-[#2B2D42] truncate group-hover:text-[#8C3A32]">{work.title}</p>
                         <p className="text-[10px] text-[#5A6275] truncate mt-0.5">{course?.name || 'Materia'}</p>
                       </div>
-                      <Badge variant={daysLeft <= 3 ? 'rose' : 'amber'} size="sm" className="shrink-0">
-                        {daysLeft === 0 ? '¡Hoy!' : daysLeft === 1 ? 'Mañana' : `En ${daysLeft} días`}
-                      </Badge>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md shrink-0 ${daysLeft <= 3 ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}`}>
+                        {daysLeft === 0 ? '¡Hoy!' : daysLeft === 1 ? 'Mañana' : `${daysLeft}d`}
+                      </span>
                     </div>
                   );
                 })
@@ -345,16 +349,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Q3: ¿Qué está atrasado? */}
         <Card variant="elevated" className="h-full flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#EBE5DF] hover:border-rose-300 hover:shadow-md transition-all">
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F5F1EB]">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-[#FFEBEE] text-[#C62828] flex items-center justify-center shrink-0">
-                  <AlertTriangle className="w-4 h-4" />
+            <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#F5F1EB]">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="w-7 h-7 rounded-lg bg-[#FFEBEE] text-[#C62828] flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="font-extrabold text-sm text-[#2B2D42] truncate">¿Qué está atrasado?</h3>
+                <h3 className="font-extrabold text-xs sm:text-sm text-[#2B2D42] leading-tight">
+                  ¿Qué está atrasado?
+                </h3>
               </div>
-              <Badge variant={overdueWorks.length + overdueTasks.length > 0 ? 'unverified' : 'verified'} size="sm" className="shrink-0">
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg shrink-0 ${overdueWorks.length + overdueTasks.length > 0 ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'}`}>
                 {overdueWorks.length + overdueTasks.length} alertas
-              </Badge>
+              </span>
             </div>
 
             <div className="space-y-2">
@@ -373,7 +379,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       className="flex items-center justify-between p-2.5 rounded-xl bg-rose-50/70 border border-rose-200 hover:bg-rose-100/70 transition-all cursor-pointer gap-2"
                     >
                       <span className="text-xs font-bold text-rose-900 truncate min-w-0 flex-1">{work.title}</span>
-                      <span className="text-[10px] font-bold text-rose-800 bg-rose-100 px-2 py-0.5 rounded-full shrink-0">
+                      <span className="text-[9px] font-bold text-rose-800 bg-rose-100 px-1.5 py-0.5 rounded shrink-0">
                         Vencido
                       </span>
                     </div>
@@ -404,7 +410,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         </button>
                         <span className="text-xs text-rose-900 truncate">{task.title}</span>
                       </div>
-                      <span className="text-[10px] font-bold text-rose-800 bg-rose-100 px-2 py-0.5 rounded-full shrink-0">
+                      <span className="text-[9px] font-bold text-rose-800 bg-rose-100 px-1.5 py-0.5 rounded shrink-0">
                         Tarea
                       </span>
                     </div>
@@ -428,16 +434,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Q4: ¿Qué está bloqueado? */}
         <Card variant="elevated" className="h-full flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#EBE5DF] hover:border-[#CE93D8] hover:shadow-md transition-all">
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F5F1EB]">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-[#F3E5F5] text-[#6A1B9A] flex items-center justify-center shrink-0">
-                  <HelpCircle className="w-4 h-4" />
+            <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#F5F1EB]">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="w-7 h-7 rounded-lg bg-[#F3E5F5] text-[#6A1B9A] flex items-center justify-center shrink-0">
+                  <HelpCircle className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="font-extrabold text-sm text-[#2B2D42] truncate">¿Qué está bloqueado?</h3>
+                <h3 className="font-extrabold text-xs sm:text-sm text-[#2B2D42] leading-tight">
+                  ¿Qué está bloqueado?
+                </h3>
               </div>
-              <Badge variant={blockedInquiries.length > 0 ? 'lavender' : 'default'} size="sm" className="shrink-0">
-                {blockedInquiries.length} consultas
-              </Badge>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-[#F3E5F5] text-[#6A1B9A] border border-[#CE93D8]/60 shrink-0">
+                {blockedInquiries.length} dudas
+              </span>
             </div>
 
             <div className="space-y-2">
@@ -457,9 +465,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[10px] font-bold text-[#6A1B9A] uppercase truncate">{course?.name || 'Profesor'}</span>
-                        <Badge variant="lavender" size="sm" className="shrink-0">
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 shrink-0">
                           {inq.status === 'SENT' ? 'Enviada' : 'Borrador'}
-                        </Badge>
+                        </span>
                       </div>
                       <p className="text-xs font-semibold text-[#2B2D42] line-clamp-1">{inq.topic}</p>
                     </div>
@@ -482,16 +490,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Q5: ¿Qué estoy investigando? */}
         <Card variant="elevated" className="h-full flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#EBE5DF] hover:border-indigo-300 hover:shadow-md transition-all">
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F5F1EB]">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
-                  <Search className="w-4 h-4" />
+            <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#F5F1EB]">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
+                  <Search className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="font-extrabold text-sm text-[#2B2D42] truncate">¿Qué investigo?</h3>
+                <h3 className="font-extrabold text-xs sm:text-sm text-[#2B2D42] leading-tight">
+                  ¿Qué investigo?
+                </h3>
               </div>
-              <Badge variant="lavender" size="sm" className="shrink-0">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
                 {activeResearchWorks.length} activos
-              </Badge>
+              </span>
             </div>
 
             <div className="space-y-2">
@@ -539,16 +549,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Q6: ¿Qué investigué recientemente? */}
         <Card variant="elevated" className="h-full flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#EBE5DF] hover:border-teal-300 hover:shadow-md transition-all">
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F5F1EB]">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-800 flex items-center justify-center shrink-0">
-                  <BookOpen className="w-4 h-4" />
+            <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#F5F1EB]">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-800 flex items-center justify-center shrink-0">
+                  <BookOpen className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="font-extrabold text-sm text-[#2B2D42] truncate">¿Qué investigué?</h3>
+                <h3 className="font-extrabold text-xs sm:text-sm text-[#2B2D42] leading-tight">
+                  ¿Qué investigué?
+                </h3>
               </div>
-              <Badge variant="mint" size="sm" className="shrink-0">
-                Fuentes Recientes
-              </Badge>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 shrink-0">
+                {recentSources.length} recientes
+              </span>
             </div>
 
             <div className="space-y-2">
@@ -589,16 +601,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Q7: ¿Qué debo revisar? */}
         <Card variant="elevated" className="h-full flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#EBE5DF] hover:border-amber-300 hover:shadow-md transition-all">
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F5F1EB]">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-[#FFF8E1] text-[#E65100] flex items-center justify-center shrink-0">
-                  <CheckSquare className="w-4 h-4" />
+            <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#F5F1EB]">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="w-7 h-7 rounded-lg bg-[#FFF8E1] text-[#E65100] flex items-center justify-center shrink-0">
+                  <CheckSquare className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="font-extrabold text-sm text-[#2B2D42] truncate">¿Qué debo revisar?</h3>
+                <h3 className="font-extrabold text-xs sm:text-sm text-[#2B2D42] leading-tight">
+                  ¿Qué debo revisar?
+                </h3>
               </div>
-              <Badge variant={pendingParaphrases.length + unverifiedSources.length > 0 ? 'amber' : 'verified'} size="sm" className="shrink-0">
-                {pendingParaphrases.length + unverifiedSources.length} por auditar
-              </Badge>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg shrink-0 ${pendingParaphrases.length + unverifiedSources.length > 0 ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'}`}>
+                {pendingParaphrases.length + unverifiedSources.length} alertas
+              </span>
             </div>
 
             <div className="space-y-2">
@@ -649,16 +663,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Q8: ¿Qué aprendí recientemente? */}
         <Card variant="elevated" className="h-full flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#EBE5DF] hover:border-[#E8A598] hover:shadow-md transition-all">
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F5F1EB]">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-[#FDF2F0] text-[#8C3A32] flex items-center justify-center shrink-0">
-                  <Brain className="w-4 h-4" />
+            <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#F5F1EB]">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="w-7 h-7 rounded-lg bg-[#FDF2F0] text-[#8C3A32] flex items-center justify-center shrink-0">
+                  <Brain className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="font-extrabold text-sm text-[#2B2D42] truncate">¿Qué aprendí?</h3>
+                <h3 className="font-extrabold text-xs sm:text-sm text-[#2B2D42] leading-tight">
+                  ¿Qué aprendí?
+                </h3>
               </div>
-              <Badge variant="rose" size="sm" className="shrink-0">
-                Segundo Cerebro
-              </Badge>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-[#FDF2F0] text-[#8C3A32] border border-[#E8A598]/50 shrink-0">
+                {recentNotes.length} notas
+              </span>
             </div>
 
             <div className="space-y-2">
