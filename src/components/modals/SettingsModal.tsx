@@ -95,12 +95,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   useEffect(() => {
     if (settingsRecords) {
+      const envKey = ((import.meta as unknown) as { env?: { VITE_GEMINI_API_KEY?: string } }).env?.VITE_GEMINI_API_KEY || '';
       const ai = settingsRecords.find((s) => s.key === 'ai_settings')?.value as AISettings | undefined;
       if (ai) {
-        setAiProvider(ai.provider || 'offline_heuristics');
-        setAiApiKey(ai.apiKey || '');
-        setAiModel(ai.modelName || 'gemini-1.5-flash');
+        setAiProvider(ai.provider || (envKey ? 'gemini' : 'offline_heuristics'));
+        setAiApiKey(ai.apiKey || envKey);
+        setAiModel(ai.modelName || 'gemini-2.5-flash');
         setOllamaUrl(ai.ollamaEndpoint || 'http://localhost:11434');
+      } else if (envKey) {
+        setAiProvider('gemini');
+        setAiApiKey(envKey);
+        setAiModel('gemini-2.5-flash');
       }
 
       const obs = settingsRecords.find((s) => s.key === 'obsidian_settings')?.value as ObsidianSettings | undefined;

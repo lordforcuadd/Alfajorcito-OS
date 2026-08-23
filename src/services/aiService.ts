@@ -37,13 +37,30 @@ export interface ParaphraseFidelityResult {
 // Helper to get active AI settings from IndexedDB if not explicitly passed
 async function getEffectiveAISettings(passedSettings?: AISettings): Promise<AISettings> {
   if (passedSettings) return passedSettings;
+  const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
   try {
     const record = await db.settings.get('ai_settings');
     if (record?.value) {
-      return record.value as AISettings;
+      const val = record.value as AISettings;
+      if (!val.apiKey && envKey) {
+        return {
+          ...val,
+          provider: val.provider === 'offline_heuristics' ? 'gemini' : val.provider,
+          apiKey: envKey,
+          modelName: val.modelName || 'gemini-2.5-flash'
+        };
+      }
+      return val;
     }
   } catch (err) {
     console.warn('Could not read ai_settings from db:', err);
+  }
+  if (envKey) {
+    return {
+      provider: 'gemini',
+      apiKey: envKey,
+      modelName: 'gemini-2.5-flash'
+    };
   }
   return {
     provider: 'offline_heuristics'
