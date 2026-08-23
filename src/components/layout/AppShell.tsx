@@ -92,11 +92,15 @@ export const AppShell: React.FC<AppShellProps> = ({
   const [animIndex, setAnimIndex] = useState(0);
   const [pusheenMessage, setPusheenMessage] = useState<string | null>(null);
   const [isPusheenPopping, setIsPusheenPopping] = useState(false);
-  const [manualOverrideUntil, setManualOverrideUntil] = useState(0);
+  const [isTyping, setIsTyping] = useState(false);
 
-  // Contextual Auto-State based on Active Tab
+  // 1. Contextual Auto-State based on Active Tab or Live Typing
   useEffect(() => {
-    if (Date.now() < manualOverrideUntil) return;
+    if (isTyping) {
+      setAnimIndex(1); // laptop typing mode
+      return;
+    }
+
     if (currentTab === 'works') {
       setAnimIndex(1); // laptop
     } else if (currentTab === 'research' || currentTab === 'curriculum' || currentTab === 'pipeline') {
@@ -106,9 +110,40 @@ export const AppShell: React.FC<AppShellProps> = ({
     } else {
       setAnimIndex(0); // idle
     }
-  }, [currentTab, manualOverrideUntil]);
+  }, [currentTab, isTyping]);
 
-  // Inactivity / Idle Sleep Detector (2.5 minutes)
+  // 2. Live Typing Detector across the entire application
+  useEffect(() => {
+    let typingTimeout: NodeJS.Timeout;
+
+    const handleUserTyping = (e: Event) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const isInput =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable;
+
+      if (isInput) {
+        setIsTyping(true);
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+          setIsTyping(false);
+        }, 3500); // return to ambient mode 3.5s after typing ends
+      }
+    };
+
+    window.addEventListener('input', handleUserTyping, true);
+    window.addEventListener('keydown', handleUserTyping, true);
+
+    return () => {
+      clearTimeout(typingTimeout);
+      window.removeEventListener('input', handleUserTyping, true);
+      window.removeEventListener('keydown', handleUserTyping, true);
+    };
+  }, []);
+
+  // 3. Inactivity / Idle Sleep Detector (2.5 minutes of absolute no activity)
   useEffect(() => {
     let timer: NodeJS.Timeout;
     const resetIdleTimer = () => {
@@ -134,7 +169,6 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   const handlePusheenInteract = () => {
     setIsPusheenPopping(true);
-    setManualOverrideUntil(Date.now() + 15000); // 15 seconds manual lock
     const nextIndex = (animIndex + 1) % pusheenAnimations.length;
     setAnimIndex(nextIndex);
     const phrases = pusheenAnimations[nextIndex].phrases;
@@ -142,6 +176,11 @@ export const AppShell: React.FC<AppShellProps> = ({
     setPusheenMessage(randomPhrase);
     setTimeout(() => setIsPusheenPopping(false), 500);
     setTimeout(() => setPusheenMessage(null), 3500);
+  };
+
+  const handleTabClick = (tabId: NavTab) => {
+    setIsTyping(false);
+    onTabChange(tabId);
   };
 
   useEffect(() => {
@@ -219,7 +258,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               return (
                 <button
                   key={item.id}
-                  onClick={() => onTabChange(item.id)}
+                  onClick={() => handleTabClick(item.id)}
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 lg:py-3 rounded-2xl text-xs lg:text-sm font-bold transition-all duration-150 cursor-pointer group relative overflow-hidden ${
                     isActive
                       ? 'bg-[#FDF2F0] text-[#8C3A32] border border-[#E8A598]/60 shadow-2xs'
@@ -245,8 +284,8 @@ export const AppShell: React.FC<AppShellProps> = ({
           </nav>
         </div>
 
-        {/* ─── PUSHEEN COMPANION IN WHITE SPACE (Omni-Flow Animated) ─── */}
-        <div className="my-auto py-3 flex flex-col items-center justify-center relative">
+        {/* ─── PUSHEEN COMPANION IN WHITE SPACE (100% Borderless & Transparent) ─── */}
+        <div className="my-auto py-2 flex flex-col items-center justify-center relative select-none">
           {/* Speech Bubble on Click/Interaction */}
           {pusheenMessage && (
             <div className="mb-2 bg-[#2B2D42] text-white text-[11px] font-bold px-3 py-1.5 rounded-2xl shadow-md whitespace-nowrap animate-fade-in border border-white/20 relative z-30">
@@ -258,31 +297,17 @@ export const AppShell: React.FC<AppShellProps> = ({
           <button
             type="button"
             onClick={handlePusheenInteract}
-            className="group relative flex flex-col items-center justify-center p-3 rounded-3xl bg-gradient-to-b from-[#FAF8F5]/80 via-white to-[#FDF2F0]/60 border border-[#E8A598]/30 hover:border-[#E8A598] hover:shadow-xs transition-all duration-300 cursor-pointer"
+            className="group relative flex flex-col items-center justify-center p-0 bg-transparent border-none shadow-none cursor-pointer focus:outline-none transition-transform hover:scale-105 active:scale-95"
             title={`Pusheen: ${currentAnim.title} (Clic para interactuar)`}
             aria-label="Tocar a Pusheen"
           >
-            <div className={`w-28 h-28 lg:w-32 lg:h-32 flex items-center justify-center relative overflow-hidden ${isPusheenPopping ? 'animate-omni-pop' : 'animate-omni-float'}`}>
-              <video
+            <div className={`w-32 h-32 lg:w-36 lg:h-36 flex items-center justify-center relative ${isPusheenPopping ? 'animate-omni-pop' : 'animate-omni-float'}`}>
+              <img
                 key={currentAnim.id}
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="w-full h-full object-contain filter drop-shadow-sm group-hover:drop-shadow-md select-none pointer-events-none"
-                poster={currentAnim.webp}
-              >
-                <source src={currentAnim.webm} type="video/webm" />
-                <img
-                  src={currentAnim.webp}
-                  alt={`Pusheen: ${currentAnim.title}`}
-                  className="w-full h-full object-contain filter drop-shadow-sm group-hover:drop-shadow-md select-none pointer-events-none"
-                />
-              </video>
-            </div>
-            <div className="flex items-center gap-1.5 mt-1.5 px-2.5 py-0.5 rounded-full bg-[#FAF8F5] border border-[#E8A598]/40 text-[10px] font-bold text-[#8C3A32]/90 group-hover:text-[#8C3A32] group-hover:border-[#8C3A32]/40 transition-colors shadow-2xs">
-              <img src="/pusheen/pusheen-paw.png" alt="paw" className="w-3.5 h-3.5 object-contain inline-block" />
-              <span>{currentAnim.title}</span>
+                src={currentAnim.webp}
+                alt={`Pusheen: ${currentAnim.title}`}
+                className="w-full h-full object-contain filter drop-shadow-sm select-none pointer-events-none"
+              />
             </div>
           </button>
         </div>
