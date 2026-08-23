@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   LayoutDashboard,
@@ -94,6 +94,27 @@ export const AppShell: React.FC<AppShellProps> = ({
   const [isPusheenPopping, setIsPusheenPopping] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [isCelebratingUntil, setIsCelebratingUntil] = useState(0);
+  const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Centralized speech bubble manager (clears previous timers to avoid flickering/bugs)
+  const showPusheenBubble = useCallback((text: string, durationMs = 4000) => {
+    if (messageTimeoutRef.current) {
+      clearTimeout(messageTimeoutRef.current);
+    }
+    setPusheenMessage(text);
+    messageTimeoutRef.current = setTimeout(() => {
+      setPusheenMessage(null);
+      messageTimeoutRef.current = null;
+    }, durationMs);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (messageTimeoutRef.current) {
+        clearTimeout(messageTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // 1. Contextual Auto-State based on Active Tab or Live Typing
   useEffect(() => {
@@ -127,16 +148,15 @@ export const AppShell: React.FC<AppShellProps> = ({
       setAnimIndex(3); // party celebration mode!
       setIsPusheenPopping(true);
       setIsCelebratingUntil(Date.now() + 14000); // 14 seconds celebration
-      setPusheenMessage(`¡Felicitaciones, ${profile.name}! 🎉 ¡Entregaste "${workTitle.slice(0, 30)}..."! 🎓`);
+      showPusheenBubble(`¡Felicitaciones, ${profile.name}! 🎉 ¡Entregaste "${workTitle.slice(0, 30)}..."! 🎓`, 6000);
       setTimeout(() => setIsPusheenPopping(false), 800);
-      setTimeout(() => setPusheenMessage(null), 5500);
     };
 
     window.addEventListener('work-delivered', handleWorkDelivered);
     return () => {
       window.removeEventListener('work-delivered', handleWorkDelivered);
     };
-  }, [profile.name]);
+  }, [profile.name, showPusheenBubble]);
 
   // 3. Live Typing Detector across the entire application
   useEffect(() => {
@@ -170,15 +190,14 @@ export const AppShell: React.FC<AppShellProps> = ({
     };
   }, [isCelebratingUntil]);
 
-  // 3. Inactivity / Idle Sleep Detector (2.5 minutes of absolute no activity)
+  // 4. Inactivity / Idle Sleep Detector (2.5 minutes of absolute no activity)
   useEffect(() => {
     let timer: NodeJS.Timeout;
     const resetIdleTimer = () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
         setAnimIndex(4); // sleep
-        setPusheenMessage('¡Zzz... en modo descanso! Tócame para despertar 🐾');
-        setTimeout(() => setPusheenMessage(null), 4000);
+        showPusheenBubble('¡Zzz... en modo descanso! Tócame para despertar 🐾', 4000);
       }, 150000); // 2.5 minutes
     };
 
@@ -190,7 +209,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       clearTimeout(timer);
       events.forEach((ev) => window.removeEventListener(ev, resetIdleTimer));
     };
-  }, []);
+  }, [showPusheenBubble]);
 
   const currentAnim = pusheenAnimations[animIndex];
 
@@ -200,9 +219,8 @@ export const AppShell: React.FC<AppShellProps> = ({
     setAnimIndex(nextIndex);
     const phrases = pusheenAnimations[nextIndex].phrases;
     const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
-    setPusheenMessage(randomPhrase);
+    showPusheenBubble(randomPhrase, 3500);
     setTimeout(() => setIsPusheenPopping(false), 500);
-    setTimeout(() => setPusheenMessage(null), 3500);
   };
 
   const handleTabClick = (tabId: NavTab) => {
@@ -313,13 +331,19 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         {/* ─── PUSHEEN COMPANION IN WHITE SPACE (100% Borderless, Large & Transparent) ─── */}
         <div className="my-auto py-1 flex flex-col items-center justify-center relative select-none">
-          {/* Speech Bubble on Click/Interaction */}
-          {pusheenMessage && (
-            <div className="mb-2 max-w-[200px] lg:max-w-[230px] w-auto bg-[#2B2D42] text-white text-[11px] font-bold px-3 py-1.5 rounded-2xl shadow-md text-center leading-snug whitespace-normal break-words animate-fade-in border border-white/20 relative z-30">
-              {pusheenMessage}
+          {/* Speech Bubble on Click/Interaction (Smooth fade & slide, zero layout shifting) */}
+          <div className="h-10 mb-1 flex items-end justify-center w-full relative z-30 pointer-events-none">
+            <div
+              className={`max-w-[200px] lg:max-w-[230px] w-auto bg-[#2B2D42] text-white text-[11px] font-bold px-3 py-1.5 rounded-2xl shadow-md text-center leading-snug whitespace-normal break-words border border-white/20 relative transition-all duration-300 ease-out ${
+                pusheenMessage
+                  ? 'opacity-100 translate-y-0 scale-100'
+                  : 'opacity-0 translate-y-2 scale-95 pointer-events-none'
+              }`}
+            >
+              {pusheenMessage || ''}
               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#2B2D42] rotate-45" />
             </div>
-          )}
+          </div>
 
           <button
             type="button"
