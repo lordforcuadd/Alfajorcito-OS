@@ -311,11 +311,11 @@ export const AppShell: React.FC<AppShellProps> = ({
           </nav>
         </div>
 
-        {/* ─── PUSHEEN COMPANION IN WHITE SPACE (100% Borderless & Transparent) ─── */}
-        <div className="my-auto py-2 flex flex-col items-center justify-center relative select-none">
+        {/* ─── PUSHEEN COMPANION IN WHITE SPACE (100% Borderless, Large & Transparent) ─── */}
+        <div className="my-auto py-1 flex flex-col items-center justify-center relative select-none">
           {/* Speech Bubble on Click/Interaction */}
           {pusheenMessage && (
-            <div className="mb-2 bg-[#2B2D42] text-white text-[11px] font-bold px-3 py-1.5 rounded-2xl shadow-md whitespace-nowrap animate-fade-in border border-white/20 relative z-30">
+            <div className="mb-2 bg-[#2B2D42] text-white text-xs font-bold px-3.5 py-1.5 rounded-2xl shadow-md whitespace-nowrap animate-fade-in border border-white/20 relative z-30">
               {pusheenMessage}
               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#2B2D42] rotate-45" />
             </div>
@@ -328,7 +328,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             title={`Pusheen: ${currentAnim.title} (Clic para interactuar)`}
             aria-label="Tocar a Pusheen"
           >
-            <div className={`w-32 h-32 lg:w-36 lg:h-36 flex items-center justify-center relative ${isPusheenPopping ? 'animate-omni-pop' : 'animate-omni-float'}`}>
+            <div className={`w-44 h-44 lg:w-52 lg:h-52 flex items-center justify-center relative ${isPusheenPopping ? 'animate-omni-pop' : 'animate-omni-float'}`}>
               <img
                 key={currentAnim.id}
                 src={currentAnim.webp}
