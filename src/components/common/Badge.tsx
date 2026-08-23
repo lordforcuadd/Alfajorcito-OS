@@ -51,10 +51,10 @@ export const Badge: React.FC<BadgeProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-xl select-none shrink-0 whitespace-nowrap leading-none tracking-normal ${sizeStyles[size]} ${variantStyles[variant]} ${className}`}
+      className={`inline-flex items-center justify-center rounded-xl select-none max-w-full leading-snug tracking-normal ${sizeStyles[size]} ${variantStyles[variant]} ${className}`}
     >
-      {icon && <span className="shrink-0 flex items-center justify-center">{icon}</span>}
-      <span className="shrink-0">{children}</span>
+      {icon && <span className="shrink-0 flex items-center justify-center mr-1">{icon}</span>}
+      <span className="truncate min-w-0">{children}</span>
     </span>
   );
 };

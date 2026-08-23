@@ -102,8 +102,8 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Viewport transformation state (Pan & Zoom)
-  const [zoom, setZoom] = useState(1);
+  // Viewport transformation state (Pan & Zoom - Initialized with broad comfortable 0.75 zoom)
+  const [zoom, setZoom] = useState(0.75);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
@@ -161,7 +161,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
       activeCourses.forEach((c, idx) => {
         const existing = existingNodesMap.get(c.id);
         const angle = (idx / Math.max(1, activeCourses.length)) * Math.PI * 2;
-        const dist = Math.min(width, height) * 0.32;
+        const dist = Math.min(width, height) * 0.22;
         const node: GraphNode = {
           id: c.id,
           label: c.name,
@@ -169,8 +169,8 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
           color: GRAPH_PALETTE.course.base,
           glowColor: GRAPH_PALETTE.course.glow,
           radius: GRAPH_PALETTE.course.radius,
-          x: existing ? existing.x : centerX + Math.cos(angle) * dist + (Math.random() - 0.5) * 20,
-          y: existing ? existing.y : centerY + Math.sin(angle) * dist + (Math.random() - 0.5) * 20,
+          x: existing ? existing.x : centerX + Math.cos(angle) * dist + (Math.random() - 0.5) * 15,
+          y: existing ? existing.y : centerY + Math.sin(angle) * dist + (Math.random() - 0.5) * 15,
           vx: existing ? existing.vx : 0,
           vy: existing ? existing.vy : 0,
           phase: existing ? existing.phase : Math.random() * Math.PI * 2,
@@ -187,8 +187,8 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
       activeWorks.forEach((w) => {
         const existing = existingNodesMap.get(w.id);
         const parentCourse = nodeMap.get(w.courseId);
-        const baseX = parentCourse ? parentCourse.x + (Math.random() - 0.5) * 80 : centerX;
-        const baseY = parentCourse ? parentCourse.y + (Math.random() - 0.5) * 80 : centerY;
+        const baseX = parentCourse ? parentCourse.x + (Math.random() - 0.5) * 60 : centerX;
+        const baseY = parentCourse ? parentCourse.y + (Math.random() - 0.5) * 60 : centerY;
         const node: GraphNode = {
           id: w.id,
           label: w.title,
@@ -220,8 +220,8 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
           color: GRAPH_PALETTE.concept.base,
           glowColor: GRAPH_PALETTE.concept.glow,
           radius: GRAPH_PALETTE.concept.radius,
-          x: existing ? existing.x : centerX + (Math.random() - 0.5) * (width * 0.55),
-          y: existing ? existing.y : centerY + (Math.random() - 0.5) * (height * 0.55),
+          x: existing ? existing.x : centerX + (Math.random() - 0.5) * (width * 0.35),
+          y: existing ? existing.y : centerY + (Math.random() - 0.5) * (height * 0.35),
           vx: existing ? existing.vx : 0,
           vy: existing ? existing.vy : 0,
           phase: existing ? existing.phase : Math.random() * Math.PI * 2,
@@ -957,21 +957,28 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     }
   };
 
-  // Reset Zoom & Fit
+  // Reset Zoom & Fit (Restores comfortable 0.75 view centered)
   const handleResetView = () => {
-    setZoom(1);
+    setZoom(0.75);
     setPan({ x: 0, y: 0 });
     setSelectedNode(null);
     setSearchQuery('');
     setIsMobileSearchOpen(false);
   };
 
-  // Lock document body scroll during fullscreen
+  // Lock document body scroll & listen to Escape key during fullscreen
   useEffect(() => {
     if (isFullscreen) {
       document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setIsFullscreen(false);
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
       return () => {
         document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
       };
     }
   }, [isFullscreen]);
@@ -1114,14 +1121,25 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
             {isPhysicsRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
           </button>
 
-          {/* Fullscreen */}
+          {/* Fullscreen Toggle or Close Button */}
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-1.5 hover:bg-[#F1F5F9] rounded-xl text-[#475569] hover:text-[#0F172A] transition-colors cursor-pointer"
-            title={isFullscreen ? 'Salir de pantalla completa' : 'Ver en pantalla completa'}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              isFullscreen
+                ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 shadow-xs'
+                : 'hover:bg-[#F1F5F9] text-[#475569] hover:text-[#0F172A]'
+            }`}
+            title={isFullscreen ? 'Salir de pantalla completa (Esc)' : 'Ver en pantalla completa'}
             aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Ver en pantalla completa'}
           >
-            {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            {isFullscreen ? (
+              <>
+                <X className="w-3.5 h-3.5 text-rose-600 stroke-[2.5]" />
+                <span>Salir (Esc)</span>
+              </>
+            ) : (
+              <Maximize2 className="w-3.5 h-3.5" />
+            )}
           </button>
         </div>
       </div>

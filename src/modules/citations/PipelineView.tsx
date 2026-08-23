@@ -369,9 +369,11 @@ export const PipelineView: React.FC = () => {
                     )}
                   </div>
                   {work && (
-                    <Badge variant="rose" size="sm" className="shrink-0">
-                      {work.title}
-                    </Badge>
+                    <div className="max-w-full sm:max-w-[320px] shrink min-w-0" title={work.title}>
+                      <Badge variant="rose" size="sm" className="w-full justify-start text-left">
+                        {work.title}
+                      </Badge>
+                    </div>
                   )}
                 </div>
 
