@@ -315,7 +315,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         <div className="my-auto py-1 flex flex-col items-center justify-center relative select-none">
           {/* Speech Bubble on Click/Interaction */}
           {pusheenMessage && (
-            <div className="mb-2 bg-[#2B2D42] text-white text-xs font-bold px-3.5 py-1.5 rounded-2xl shadow-md whitespace-nowrap animate-fade-in border border-white/20 relative z-30">
+            <div className="mb-2 max-w-[200px] lg:max-w-[230px] w-auto bg-[#2B2D42] text-white text-[11px] font-bold px-3 py-1.5 rounded-2xl shadow-md text-center leading-snug whitespace-normal break-words animate-fade-in border border-white/20 relative z-30">
               {pusheenMessage}
               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#2B2D42] rotate-45" />
             </div>
