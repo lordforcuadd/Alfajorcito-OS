@@ -93,9 +93,13 @@ export const AppShell: React.FC<AppShellProps> = ({
   const [pusheenMessage, setPusheenMessage] = useState<string | null>(null);
   const [isPusheenPopping, setIsPusheenPopping] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [isCelebratingUntil, setIsCelebratingUntil] = useState(0);
 
   // 1. Contextual Auto-State based on Active Tab or Live Typing
   useEffect(() => {
+    // If a work delivery celebration is active, don't interrupt it!
+    if (Date.now() < isCelebratingUntil) return;
+
     if (isTyping) {
       setAnimIndex(1); // laptop typing mode
       return;
@@ -103,20 +107,43 @@ export const AppShell: React.FC<AppShellProps> = ({
 
     if (currentTab === 'works') {
       setAnimIndex(1); // laptop
-    } else if (currentTab === 'research' || currentTab === 'curriculum' || currentTab === 'pipeline') {
-      setAnimIndex(2); // book
-    } else if (currentTab === 'brain') {
-      setAnimIndex(3); // party
+    } else if (
+      currentTab === 'research' ||
+      currentTab === 'curriculum' ||
+      currentTab === 'pipeline' ||
+      currentTab === 'brain'
+    ) {
+      setAnimIndex(2); // book (studying, reading literature, notes & graph)
     } else {
-      setAnimIndex(0); // idle
+      setAnimIndex(0); // idle (dashboard)
     }
-  }, [currentTab, isTyping]);
+  }, [currentTab, isTyping, isCelebratingUntil]);
 
-  // 2. Live Typing Detector across the entire application
+  // 2. Work Delivery Celebration Listener (anim-party ONLY triggers upon delivering a work!)
+  useEffect(() => {
+    const handleWorkDelivered = (e: Event) => {
+      const customEvent = e as CustomEvent<{ title?: string }>;
+      const workTitle = customEvent.detail?.title || 'tu trabajo académico';
+      setAnimIndex(3); // party celebration mode!
+      setIsPusheenPopping(true);
+      setIsCelebratingUntil(Date.now() + 14000); // 14 seconds celebration
+      setPusheenMessage(`¡Felicitaciones, ${profile.name}! 🎉 ¡Entregaste "${workTitle.slice(0, 30)}..."! 🎓`);
+      setTimeout(() => setIsPusheenPopping(false), 800);
+      setTimeout(() => setPusheenMessage(null), 5500);
+    };
+
+    window.addEventListener('work-delivered', handleWorkDelivered);
+    return () => {
+      window.removeEventListener('work-delivered', handleWorkDelivered);
+    };
+  }, [profile.name]);
+
+  // 3. Live Typing Detector across the entire application
   useEffect(() => {
     let typingTimeout: NodeJS.Timeout;
 
     const handleUserTyping = (e: Event) => {
+      if (Date.now() < isCelebratingUntil) return;
       const target = e.target as HTMLElement | null;
       if (!target) return;
       const isInput =
@@ -141,7 +168,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       window.removeEventListener('input', handleUserTyping, true);
       window.removeEventListener('keydown', handleUserTyping, true);
     };
-  }, []);
+  }, [isCelebratingUntil]);
 
   // 3. Inactivity / Idle Sleep Detector (2.5 minutes of absolute no activity)
   useEffect(() => {

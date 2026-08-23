@@ -155,6 +155,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
         spread: 70,
         origin: { y: 0.6 }
       });
+      window.dispatchEvent(new CustomEvent('work-delivered', { detail: { title: work.title } }));
       showToast('¡Felicitaciones!', 'Trabajo marcado como ENTREGADO. El conocimiento ha sido preservado.', 'success');
     }
   };
@@ -205,6 +206,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
         spread: 70,
         origin: { y: 0.6 }
       });
+      window.dispatchEvent(new CustomEvent('work-delivered', { detail: { title: work.title } }));
       showToast('¡Felicitaciones!', 'Trabajo marcado como ENTREGADO.', 'success');
     } else {
       showToast('Estado actualizado', `El trabajo cambió a "${WORK_STATUS_META[newStatus]?.label || newStatus}".`, 'success');

@@ -20,6 +20,7 @@ import { Badge, CitationStyleBadge, WorkStatusBadge, WORK_STATUS_META, type Badg
 import { useToast } from '../../components/common/Toast';
 import { CourseModal } from '../../components/modals/CourseModal';
 import { WorkWorkspace } from './WorkWorkspace';
+import confetti from 'canvas-confetti';
 import type { Work, Course, WorkStatus } from '../../types';
 
 export interface WorksViewProps {
@@ -50,11 +51,22 @@ export const WorksView: React.FC<WorksViewProps> = ({
     e.stopPropagation();
     const newStatus = e.target.value as WorkStatus;
     await db.works.update(work.id, { status: newStatus, updatedAt: Date.now() });
-    showToast(
-      'Estado actualizado',
-      `"${work.title}" cambió a ${WORK_STATUS_META[newStatus]?.label || newStatus}.`,
-      'success'
-    );
+    
+    if (newStatus === 'ENTREGADO') {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+      window.dispatchEvent(new CustomEvent('work-delivered', { detail: { title: work.title } }));
+      showToast('¡Felicitaciones!', `"${work.title}" marcado como ENTREGADO.`, 'success');
+    } else {
+      showToast(
+        'Estado actualizado',
+        `"${work.title}" cambió a ${WORK_STATUS_META[newStatus]?.label || newStatus}.`,
+        'success'
+      );
+    }
   };
 
   // If a work is selected, show its full dedicated Workspace
