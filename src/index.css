@@ -184,12 +184,6 @@ button, input, select, textarea, [role="button"] {
   }
 }
 
-@keyframes omniWiggle {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-5deg) scale(1.05); }
-  75% { transform: rotate(5deg) scale(1.05); }
-}
-
 @keyframes omniPawTap {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.25) translateY(-2px); }
@@ -201,10 +195,6 @@ button, input, select, textarea, [role="button"] {
 
 .animate-omni-pop {
   animation: omniPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-.animate-omni-wiggle {
-  animation: omniWiggle 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
 }
 
 .animate-omni-paw {
