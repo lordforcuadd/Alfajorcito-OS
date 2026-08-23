@@ -38,9 +38,6 @@ export const AppShell: React.FC<AppShellProps> = ({
   children
 }) => {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
-  const [pusheenMood, setPusheenMood] = useState<'classic' | 'party' | 'rainbow'>('classic');
-  const [pusheenMessage, setPusheenMessage] = useState<string | null>(null);
-  const [isPusheenBouncing, setIsPusheenBouncing] = useState(false);
 
   // Dynamic user profile from IndexedDB (Live reactivity on settings edit!)
   const userProfileRecord = useLiveQuery(() => db.settings.get('user_profile'));
@@ -53,22 +50,30 @@ export const AppShell: React.FC<AppShellProps> = ({
     defaultCitationStyle: 'APA_7'
   };
 
-  const pusheenPhrases = [
-    `¡Vamos, ${profile.name}! 🐾`,
-    '¡Tu tesis va con todo! 🎓',
-    '¡Segundo Cerebro activado! ✨',
-    '¡APA 7 sin errores! 📖',
-    '¡Miau! Modo estudio 🍰',
-    '¡Orgullo USMP! 🌟'
+  const pusheenMoods = [
+    { id: 'classic', src: '/pusheen/pusheen-classic.png', label: `¡Vamos por ese 20, ${profile.name}! 🐾` },
+    { id: 'study', src: '/pusheen/pusheen-study.png', label: '¡Tomando notas atómicas! 📝' },
+    { id: 'book', src: '/pusheen/pusheen-book.png', label: '¡Revisando literatura científica! 📖' },
+    { id: 'laptop', src: '/pusheen/pusheen-laptop.png', label: '¡Redactando tesis con todo! 💻' },
+    { id: 'party', src: '/pusheen/pusheen-party.png', label: '¡Todo al día en la USMP! 🎉' },
+    { id: 'rainbow', src: '/pusheen/pusheen-rainbow.png', label: '¡Segundo Cerebro activado! ✨' },
+    { id: 'unicorn', src: '/pusheen/pusheen-unicorn.png', label: '¡Citas APA 7 dominadas! 🌟' },
+    { id: 'sleep', src: '/pusheen/pusheen-sleep.png', label: '¡Recuerda descansar también! 💤' }
   ];
 
+  const [moodIndex, setMoodIndex] = useState(0);
+  const [pusheenMessage, setPusheenMessage] = useState<string | null>(null);
+  const [isPusheenPopping, setIsPusheenPopping] = useState(false);
+
+  const currentMood = pusheenMoods[moodIndex];
+
   const handlePusheenInteract = () => {
-    setIsPusheenBouncing(true);
-    setPusheenMood((prev) => (prev === 'classic' ? 'party' : prev === 'party' ? 'rainbow' : 'classic'));
-    const randomPhrase = pusheenPhrases[Math.floor(Math.random() * pusheenPhrases.length)];
-    setPusheenMessage(randomPhrase);
-    setTimeout(() => setIsPusheenBouncing(false), 600);
-    setTimeout(() => setPusheenMessage(null), 3000);
+    setIsPusheenPopping(true);
+    const nextIndex = (moodIndex + 1) % pusheenMoods.length;
+    setMoodIndex(nextIndex);
+    setPusheenMessage(pusheenMoods[nextIndex].label);
+    setTimeout(() => setIsPusheenPopping(false), 500);
+    setTimeout(() => setPusheenMessage(null), 3200);
   };
 
   useEffect(() => {
@@ -162,8 +167,8 @@ export const AppShell: React.FC<AppShellProps> = ({
 
                   {/* Active Indicator with Cute Pusheen Paw */}
                   {isActive && (
-                    <span className="text-[11px] animate-fade-in text-[#8C3A32]" title="Sección activa">
-                      🐾
+                    <span className="flex items-center justify-center w-5 h-5 animate-omni-paw" title="Sección activa">
+                      <img src="/pusheen/pusheen-paw.png" alt="🐾" className="w-4 h-4 object-contain" />
                     </span>
                   )}
                 </button>
@@ -172,11 +177,11 @@ export const AppShell: React.FC<AppShellProps> = ({
           </nav>
         </div>
 
-        {/* ─── PUSHEEN COMPANION IN WHITE SPACE ─── */}
-        <div className="my-auto py-4 flex flex-col items-center justify-center relative">
+        {/* ─── PUSHEEN COMPANION IN WHITE SPACE (Omni-Flow Animated) ─── */}
+        <div className="my-auto py-3 flex flex-col items-center justify-center relative">
           {/* Speech Bubble on Click/Interaction */}
           {pusheenMessage && (
-            <div className="mb-2 bg-[#2B2D42] text-white text-[11px] font-bold px-3 py-1.5 rounded-2xl shadow-md whitespace-nowrap animate-fade-in border border-white/20 relative">
+            <div className="mb-2 bg-[#2B2D42] text-white text-[11px] font-bold px-3 py-1.5 rounded-2xl shadow-md whitespace-nowrap animate-fade-in border border-white/20 relative z-30">
               {pusheenMessage}
               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#2B2D42] rotate-45" />
             </div>
@@ -185,27 +190,20 @@ export const AppShell: React.FC<AppShellProps> = ({
           <button
             type="button"
             onClick={handlePusheenInteract}
-            className={`group relative flex flex-col items-center justify-center p-3 rounded-3xl bg-gradient-to-b from-[#FAF8F5]/80 via-white to-[#FDF2F0]/60 border border-[#E8A598]/30 hover:border-[#E8A598] hover:shadow-xs transition-all duration-300 cursor-pointer ${
-              isPusheenBouncing ? 'scale-110 -rotate-3' : 'hover:scale-105'
-            }`}
-            title="¡Toca a Pusheen para motivarte!"
+            className="group relative flex flex-col items-center justify-center p-3 rounded-3xl bg-gradient-to-b from-[#FAF8F5]/80 via-white to-[#FDF2F0]/60 border border-[#E8A598]/30 hover:border-[#E8A598] hover:shadow-xs transition-all duration-300 cursor-pointer"
+            title="¡Toca a Pusheen para interactuar!"
             aria-label="Tocar a Pusheen"
           >
-            <div className="w-24 h-24 lg:w-28 lg:h-28 flex items-center justify-center">
+            <div className={`w-24 h-24 lg:w-28 lg:h-28 flex items-center justify-center ${isPusheenPopping ? 'animate-omni-pop' : 'animate-omni-float'}`}>
               <img
-                src={
-                  pusheenMood === 'party'
-                    ? '/pusheen/pusheen-party.png'
-                    : pusheenMood === 'rainbow'
-                    ? '/pusheen/pusheen-rainbow.png'
-                    : '/pusheen/pusheen-classic.png'
-                }
+                src={currentMood.src}
                 alt="Pusheen Mascota"
                 className="w-full h-full object-contain filter drop-shadow-sm group-hover:drop-shadow-md transition-all select-none pointer-events-none"
               />
             </div>
-            <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-[#8C3A32]/80 group-hover:text-[#8C3A32]">
-              <span>🐾 Toca para interactuar</span>
+            <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold text-[#8C3A32]/80 group-hover:text-[#8C3A32] transition-colors">
+              <img src="/pusheen/pusheen-paw.png" alt="paw" className="w-3.5 h-3.5 object-contain inline-block" />
+              <span>Toca a Pusheen</span>
             </div>
           </button>
         </div>
