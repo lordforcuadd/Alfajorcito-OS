@@ -15,7 +15,12 @@ import {
   CheckCircle2,
   AlertCircle,
   Brain,
-  GraduationCap
+  GraduationCap,
+  ArrowUpRight,
+  Bookmark,
+  Check,
+  Award,
+  FileText
 } from 'lucide-react';
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';
@@ -27,6 +32,7 @@ export interface DashboardViewProps {
   onOpenWork: (workId: string) => void;
   onOpenSource: (sourceId: string) => void;
   onOpenNote: (noteId: string) => void;
+  onNavigateTab?: (tab: 'works' | 'curriculum' | 'research' | 'brain' | 'citations') => void;
   onQuickCapture: (tab?: 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task') => void;
 }
 
@@ -34,6 +40,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenWork,
   onOpenSource,
   onOpenNote,
+  onNavigateTab,
   onQuickCapture
 }) => {
   const now = Date.now();
@@ -79,6 +86,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // 8. ¿Qué aprendí recientemente? (Latest atomic notes)
   const recentNotes = [...notes].sort((a, b) => b.createdAt - a.createdAt).slice(0, 3);
 
+  // Dynamic user profile query
+  const userProfileRecord = useLiveQuery(() => db.settings.get('user_profile'));
+  const userProfile = (userProfileRecord?.value as UserProfile | undefined) || {
+    name: 'Estudiante',
+    institution: 'Universidad de San Martín de Porres',
+    faculty: 'Facultad de Ciencias de la Comunicación, Turismo y Psicología',
+    major: 'Psicología',
+    currentCycle: '8vo Ciclo',
+    defaultCitationStyle: 'APA_7'
+  };
+
+  // Time-aware greeting
+  const greeting = React.useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return { text: '¡Buenos días', icon: '☀️' };
+    if (hour >= 12 && hour < 19) return { text: '¡Buenas tardes', icon: '🌤️' };
+    return { text: '¡Buenas noches', icon: '🌙' };
+  }, []);
+
   // Toggle Task Completion Handler
   const handleToggleTask = async (taskId: string, currentStatus: boolean) => {
     await db.tasks.update(taskId, {
@@ -88,111 +114,159 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     });
   };
 
-  // Dynamic user profile query
-  const userProfileRecord = useLiveQuery(() => db.settings.get('user_profile'));
-  const userProfile = (userProfileRecord?.value as UserProfile | undefined) || {
-    name: 'Estudiante',
-    institution: 'Universidad',
-    faculty: 'Facultad',
-    major: 'Carrera',
-    currentCycle: 'Ciclo Actual',
-    defaultCitationStyle: 'APA_7'
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Header Welcome Card (100% Dynamic & Reactive) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-6 rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/40 shadow-xs">
-        <div className="space-y-2">
-          {/* Institutional Chips */}
-          <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-[#8C3A32]">
-            <span className="inline-flex items-center gap-1 bg-[#FDF2F0] text-[#8C3A32] px-2.5 py-1 rounded-lg border border-[#E8A598]/50">
-              <GraduationCap className="w-3.5 h-3.5 text-[#D98880] shrink-0" />
-              <span>{userProfile.institution || 'USMP'}</span>
-            </span>
-            <span className="inline-flex items-center bg-[#F5F1EB] text-[#5A6275] px-2.5 py-1 rounded-lg border border-[#EBE5DF]">
-              {userProfile.faculty || 'FCCTP'}
-            </span>
-            <span className="inline-flex items-center bg-[#F3E5F5] text-[#6A1B9A] px-2.5 py-1 rounded-lg border border-[#CE93D8]/60">
-              {userProfile.currentCycle || '8vo Ciclo'}
-            </span>
+    <div className="space-y-5 sm:space-y-6">
+      {/* ─── 1. HERO COCKPIT CARD (Adaptive Portrait & Landscape) ─── */}
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/50 p-4 sm:p-6 shadow-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          {/* Left: Greeting & Profile Context */}
+          <div className="space-y-3 min-w-0">
+            {/* Institution & Cycle Badges */}
+            <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
+              <span className="inline-flex items-center gap-1 bg-[#FDF2F0] text-[#8C3A32] px-2.5 py-1 rounded-xl border border-[#E8A598]/60 shadow-2xs">
+                <GraduationCap className="w-3.5 h-3.5 text-[#D98880] shrink-0" />
+                <span className="truncate max-w-[200px] sm:max-w-none">{userProfile.institution || 'USMP'}</span>
+              </span>
+              <span className="inline-flex items-center bg-[#F5F1EB] text-[#5A6275] px-2.5 py-1 rounded-xl border border-[#EBE5DF] shadow-2xs">
+                <span className="truncate max-w-[160px] sm:max-w-none">{userProfile.faculty || 'FCCTP'}</span>
+              </span>
+              <span className="inline-flex items-center bg-[#F3E5F5] text-[#6A1B9A] px-2.5 py-1 rounded-xl border border-[#CE93D8]/60 shadow-2xs">
+                {userProfile.currentCycle || '8vo Ciclo'}
+              </span>
+            </div>
+
+            <div>
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#2B2D42] tracking-tight">
+                {greeting.text}, <span className="text-[#8C3A32]">{userProfile.name}</span>! {greeting.icon}
+              </h2>
+              <p className="text-xs sm:text-sm text-[#5A6275] font-medium mt-0.5">
+                Panel Académico & Segundo Cerebro · {userProfile.major || 'Psicología'}
+              </p>
+            </div>
+
+            {/* Interactive Metrics Bar (Click to navigate) */}
+            <div className="grid grid-cols-2 xs:grid-cols-4 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => onNavigateTab?.('curriculum')}
+                className="flex items-center gap-2 p-2 rounded-xl bg-white/90 hover:bg-white border border-[#EBE5DF] hover:border-[#CBD5E1] shadow-2xs transition-all cursor-pointer text-left group"
+                title="Ver Malla Curricular"
+              >
+                <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <BookOpen className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-extrabold text-[#2B2D42] block leading-none">{courses.length}</span>
+                  <span className="text-[10px] text-[#5A6275] font-medium block truncate mt-0.5">Cursos</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onNavigateTab?.('works')}
+                className="flex items-center gap-2 p-2 rounded-xl bg-white/90 hover:bg-white border border-[#EBE5DF] hover:border-[#E8A598] shadow-2xs transition-all cursor-pointer text-left group"
+                title="Ver Entregables & Tesis"
+              >
+                <div className="w-7 h-7 rounded-lg bg-[#FDF2F0] text-[#8C3A32] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <GraduationCap className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-extrabold text-[#2B2D42] block leading-none">{works.length}</span>
+                  <span className="text-[10px] text-[#5A6275] font-medium block truncate mt-0.5">Trabajos</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onNavigateTab?.('research')}
+                className="flex items-center gap-2 p-2 rounded-xl bg-white/90 hover:bg-white border border-[#EBE5DF] hover:border-[#80CBC4] shadow-2xs transition-all cursor-pointer text-left group"
+                title="Ver Fuentes & Papers"
+              >
+                <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-800 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <Search className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-extrabold text-[#2B2D42] block leading-none">{sources.length}</span>
+                  <span className="text-[10px] text-[#5A6275] font-medium block truncate mt-0.5">Fuentes</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onNavigateTab?.('brain')}
+                className="flex items-center gap-2 p-2 rounded-xl bg-white/90 hover:bg-white border border-[#EBE5DF] hover:border-[#B39DDB] shadow-2xs transition-all cursor-pointer text-left group"
+                title="Ver Segundo Cerebro"
+              >
+                <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-800 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <Brain className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-extrabold text-[#2B2D42] block leading-none">{notes.length}</span>
+                  <span className="text-[10px] text-[#5A6275] font-medium block truncate mt-0.5">Notas</span>
+                </div>
+              </button>
+            </div>
           </div>
 
-          <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-[#2B2D42] leading-tight">
-              ¡Hola, {userProfile.name}! 👋
-            </h2>
-            <p className="text-xs text-[#8D99AE] font-medium mt-0.5">
-              Panel Académico & Tesis de Grado
-            </p>
-          </div>
-
-          {/* Quick Metrics Bar in Structured Chips */}
-          <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs text-[#5A6275]">
-            <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-[#EBE5DF] shadow-2xs">
-              <span className="font-bold text-[#2B2D42]">{courses.length}</span> {courses.length === 1 ? 'asignatura' : 'asignaturas'}
-            </span>
-            <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-[#EBE5DF] shadow-2xs">
-              <span className="font-bold text-[#2B2D42]">{works.length}</span> {works.length === 1 ? 'proyecto' : 'proyectos'}
-            </span>
-            <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-[#EBE5DF] shadow-2xs">
-              <span className="font-bold text-[#2B2D42]">{sources.length}</span> {sources.length === 1 ? 'fuente' : 'fuentes'}
-            </span>
-            <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-[#EBE5DF] shadow-2xs">
-              <span className="font-bold text-[#2B2D42]">{notes.length}</span> {notes.length === 1 ? 'nota' : 'notas'}
-            </span>
+          {/* Right: Quick Capture Action */}
+          <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between gap-3 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-[#E8A598]/30">
+            <Button
+              onClick={() => onQuickCapture('note')}
+              variant="primary"
+              size="md"
+              icon={<Plus className="w-4 h-4 stroke-[2.5]" />}
+              className="shadow-sm w-full sm:w-auto font-bold py-2.5 px-4"
+            >
+              Captura Rápida
+            </Button>
           </div>
         </div>
-
-        <Button
-          onClick={() => onQuickCapture('note')}
-          variant="primary"
-          size="md"
-          icon={<Plus className="w-4 h-4 stroke-[2.5]" />}
-          className="shadow-sm w-full sm:w-auto shrink-0 font-bold"
-        >
-          Captura Rápida
-        </Button>
       </div>
 
-      {/* Grid of the 8 Core Questions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {/* ─── 2. RESPONSIVE GRID OF 8 ACADEMIC QUESTIONS ─── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
         {/* Q1: ¿Qué debo hacer hoy? */}
-        <Card variant="elevated" className="flex flex-col justify-between">
+        <Card variant="elevated" className="h-full flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#EBE5DF] hover:border-[#E8A598]/70 hover:shadow-md transition-all">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#FDF2F0] text-[#D98880] flex items-center justify-center">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F5F1EB]">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-[#FDF2F0] text-[#D98880] flex items-center justify-center shrink-0">
                   <Clock className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-sm text-[#2B2D42]">¿Qué debo hacer hoy?</h3>
+                <h3 className="font-extrabold text-sm text-[#2B2D42] truncate">¿Qué debo hacer hoy?</h3>
               </div>
-              <Badge variant="rose" size="sm">
+              <Badge variant="rose" size="sm" className="shrink-0">
                 {todayTasks.length} pendientes
               </Badge>
             </div>
 
-            <div className="space-y-2 pt-1">
+            <div className="space-y-2">
               {todayTasks.length === 0 ? (
-                <p className="text-xs text-[#8D99AE] py-3 italic">¡Estás al día! No hay tareas urgentes para hoy.</p>
+                <div className="py-6 text-center space-y-1">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 mx-auto opacity-80" />
+                  <p className="text-xs font-bold text-[#2B2D42]">¡Estás al día!</p>
+                  <p className="text-[11px] text-[#8D99AE]">No tienes tareas urgentes pendientes para hoy.</p>
+                </div>
               ) : (
                 todayTasks.slice(0, 3).map((task) => (
                   <div
                     key={task.id}
-                    className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#F5F1EB]/60 hover:bg-[#FDF2F0] transition-colors"
+                    className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#FAF8F5] hover:bg-[#FDF2F0] border border-[#EBE5DF] transition-colors"
                   >
                     <input
                       type="checkbox"
                       checked={task.isCompleted}
                       onChange={() => handleToggleTask(task.id, task.isCompleted)}
-                      className="mt-0.5 w-4 h-4 rounded text-[#E8A598] focus:ring-[#E8A598] cursor-pointer"
+                      className="mt-0.5 w-4 h-4 rounded text-[#E8A598] focus:ring-[#E8A598] cursor-pointer shrink-0"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className={`text-xs font-semibold break-words [overflow-wrap:anywhere] ${task.isCompleted ? 'line-through text-[#8D99AE]' : 'text-[#2B2D42]'}`}>
+                      <p className={`text-xs font-semibold leading-snug break-words [overflow-wrap:anywhere] ${task.isCompleted ? 'line-through text-[#8D99AE]' : 'text-[#2B2D42]'}`}>
                         {task.title}
                       </p>
                       {task.priority === 'URGENT' && (
-                        <span className="text-[10px] font-bold text-[#C62828] uppercase tracking-wider">Urgente</span>
+                        <span className="text-[9px] font-extrabold text-[#C62828] bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 mt-1 inline-block uppercase">
+                          Urgente
+                        </span>
                       )}
                     </div>
                   </div>
@@ -200,26 +274,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               )}
             </div>
           </div>
+
+          <div className="pt-2 mt-auto">
+            <button
+              onClick={() => onQuickCapture('task')}
+              className="w-full py-1.5 text-[11px] font-bold text-[#8C3A32] hover:bg-[#FDF2F0] rounded-xl transition-colors flex items-center justify-center gap-1 cursor-pointer"
+            >
+              <Plus className="w-3 h-3" /> Agregar tarea
+            </button>
+          </div>
         </Card>
 
         {/* Q2: ¿Qué se acerca? */}
-        <Card variant="elevated" className="flex flex-col justify-between">
+        <Card variant="elevated" className="h-full flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#EBE5DF] hover:border-[#FFB300]/70 hover:shadow-md transition-all">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#FFF8E1] text-[#FFB300] flex items-center justify-center">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F5F1EB]">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-[#FFF8E1] text-[#FFB300] flex items-center justify-center shrink-0">
                   <Calendar className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-sm text-[#2B2D42]">¿Qué se acerca?</h3>
+                <h3 className="font-extrabold text-sm text-[#2B2D42] truncate">¿Qué se acerca?</h3>
               </div>
-              <Badge variant="amber" size="sm">
+              <Badge variant="amber" size="sm" className="shrink-0">
                 Próximos 14 días
               </Badge>
             </div>
 
-            <div className="space-y-2 pt-1">
+            <div className="space-y-2">
               {upcomingWorks.length === 0 ? (
-                <p className="text-xs text-[#8D99AE] py-3 italic">No hay entregas próximas en las siguientes dos semanas.</p>
+                <div className="py-6 text-center space-y-1">
+                  <Calendar className="w-6 h-6 text-amber-500 mx-auto opacity-70" />
+                  <p className="text-xs font-bold text-[#2B2D42]">Calendario despejado</p>
+                  <p className="text-[11px] text-[#8D99AE]">No hay entregas en las próximas 2 semanas.</p>
+                </div>
               ) : (
                 upcomingWorks.slice(0, 3).map((work) => {
                   const daysLeft = Math.ceil((work.deadline - now) / oneDayMs);
@@ -228,13 +315,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <div
                       key={work.id}
                       onClick={() => onOpenWork(work.id)}
-                      className="flex items-center justify-between p-2.5 rounded-xl bg-[#F5F1EB]/60 hover:bg-[#FDF2F0] hover:border-[#E8A598]/50 border border-transparent transition-all cursor-pointer gap-2"
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF8F5] hover:bg-[#FFF8E1]/60 border border-[#EBE5DF] hover:border-[#FFB300]/50 transition-all cursor-pointer gap-2 group"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-[#2B2D42] truncate">{work.title}</p>
-                        <p className="text-[10px] text-[#5A6275] truncate">{course?.name || 'Materia'}</p>
+                        <p className="text-xs font-bold text-[#2B2D42] truncate group-hover:text-[#8C3A32]">{work.title}</p>
+                        <p className="text-[10px] text-[#5A6275] truncate mt-0.5">{course?.name || 'Materia'}</p>
                       </div>
-                      <Badge variant={daysLeft <= 3 ? 'rose' : 'amber'} size="sm">
+                      <Badge variant={daysLeft <= 3 ? 'rose' : 'amber'} size="sm" className="shrink-0">
                         {daysLeft === 0 ? '¡Hoy!' : daysLeft === 1 ? 'Mañana' : `En ${daysLeft} días`}
                       </Badge>
                     </div>
@@ -243,28 +330,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               )}
             </div>
           </div>
+
+          <div className="pt-2 mt-auto">
+            <button
+              onClick={() => onNavigateTab?.('works')}
+              className="w-full py-1.5 text-[11px] font-bold text-[#5A6275] hover:text-[#2B2D42] hover:bg-[#F5F1EB] rounded-xl transition-colors flex items-center justify-center gap-1 cursor-pointer"
+            >
+              <span>Ver todos los trabajos</span>
+              <ArrowUpRight className="w-3 h-3" />
+            </button>
+          </div>
         </Card>
 
         {/* Q3: ¿Qué está atrasado? */}
-        <Card variant="elevated" className="flex flex-col justify-between">
+        <Card variant="elevated" className="h-full flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#EBE5DF] hover:border-rose-300 hover:shadow-md transition-all">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#FFEBEE] text-[#C62828] flex items-center justify-center">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F5F1EB]">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-[#FFEBEE] text-[#C62828] flex items-center justify-center shrink-0">
                   <AlertTriangle className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-sm text-[#2B2D42]">¿Qué está atrasado?</h3>
+                <h3 className="font-extrabold text-sm text-[#2B2D42] truncate">¿Qué está atrasado?</h3>
               </div>
-              <Badge variant={overdueWorks.length + overdueTasks.length > 0 ? 'unverified' : 'verified'} size="sm">
+              <Badge variant={overdueWorks.length + overdueTasks.length > 0 ? 'unverified' : 'verified'} size="sm" className="shrink-0">
                 {overdueWorks.length + overdueTasks.length} alertas
               </Badge>
             </div>
 
-            <div className="space-y-2 pt-1">
+            <div className="space-y-2">
               {overdueWorks.length === 0 && overdueTasks.length === 0 ? (
-                <div className="flex items-center gap-2 text-xs text-emerald-800 bg-emerald-50 p-3 rounded-xl border border-emerald-200">
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  <span>¡Excelente! Sin entregas atrasadas.</span>
+                <div className="py-6 text-center space-y-1 bg-emerald-50/60 rounded-xl border border-emerald-200/60 p-3">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 mx-auto" />
+                  <p className="text-xs font-bold text-emerald-900">¡Al día y sin retrasos!</p>
+                  <p className="text-[11px] text-emerald-700">Todas tus entregas están en fecha.</p>
                 </div>
               ) : (
                 <>
@@ -272,7 +370,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <div
                       key={work.id}
                       onClick={() => onOpenWork(work.id)}
-                      className="flex items-center justify-between p-2.5 rounded-xl bg-rose-50/70 border border-rose-200 transition-all cursor-pointer gap-2"
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-rose-50/70 border border-rose-200 hover:bg-rose-100/70 transition-all cursor-pointer gap-2"
                     >
                       <span className="text-xs font-bold text-rose-900 truncate min-w-0 flex-1">{work.title}</span>
                       <span className="text-[10px] font-bold text-rose-800 bg-rose-100 px-2 py-0.5 rounded-full shrink-0">
@@ -302,12 +400,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           title="Marcar como completada"
                           aria-label="Marcar tarea como completada"
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <CheckCircle2 className="w-4 h-4" />
                         </button>
                         <span className="text-xs text-rose-900 truncate">{task.title}</span>
                       </div>
                       <span className="text-[10px] font-bold text-rose-800 bg-rose-100 px-2 py-0.5 rounded-full shrink-0">
-                        Tarea vencida
+                        Tarea
                       </span>
                     </div>
                   ))}
@@ -315,37 +413,51 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               )}
             </div>
           </div>
+
+          <div className="pt-2 mt-auto">
+            <button
+              onClick={() => onNavigateTab?.('works')}
+              className="w-full py-1.5 text-[11px] font-bold text-[#5A6275] hover:text-[#2B2D42] hover:bg-[#F5F1EB] rounded-xl transition-colors flex items-center justify-center gap-1 cursor-pointer"
+            >
+              <span>Revisar cronograma</span>
+              <ArrowUpRight className="w-3 h-3" />
+            </button>
+          </div>
         </Card>
 
         {/* Q4: ¿Qué está bloqueado? */}
-        <Card variant="elevated" className="flex flex-col justify-between">
+        <Card variant="elevated" className="h-full flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#EBE5DF] hover:border-[#CE93D8] hover:shadow-md transition-all">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#F3E5F5] text-[#6A1B9A] flex items-center justify-center">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F5F1EB]">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-[#F3E5F5] text-[#6A1B9A] flex items-center justify-center shrink-0">
                   <HelpCircle className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-sm text-[#2B2D42]">¿Qué está bloqueado?</h3>
+                <h3 className="font-extrabold text-sm text-[#2B2D42] truncate">¿Qué está bloqueado?</h3>
               </div>
-              <Badge variant={blockedInquiries.length > 0 ? 'lavender' : 'default'} size="sm">
+              <Badge variant={blockedInquiries.length > 0 ? 'lavender' : 'default'} size="sm" className="shrink-0">
                 {blockedInquiries.length} consultas
               </Badge>
             </div>
 
-            <div className="space-y-2 pt-1">
+            <div className="space-y-2">
               {blockedInquiries.length === 0 ? (
-                <p className="text-xs text-[#8D99AE] py-3 italic">No hay dudas bloqueando el avance.</p>
+                <div className="py-6 text-center space-y-1">
+                  <Sparkles className="w-6 h-6 text-purple-400 mx-auto opacity-70" />
+                  <p className="text-xs font-bold text-[#2B2D42]">Sin bloqueos</p>
+                  <p className="text-[11px] text-[#8D99AE]">No hay consultas docentes pendientes.</p>
+                </div>
               ) : (
                 blockedInquiries.map((inq) => {
                   const course = coursesMap.get(inq.courseId);
                   return (
                     <div
                       key={inq.id}
-                      className="p-2.5 rounded-xl bg-[#F5F1EB]/60 hover:bg-[#F3E5F5]/40 transition-colors space-y-1"
+                      className="p-2.5 rounded-xl bg-[#FAF8F5] hover:bg-[#F3E5F5]/40 border border-[#EBE5DF] transition-colors space-y-1"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[10px] font-bold text-[#6A1B9A] uppercase truncate">{course?.name || 'Profesor'}</span>
-                        <Badge variant="lavender" size="sm">
+                        <Badge variant="lavender" size="sm" className="shrink-0">
                           {inq.status === 'SENT' ? 'Enviada' : 'Borrador'}
                         </Badge>
                       </div>
@@ -356,124 +468,163 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               )}
             </div>
           </div>
+
+          <div className="pt-2 mt-auto">
+            <button
+              onClick={() => onQuickCapture('inquiry')}
+              className="w-full py-1.5 text-[11px] font-bold text-[#6A1B9A] hover:bg-[#F3E5F5] rounded-xl transition-colors flex items-center justify-center gap-1 cursor-pointer"
+            >
+              <Plus className="w-3 h-3" /> Formular duda a docente
+            </button>
+          </div>
         </Card>
 
         {/* Q5: ¿Qué estoy investigando? */}
-        <Card variant="elevated" className="flex flex-col justify-between">
+        <Card variant="elevated" className="h-full flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#EBE5DF] hover:border-indigo-300 hover:shadow-md transition-all">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#F3E5F5] text-[#512DA8] flex items-center justify-center">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F5F1EB]">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
                   <Search className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-sm text-[#2B2D42]">¿Qué estoy investigando?</h3>
+                <h3 className="font-extrabold text-sm text-[#2B2D42] truncate">¿Qué investigo?</h3>
               </div>
-              <Badge variant="lavender" size="sm">
+              <Badge variant="lavender" size="sm" className="shrink-0">
                 {activeResearchWorks.length} activos
               </Badge>
             </div>
 
-            <div className="space-y-2 pt-1">
+            <div className="space-y-2">
               {activeResearchWorks.length === 0 ? (
-                <p className="text-xs text-[#8D99AE] py-3 italic">No hay trabajos en fase activa de investigación.</p>
+                <div className="py-6 text-center space-y-1">
+                  <Search className="w-6 h-6 text-indigo-400 mx-auto opacity-70" />
+                  <p className="text-xs font-bold text-[#2B2D42]">Sin investigaciones</p>
+                  <p className="text-[11px] text-[#8D99AE]">Crea un nuevo entregable para iniciar.</p>
+                </div>
               ) : (
-                activeResearchWorks.map((work) => {
+                activeResearchWorks.slice(0, 3).map((work) => {
                   const workSources = sources.filter((s) => s.workIds.includes(work.id));
                   return (
                     <div
                       key={work.id}
                       onClick={() => onOpenWork(work.id)}
-                      className="p-2.5 rounded-xl bg-[#F5F1EB]/60 hover:bg-[#FDF2F0] transition-all cursor-pointer space-y-1"
+                      className="p-2.5 rounded-xl bg-[#FAF8F5] hover:bg-indigo-50/50 border border-[#EBE5DF] transition-all cursor-pointer space-y-1.5 group"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold text-[#2B2D42] truncate min-w-0 flex-1">{work.title}</span>
+                        <span className="text-xs font-bold text-[#2B2D42] truncate min-w-0 flex-1 group-hover:text-indigo-900">{work.title}</span>
                         <CitationStyleBadge style={work.citationStyle} />
                       </div>
-                      <p className="text-[11px] text-[#5A6275]">
-                        {workSources.length} de {work.minRequiredSources || 3} fuentes recolectadas
-                      </p>
+                      <div className="flex items-center justify-between text-[10px] text-[#5A6275]">
+                        <span>{workSources.length} de {work.minRequiredSources || 3} fuentes</span>
+                        <span className="font-bold text-indigo-700">{Math.min(100, Math.round((workSources.length / (work.minRequiredSources || 3)) * 100))}%</span>
+                      </div>
                     </div>
                   );
                 })
               )}
             </div>
           </div>
+
+          <div className="pt-2 mt-auto">
+            <button
+              onClick={() => onNavigateTab?.('research')}
+              className="w-full py-1.5 text-[11px] font-bold text-indigo-700 hover:bg-indigo-50 rounded-xl transition-colors flex items-center justify-center gap-1 cursor-pointer"
+            >
+              <span>Explorar fuentes científicas</span>
+              <ArrowUpRight className="w-3 h-3" />
+            </button>
+          </div>
         </Card>
 
         {/* Q6: ¿Qué investigué recientemente? */}
-        <Card variant="elevated" className="flex flex-col justify-between">
+        <Card variant="elevated" className="h-full flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#EBE5DF] hover:border-teal-300 hover:shadow-md transition-all">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#E0F2F1] text-[#00695C] flex items-center justify-center">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F5F1EB]">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-800 flex items-center justify-center shrink-0">
                   <BookOpen className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-sm text-[#2B2D42]">¿Qué investigué?</h3>
+                <h3 className="font-extrabold text-sm text-[#2B2D42] truncate">¿Qué investigué?</h3>
               </div>
-              <Badge variant="mint" size="sm">
+              <Badge variant="mint" size="sm" className="shrink-0">
                 Fuentes Recientes
               </Badge>
             </div>
 
-            <div className="space-y-2 pt-1">
+            <div className="space-y-2">
               {recentSources.length === 0 ? (
-                <p className="text-xs text-[#8D99AE] py-3 italic">Aún no has registrado fuentes científicas.</p>
+                <div className="py-6 text-center space-y-1">
+                  <BookOpen className="w-6 h-6 text-teal-500 mx-auto opacity-70" />
+                  <p className="text-xs font-bold text-[#2B2D42]">Sin fuentes aún</p>
+                  <p className="text-[11px] text-[#8D99AE]">Indexa tu primer paper con DOI.</p>
+                </div>
               ) : (
                 recentSources.map((src) => (
                   <div
                     key={src.id}
                     onClick={() => onOpenSource(src.id)}
-                    className="p-2.5 rounded-xl bg-[#F5F1EB]/60 hover:bg-[#E0F2F1]/50 transition-colors cursor-pointer space-y-1"
+                    className="p-2.5 rounded-xl bg-[#FAF8F5] hover:bg-teal-50/60 border border-[#EBE5DF] transition-colors cursor-pointer space-y-1 group"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[10px] font-bold text-[#00695C] uppercase">{src.year}</span>
                       <VerificationBadge status={src.verificationStatus} />
                     </div>
-                    <p className="text-xs font-semibold text-[#2B2D42] line-clamp-1">{src.title}</p>
+                    <p className="text-xs font-semibold text-[#2B2D42] line-clamp-1 group-hover:text-teal-900">{src.title}</p>
                   </div>
                 ))
               )}
             </div>
           </div>
+
+          <div className="pt-2 mt-auto">
+            <button
+              onClick={() => onQuickCapture('source')}
+              className="w-full py-1.5 text-[11px] font-bold text-teal-800 hover:bg-teal-50 rounded-xl transition-colors flex items-center justify-center gap-1 cursor-pointer"
+            >
+              <Plus className="w-3 h-3" /> Registrar fuente / DOI
+            </button>
+          </div>
         </Card>
 
         {/* Q7: ¿Qué debo revisar? */}
-        <Card variant="elevated" className="flex flex-col justify-between">
+        <Card variant="elevated" className="h-full flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#EBE5DF] hover:border-amber-300 hover:shadow-md transition-all">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#FFF8E1] text-[#E65100] flex items-center justify-center">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F5F1EB]">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-[#FFF8E1] text-[#E65100] flex items-center justify-center shrink-0">
                   <CheckSquare className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-sm text-[#2B2D42]">¿Qué debo revisar?</h3>
+                <h3 className="font-extrabold text-sm text-[#2B2D42] truncate">¿Qué debo revisar?</h3>
               </div>
-              <Badge variant={pendingParaphrases.length + unverifiedSources.length > 0 ? 'amber' : 'verified'} size="sm">
+              <Badge variant={pendingParaphrases.length + unverifiedSources.length > 0 ? 'amber' : 'verified'} size="sm" className="shrink-0">
                 {pendingParaphrases.length + unverifiedSources.length} por auditar
               </Badge>
             </div>
 
-            <div className="space-y-2 pt-1">
+            <div className="space-y-2">
               {pendingParaphrases.length === 0 && unverifiedSources.length === 0 ? (
-                <div className="flex items-center gap-2 text-xs text-emerald-800 bg-emerald-50 p-3 rounded-xl border border-emerald-200">
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  <span>Trazabilidad y citas al 100% verificadas.</span>
+                <div className="py-6 text-center space-y-1 bg-emerald-50/60 rounded-xl border border-emerald-200/60 p-3">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 mx-auto" />
+                  <p className="text-xs font-bold text-emerald-900">100% Verificado</p>
+                  <p className="text-[11px] text-emerald-700">Citas y fuentes auditadas sin alertas.</p>
                 </div>
               ) : (
                 <>
-                  {pendingParaphrases.map((para) => (
+                  {pendingParaphrases.slice(0, 2).map((para) => (
                     <div
                       key={para.id}
-                      className="p-2.5 rounded-xl bg-[#FFF8E1]/60 border border-[#FFE082] text-xs space-y-0.5"
+                      onClick={() => onNavigateTab?.('citations')}
+                      className="p-2.5 rounded-xl bg-[#FFF8E1]/60 border border-[#FFE082] text-xs space-y-0.5 cursor-pointer hover:bg-[#FFF8E1] transition-colors"
                     >
                       <span className="text-[10px] font-bold text-[#E65100] uppercase">Auditoría de Paráfrasis</span>
                       <p className="text-[#2B2D42] line-clamp-1 font-medium">{para.finalParaphrase}</p>
                     </div>
                   ))}
-                  {unverifiedSources.map((src) => (
+                  {unverifiedSources.slice(0, 2).map((src) => (
                     <div
                       key={src.id}
                       onClick={() => onOpenSource(src.id)}
-                      className="p-2.5 rounded-xl bg-rose-50/70 border border-rose-200 text-xs flex items-center justify-between cursor-pointer gap-2"
+                      className="p-2.5 rounded-xl bg-rose-50/70 border border-rose-200 text-xs flex items-center justify-between cursor-pointer hover:bg-rose-100/70 transition-colors gap-2"
                     >
                       <span className="text-[#2B2D42] truncate min-w-0 flex-1">{src.title}</span>
                       <span className="text-[10px] text-rose-800 font-bold shrink-0">Sin DOI</span>
@@ -483,26 +634,40 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               )}
             </div>
           </div>
+
+          <div className="pt-2 mt-auto">
+            <button
+              onClick={() => onNavigateTab?.('citations')}
+              className="w-full py-1.5 text-[11px] font-bold text-[#E65100] hover:bg-[#FFF8E1] rounded-xl transition-colors flex items-center justify-center gap-1 cursor-pointer"
+            >
+              <span>Ir a Trazabilidad de Citas</span>
+              <ArrowUpRight className="w-3 h-3" />
+            </button>
+          </div>
         </Card>
 
         {/* Q8: ¿Qué aprendí recientemente? */}
-        <Card variant="elevated" className="flex flex-col justify-between">
+        <Card variant="elevated" className="h-full flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#EBE5DF] hover:border-[#E8A598] hover:shadow-md transition-all">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#FDF2F0] text-[#8C3A32] flex items-center justify-center">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F5F1EB]">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-[#FDF2F0] text-[#8C3A32] flex items-center justify-center shrink-0">
                   <Brain className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-sm text-[#2B2D42]">¿Qué aprendí?</h3>
+                <h3 className="font-extrabold text-sm text-[#2B2D42] truncate">¿Qué aprendí?</h3>
               </div>
-              <Badge variant="rose" size="sm">
+              <Badge variant="rose" size="sm" className="shrink-0">
                 Segundo Cerebro
               </Badge>
             </div>
 
-            <div className="space-y-2 pt-1">
+            <div className="space-y-2">
               {recentNotes.length === 0 ? (
-                <p className="text-xs text-[#8D99AE] py-3 italic">Aún no hay notas atómicas registradas.</p>
+                <div className="py-6 text-center space-y-1">
+                  <Brain className="w-6 h-6 text-[#D98880] mx-auto opacity-70" />
+                  <p className="text-xs font-bold text-[#2B2D42]">Sin notas atómicas</p>
+                  <p className="text-[11px] text-[#8D99AE]">Crea tu primera nota para alimentar el grafo.</p>
+                </div>
               ) : (
                 recentNotes.map((note) => {
                   const paraLabel =
@@ -520,21 +685,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <div
                       key={note.id}
                       onClick={() => onOpenNote(note.id)}
-                      className="p-2.5 rounded-xl bg-[#F5F1EB]/60 hover:bg-[#FDF2F0] transition-colors cursor-pointer space-y-1"
+                      className="p-2.5 rounded-xl bg-[#FAF8F5] hover:bg-[#FDF2F0] border border-[#EBE5DF] transition-colors cursor-pointer space-y-1 group"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[10px] font-bold text-[#8C3A32] uppercase truncate">{paraLabel}</span>
                         <span className="text-[10px] text-[#8D99AE] font-mono shrink-0">[[wiki]]</span>
                       </div>
-                      <p className="text-xs font-semibold text-[#2B2D42] line-clamp-1">{note.title}</p>
+                      <p className="text-xs font-semibold text-[#2B2D42] line-clamp-1 group-hover:text-[#8C3A32]">{note.title}</p>
                     </div>
                   );
                 })
               )}
             </div>
           </div>
+
+          <div className="pt-2 mt-auto">
+            <button
+              onClick={() => onQuickCapture('note')}
+              className="w-full py-1.5 text-[11px] font-bold text-[#8C3A32] hover:bg-[#FDF2F0] rounded-xl transition-colors flex items-center justify-center gap-1 cursor-pointer"
+            >
+              <Plus className="w-3 h-3" /> Tomar nota atómica
+            </button>
+          </div>
         </Card>
       </div>
     </div>
   );
 };
+
