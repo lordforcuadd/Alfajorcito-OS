@@ -217,8 +217,8 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
               className={`flex gap-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {msg.sender === 'ai' && (
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#FDF2F0] border border-[#E8A598]/60 flex items-center justify-center shrink-0 shadow-xs mt-0.5 overflow-hidden p-0.5">
-                  <img src="/pusheen/pusheen-classic.png" alt="Pusheen IA" className="w-full h-full object-contain drop-shadow-xs" />
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#FDF2F0] border border-[#E8A598]/60 flex items-center justify-center shrink-0 shadow-xs mt-0.5 overflow-hidden p-0.5">
+                  <img src="/pusheen/anim-idle.webp" alt="Pusheen IA" className="w-full h-full object-contain filter drop-shadow-xs" />
                 </div>
               )}
 
