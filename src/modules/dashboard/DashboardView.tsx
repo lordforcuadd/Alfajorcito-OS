@@ -207,19 +207,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </button>
             </div>
           </div>
-
-          {/* Right: Quick Capture Action */}
-          <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between gap-3 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-[#E8A598]/30">
-            <Button
-              onClick={() => onQuickCapture('note')}
-              variant="primary"
-              size="md"
-              icon={<Plus className="w-4 h-4 stroke-[2.5]" />}
-              className="shadow-sm w-full sm:w-auto font-bold py-2.5 px-4"
-            >
-              Captura Rápida
-            </Button>
-          </div>
         </div>
       </div>
 

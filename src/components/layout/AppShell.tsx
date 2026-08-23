@@ -110,53 +110,18 @@ export const AppShell: React.FC<AppShellProps> = ({
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-[#2B2D42] flex flex-col md:flex-row pb-20 md:pb-0">
       {/* Desktop / Tablet Modern Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 lg:w-72 bg-white/95 backdrop-blur-md border-r border-[#EBE5DF] h-screen sticky top-0 shrink-0 z-30 p-4 lg:p-5 justify-between select-none">
+      <aside className="hidden md:flex flex-col w-64 lg:w-72 bg-white/95 backdrop-blur-md border-r border-[#EBE5DF] h-screen sticky top-0 shrink-0 z-30 p-4 lg:p-5 justify-between select-none overflow-y-auto tab-scroll-pc">
         <div className="space-y-4 lg:space-y-5">
-          {/* Logo Brand Header with Cute Mascot */}
-          <div className="flex items-center justify-between p-2 rounded-2xl bg-gradient-to-r from-[#FDF2F0] to-[#FAF8F5] border border-[#E8A598]/40 shadow-2xs">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-10 h-10 rounded-2xl bg-white border border-[#E8A598]/60 flex items-center justify-center shadow-xs shrink-0 p-1">
-                <img src="/alfajor.svg" alt="Alfajorcito OS" className="w-full h-full object-contain drop-shadow-xs" />
-              </div>
-              <div className="min-w-0">
-                <h1 className="font-extrabold text-sm lg:text-base tracking-tight text-[#2B2D42] truncate">Alfajorcito OS</h1>
-                <p className="text-[10px] text-[#8C3A32] font-bold truncate">
-                  {profile.institution || 'USMP'} · {profile.currentCycle || '8vo Ciclo'}
-                </p>
-              </div>
+          {/* Logo Brand Header (Clean & Uncluttered) */}
+          <div className="flex items-center gap-3 px-1.5 py-0.5">
+            <div className="w-10 h-10 rounded-2xl bg-[#FDF2F0] border border-[#E8A598]/60 flex items-center justify-center shadow-xs shrink-0 p-1.5">
+              <img src="/alfajor.svg" alt="Alfajorcito OS" className="w-full h-full object-contain drop-shadow-xs" />
             </div>
-
-            {/* Pusheen Mini Interactive Mascot */}
-            <div className="relative shrink-0">
-              <button
-                type="button"
-                onClick={handlePusheenInteract}
-                className={`w-9 h-9 rounded-xl bg-white border border-[#E8A598]/50 hover:border-[#8C3A32] flex items-center justify-center shadow-2xs transition-all cursor-pointer overflow-hidden p-0.5 group ${
-                  isPusheenBouncing ? 'scale-115 rotate-6' : 'hover:scale-105'
-                }`}
-                title="¡Haz clic en Pusheen para interactuar!"
-                aria-label="Interactuar con Pusheen"
-              >
-                <img
-                  src={
-                    pusheenMood === 'party'
-                      ? '/pusheen/pusheen-party.png'
-                      : pusheenMood === 'rainbow'
-                      ? '/pusheen/pusheen-rainbow.png'
-                      : '/pusheen/pusheen-classic.png'
-                  }
-                  alt="Pusheen"
-                  className="w-full h-full object-contain"
-                />
-              </button>
-
-              {/* Speech Bubble on Click */}
-              {pusheenMessage && (
-                <div className="absolute top-11 right-0 z-50 bg-[#2B2D42] text-white text-[10px] font-bold px-2.5 py-1 rounded-xl shadow-lg whitespace-nowrap animate-fade-in border border-white/20">
-                  <div className="absolute -top-1 right-3.5 w-2 h-2 bg-[#2B2D42] rotate-45" />
-                  {pusheenMessage}
-                </div>
-              )}
+            <div className="min-w-0 flex-1">
+              <h1 className="font-extrabold text-sm lg:text-base tracking-tight text-[#2B2D42] truncate">Alfajorcito OS</h1>
+              <p className="text-[10px] text-[#8C3A32] font-bold truncate">
+                {profile.institution || 'USMP'} · {profile.currentCycle || '8vo Ciclo'}
+              </p>
             </div>
           </div>
 
@@ -205,6 +170,44 @@ export const AppShell: React.FC<AppShellProps> = ({
               );
             })}
           </nav>
+        </div>
+
+        {/* ─── PUSHEEN COMPANION IN WHITE SPACE ─── */}
+        <div className="my-auto py-4 flex flex-col items-center justify-center relative">
+          {/* Speech Bubble on Click/Interaction */}
+          {pusheenMessage && (
+            <div className="mb-2 bg-[#2B2D42] text-white text-[11px] font-bold px-3 py-1.5 rounded-2xl shadow-md whitespace-nowrap animate-fade-in border border-white/20 relative">
+              {pusheenMessage}
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#2B2D42] rotate-45" />
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handlePusheenInteract}
+            className={`group relative flex flex-col items-center justify-center p-3 rounded-3xl bg-gradient-to-b from-[#FAF8F5]/80 via-white to-[#FDF2F0]/60 border border-[#E8A598]/30 hover:border-[#E8A598] hover:shadow-xs transition-all duration-300 cursor-pointer ${
+              isPusheenBouncing ? 'scale-110 -rotate-3' : 'hover:scale-105'
+            }`}
+            title="¡Toca a Pusheen para motivarte!"
+            aria-label="Tocar a Pusheen"
+          >
+            <div className="w-24 h-24 lg:w-28 lg:h-28 flex items-center justify-center">
+              <img
+                src={
+                  pusheenMood === 'party'
+                    ? '/pusheen/pusheen-party.png'
+                    : pusheenMood === 'rainbow'
+                    ? '/pusheen/pusheen-rainbow.png'
+                    : '/pusheen/pusheen-classic.png'
+                }
+                alt="Pusheen Mascota"
+                className="w-full h-full object-contain filter drop-shadow-sm group-hover:drop-shadow-md transition-all select-none pointer-events-none"
+              />
+            </div>
+            <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-[#8C3A32]/80 group-hover:text-[#8C3A32]">
+              <span>🐾 Toca para interactuar</span>
+            </div>
+          </button>
         </div>
 
         {/* Sidebar Footer: Profile & Settings Trigger */}
