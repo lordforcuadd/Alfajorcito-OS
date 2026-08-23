@@ -139,7 +139,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
   // Nodes & Edges mutable physics storage
   const nodesRef = useRef<GraphNode[]>([]);
   const edgesRef = useRef<GraphEdge[]>([]);
-  const dimensionsRef = useRef({ width: 800, height: 500, dpr: 1 });
+  const dimensionsRef = useRef({ width: 0, height: 0, dpr: 1 });
   const alphaRef = useRef(1.0); // Physics simulation cooling factor (1.0 -> 0.0)
 
   // Build or update Graph structure (Preserving existing node positions to prevent jitter!)
@@ -150,18 +150,13 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
 
     const newNodes: GraphNode[] = [];
     const nodeMap = new Map<string, GraphNode>();
-    const width = containerRef.current?.clientWidth || 800;
-    const height = isFullscreen ? window.innerHeight - 80 : window.innerWidth < 640 ? 460 : 580;
 
-    const centerX = width / 2;
-    const centerY = height / 2;
-
-    // 1. Courses (Major Hubs)
+    // 1. Courses (Major Hubs distributed in a circle around origin (0, 0))
     if (filterTypes.course) {
       activeCourses.forEach((c, idx) => {
         const existing = existingNodesMap.get(c.id);
         const angle = (idx / Math.max(1, activeCourses.length)) * Math.PI * 2;
-        const dist = Math.min(width, height) * 0.22;
+        const dist = 180;
         const node: GraphNode = {
           id: c.id,
           label: c.name,
@@ -169,8 +164,8 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
           color: GRAPH_PALETTE.course.base,
           glowColor: GRAPH_PALETTE.course.glow,
           radius: GRAPH_PALETTE.course.radius,
-          x: existing ? existing.x : centerX + Math.cos(angle) * dist + (Math.random() - 0.5) * 15,
-          y: existing ? existing.y : centerY + Math.sin(angle) * dist + (Math.random() - 0.5) * 15,
+          x: existing ? existing.x : Math.cos(angle) * dist + (Math.random() - 0.5) * 15,
+          y: existing ? existing.y : Math.sin(angle) * dist + (Math.random() - 0.5) * 15,
           vx: existing ? existing.vx : 0,
           vy: existing ? existing.vy : 0,
           phase: existing ? existing.phase : Math.random() * Math.PI * 2,
@@ -182,13 +177,13 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
       });
     }
 
-    // 2. Works (Sub-Hubs)
+    // 2. Works (Sub-Hubs clustered around their parent course or origin)
     if (filterTypes.work) {
       activeWorks.forEach((w) => {
         const existing = existingNodesMap.get(w.id);
         const parentCourse = nodeMap.get(w.courseId);
-        const baseX = parentCourse ? parentCourse.x + (Math.random() - 0.5) * 60 : centerX;
-        const baseY = parentCourse ? parentCourse.y + (Math.random() - 0.5) * 60 : centerY;
+        const baseX = parentCourse ? parentCourse.x + (Math.random() - 0.5) * 60 : 0;
+        const baseY = parentCourse ? parentCourse.y + (Math.random() - 0.5) * 60 : 0;
         const node: GraphNode = {
           id: w.id,
           label: w.title,
@@ -209,7 +204,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
       });
     }
 
-    // 3. Concepts (Theoretical Concepts)
+    // 3. Concepts (Theoretical Concepts clustered in center around origin)
     if (filterTypes.concept) {
       concepts.forEach((conc) => {
         const existing = existingNodesMap.get(conc.id);
@@ -220,8 +215,8 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
           color: GRAPH_PALETTE.concept.base,
           glowColor: GRAPH_PALETTE.concept.glow,
           radius: GRAPH_PALETTE.concept.radius,
-          x: existing ? existing.x : centerX + (Math.random() - 0.5) * (width * 0.35),
-          y: existing ? existing.y : centerY + (Math.random() - 0.5) * (height * 0.35),
+          x: existing ? existing.x : (Math.random() - 0.5) * 220,
+          y: existing ? existing.y : (Math.random() - 0.5) * 220,
           vx: existing ? existing.vx : 0,
           vy: existing ? existing.vy : 0,
           phase: existing ? existing.phase : Math.random() * Math.PI * 2,
@@ -237,8 +232,8 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     if (filterTypes.note) {
       activeNotes.forEach((n) => {
         const existing = existingNodesMap.get(n.id);
-        let parentX = centerX;
-        let parentY = centerY;
+        let parentX = 0;
+        let parentY = 0;
         if (n.workId && nodeMap.has(n.workId)) {
           parentX = nodeMap.get(n.workId)!.x;
           parentY = nodeMap.get(n.workId)!.y;
@@ -254,8 +249,8 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
           color: GRAPH_PALETTE.note.base,
           glowColor: GRAPH_PALETTE.note.glow,
           radius: GRAPH_PALETTE.note.radius,
-          x: existing ? existing.x : parentX + (Math.random() - 0.5) * 60,
-          y: existing ? existing.y : parentY + (Math.random() - 0.5) * 60,
+          x: existing ? existing.x : parentX + (Math.random() - 0.5) * 50,
+          y: existing ? existing.y : parentY + (Math.random() - 0.5) * 50,
           vx: existing ? existing.vx : 0,
           vy: existing ? existing.vy : 0,
           phase: existing ? existing.phase : Math.random() * Math.PI * 2,
@@ -413,16 +408,6 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
         canvas.width = width * dpr;
         canvas.height = height * dpr;
         dimensionsRef.current = { width, height, dpr };
-
-        // If resizing (like toggling fullscreen or rotating phone), maintain perfect center!
-        if (oldWidth > 0 && oldHeight > 0) {
-          const shiftX = (width - oldWidth) / 2;
-          const shiftY = (height - oldHeight) / 2;
-          setPan((prev) => ({
-            x: prev.x + shiftX,
-            y: prev.y + shiftY
-          }));
-        }
       }
     };
 
@@ -445,13 +430,13 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
 
       setZoom((oldZoom) => {
         const newZoom = Math.min(3.2, Math.max(0.35, oldZoom * zoomFactor));
-        const actualFactor = newZoom / oldZoom;
+        const worldX = (mouseX - centerX - pan.x) / oldZoom;
+        const worldY = (mouseY - centerY - pan.y) / oldZoom;
 
-        // Mathematical focal-point invariant: the world point under mouse cursor stays rock-solid
-        setPan((oldPan) => ({
-          x: mouseX - centerX - (mouseX - centerX - oldPan.x) * actualFactor,
-          y: mouseY - centerY - (mouseY - centerY - oldPan.y) * actualFactor
-        }));
+        setPan({
+          x: mouseX - centerX - worldX * newZoom,
+          y: mouseY - centerY - worldY * newZoom
+        });
 
         return newZoom;
       });
@@ -538,11 +523,11 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
           }
         });
 
-        // C. Center Gravity, Damping & Velocity Clamping
+        // C. Center Gravity (pulls to origin (0, 0)), Damping & Velocity Clamping
         nodes.forEach((node) => {
           if (!node.isDragging) {
-            const dx = centerX - node.x;
-            const dy = centerY - node.y;
+            const dx = 0 - node.x;
+            const dy = 0 - node.y;
             node.vx += dx * 0.0012 * alpha;
             node.vy += dy * 0.0012 * alpha;
 
@@ -599,11 +584,10 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
         }
       }
 
-      // Apply Zoom & Pan Camera Transformation
+      // Apply Zoom & Pan Camera Transformation from canvas dead center
       ctx.save();
       ctx.translate(centerX + pan.x, centerY + pan.y);
       ctx.scale(zoom, zoom);
-      ctx.translate(-centerX, -centerY);
 
       // A. Draw Edges
       edgesRef.current.forEach((edge) => {
@@ -773,8 +757,8 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     const centerX = width / 2;
     const centerY = height / 2;
 
-    const worldX = (screenX - pan.x - centerX) / zoom + centerX;
-    const worldY = (screenY - pan.y - centerY) / zoom + centerY;
+    const worldX = (screenX - centerX - pan.x) / zoom;
+    const worldY = (screenY - centerY - pan.y) / zoom;
 
     return { x: worldX, y: worldY };
   };
@@ -906,12 +890,13 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
 
       setZoom((oldZoom) => {
         const newZoom = Math.min(3.2, Math.max(0.35, oldZoom * factor));
-        const actualFactor = newZoom / oldZoom;
+        const worldX = (midX - centerX - pan.x) / oldZoom;
+        const worldY = (midY - centerY - pan.y) / oldZoom;
 
-        setPan((oldPan) => ({
-          x: midX - centerX - (midX - centerX - oldPan.x) * actualFactor,
-          y: midY - centerY - (midY - centerY - oldPan.y) * actualFactor
-        }));
+        setPan({
+          x: midX - centerX - worldX * newZoom,
+          y: midY - centerY - worldY * newZoom
+        });
 
         return newZoom;
       });
@@ -946,10 +931,9 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     const { x, y } = getGraphCoords(e.clientX, e.clientY);
     const clickedNode = getNodeAt(x, y);
     if (clickedNode) {
-      const { width, height } = dimensionsRef.current;
       setPan({
-        x: width / 2 - clickedNode.x * zoom,
-        y: height / 2 - clickedNode.y * zoom
+        x: -clickedNode.x * zoom,
+        y: -clickedNode.y * zoom
       });
       setSelectedNode(clickedNode);
     } else {

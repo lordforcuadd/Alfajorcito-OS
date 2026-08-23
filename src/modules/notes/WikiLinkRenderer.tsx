@@ -73,7 +73,23 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
       return;
     }
 
-    // 4. If not found, offer to create it
+    // 4. Check matching course
+    const matchedCourse = courses.find((c) => {
+      const ct = c.name.toLowerCase();
+      if (ct === targetLower) return true;
+      if (c.code && c.code.toLowerCase() === targetLower) return true;
+      if (targetLower.length >= 3 && (ct.includes(targetLower) || targetLower.includes(ct))) return true;
+      return false;
+    });
+    if (matchedCourse) {
+      const courseNote = notes.find((n) => n.courseId === matchedCourse.id);
+      if (courseNote) {
+        onNavigateToNote(courseNote);
+        return;
+      }
+    }
+
+    // 5. If not found, offer to create it
     if (onCreateMissingNote) {
       onCreateMissingNote(target);
     }
@@ -83,10 +99,12 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
   const renderInlineText = (text: string, keyPrefix: string) => {
     // Regex matching [[wiki-links]] or #tags
     const targetSet = new Set([
-      ...notes.map(n => n.title.toLowerCase()),
-      ...notes.map(n => n.slug.toLowerCase()),
-      ...concepts.map(c => c.name.toLowerCase()),
-      ...works.map(w => w.title.toLowerCase())
+      ...notes.map((n) => n.title.toLowerCase()),
+      ...notes.map((n) => n.slug.toLowerCase()),
+      ...concepts.map((c) => c.name.toLowerCase()),
+      ...works.map((w) => w.title.toLowerCase()),
+      ...courses.map((c) => c.name.toLowerCase()),
+      ...courses.map((c) => (c.code || '').toLowerCase()).filter(Boolean)
     ]);
     const parts = text.split(/(\[\[.*?\]\]|#[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ_]+)/g);
 
@@ -98,21 +116,49 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
         const linkTitle = part.slice(2, -2).trim();
         if (!linkTitle) return null;
 
-        const exists = targetSet.has(linkTitle.toLowerCase());
-        const isConcept = concepts.some((c) => c.name.toLowerCase() === linkTitle.toLowerCase());
-        const isWork = works.some((w) => w.title.toLowerCase() === linkTitle.toLowerCase());
+        const isCourse = courses.some(
+          (c) =>
+            c.name.toLowerCase() === linkTitle.toLowerCase() ||
+            (c.code && c.code.toLowerCase() === linkTitle.toLowerCase()) ||
+            (linkTitle.length >= 4 && c.name.toLowerCase().includes(linkTitle.toLowerCase()))
+        );
+        const isWork = works.some(
+          (w) =>
+            w.title.toLowerCase() === linkTitle.toLowerCase() ||
+            (linkTitle.length >= 4 && w.title.toLowerCase().includes(linkTitle.toLowerCase()))
+        );
+        const isConcept = concepts.some(
+          (c) =>
+            c.name.toLowerCase() === linkTitle.toLowerCase() ||
+            (linkTitle.length >= 4 && c.name.toLowerCase().includes(linkTitle.toLowerCase()))
+        );
+        const isNote = notes.some(
+          (n) =>
+            n.title.toLowerCase() === linkTitle.toLowerCase() ||
+            (linkTitle.length >= 4 && n.title.toLowerCase().includes(linkTitle.toLowerCase()))
+        );
 
-        let badgeStyle = exists
-          ? 'bg-[#FAF8F5] text-[#8C3A32] border-[#E8A598]/60 hover:bg-[#FDF2F0]'
-          : 'bg-[#F5F1EB]/80 text-[#5A6275] border-dashed border-[#8D99AE]/50 hover:bg-white';
-        let Icon = exists ? FileText : Plus;
+        const exists = isCourse || isWork || isConcept || isNote || targetSet.has(linkTitle.toLowerCase());
 
-        if (isConcept) {
-          badgeStyle = 'bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100';
-          Icon = Sparkles;
+        let badgeStyle = 'bg-[#FAF8F5] text-[#2B2D42] border-[#CBD5E1] hover:bg-white hover:border-[#8C3A32]';
+        let Icon = FileText;
+
+        if (isCourse) {
+          // Asignatura: Elegant Slate / Academic Blue
+          badgeStyle = 'bg-[#EEF2F6] text-[#1E293B] border-[#CBD5E1] hover:bg-[#E2E8F0] hover:border-[#94A3B8]';
+          Icon = BookOpen;
         } else if (isWork) {
-          badgeStyle = 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100';
+          // Entregable / Tesis: Elegant Terracotta / Rose
+          badgeStyle = 'bg-[#FDF2F0] text-[#8C3A32] border-[#E8A598]/70 hover:bg-[#FBE5E1] hover:border-[#D98880]';
           Icon = GraduationCap;
+        } else if (isConcept) {
+          // Concepto Teórico: Elegant Teal / Mint
+          badgeStyle = 'bg-[#F0FDFA] text-[#0F766E] border-[#99F6E4] hover:bg-[#CCFBF1] hover:border-[#5EEAD4]';
+          Icon = Sparkles;
+        } else if (!exists) {
+          // Nota por crear
+          badgeStyle = 'bg-[#F5F1EB]/70 text-[#5A6275] border border-dashed border-[#CBD5E1] hover:bg-white';
+          Icon = Plus;
         }
 
         return (
@@ -123,10 +169,10 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
               e.stopPropagation();
               handleLinkClick(linkTitle);
             }}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 mx-1 my-0.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-2xs hover:scale-[1.03] active:scale-[0.97] align-middle select-none ${badgeStyle}`}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 mx-1 my-0.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-2xs hover:scale-[1.02] active:scale-[0.98] align-middle select-none max-w-full ${badgeStyle}`}
             title={`Clic para saltar a: "${linkTitle}"`}
           >
-            <Icon className="w-3.5 h-3.5 shrink-0" />
+            <Icon className="w-3.5 h-3.5 shrink-0 opacity-90" />
             <span className="truncate max-w-[180px] sm:max-w-[280px]">{linkTitle}</span>
           </button>
         );
