@@ -6,7 +6,10 @@ import {
   calculateDaysRemaining,
   getDeadlineUrgencyMeta,
   calculateTaskProgress,
-  dissociateWorkIdFromSources
+  dissociateWorkIdFromSources,
+  isWorkUpcoming,
+  isWorkOverdue,
+  WORK_DELETION_CONSEQUENCES
 } from '../utils/academicWorkUtils';
 
 describe('Works and Thesis Management Suite', () => {
@@ -157,6 +160,32 @@ describe('Works and Thesis Management Suite', () => {
 
     // Source 2 had work-other -> retains work-other
     expect(updatedSources[1].workIds).toEqual(['work-other']);
+  });
+
+  it('correctly filters upcoming and overdue works with shared helpers', () => {
+    const fixedNow = 1756000000000;
+    const upcomingWork: Work = { ...sampleWork, deadline: fixedNow + 86400000 * 5, status: 'REDACTANDO' };
+    const farFutureWork: Work = { ...sampleWork, deadline: fixedNow + 86400000 * 20, status: 'REDACTANDO' };
+    const overdueWork: Work = { ...sampleWork, deadline: fixedNow - 86400000 * 2, status: 'REDACTANDO' };
+    const deliveredWork: Work = { ...sampleWork, deadline: fixedNow + 86400000 * 3, status: 'ENTREGADO' };
+
+    expect(isWorkUpcoming(upcomingWork, fixedNow, 14)).toBe(true);
+    expect(isWorkUpcoming(farFutureWork, fixedNow, 14)).toBe(false);
+    expect(isWorkUpcoming(overdueWork, fixedNow, 14)).toBe(false);
+    expect(isWorkUpcoming(deliveredWork, fixedNow, 14)).toBe(false);
+
+    expect(isWorkOverdue(overdueWork, fixedNow)).toBe(true);
+    expect(isWorkOverdue(upcomingWork, fixedNow)).toBe(false);
+    expect(isWorkOverdue(deliveredWork, fixedNow)).toBe(false);
+  });
+
+  it('provides comprehensive work deletion consequences messaging', () => {
+    expect(WORK_DELETION_CONSEQUENCES.alertTitle).toBe('Esta acción no se puede deshacer');
+    const msg = WORK_DELETION_CONSEQUENCES.formatMainWarning('Tesis USMP');
+    expect(msg).toContain('Tesis USMP');
+    expect(msg).toContain('citas vinculadas');
+    expect(WORK_DELETION_CONSEQUENCES.dissociationNotice).toContain('paráfrasis');
+    expect(WORK_DELETION_CONSEQUENCES.dissociationNotice).toContain('registros huérfanos');
   });
 
   it('maintains default user profile integrity with empty thesis and internship by default', () => {

@@ -18,7 +18,7 @@ import { Input, Select, TextArea } from '../common/Input';
 import { db } from '../../db';
 import { useToast } from '../common/Toast';
 import confetti from 'canvas-confetti';
-import { dissociateWorkIdFromSources } from '../../utils/academicWorkUtils';
+import { dissociateWorkIdFromSources, WORK_DELETION_CONSEQUENCES } from '../../utils/academicWorkUtils';
 import type { Work, WorkType, WorkStatus, CitationStyle, Course, UserProfile } from '../../types';
 
 export interface WorkModalProps {
@@ -441,13 +441,13 @@ export const WorkModal: React.FC<WorkModalProps> = ({
             <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-950 space-y-2">
               <div className="flex items-center gap-2 font-bold text-rose-900">
                 <AlertTriangle className="w-4 h-4 text-[#C62828] shrink-0" />
-                <span>Esta acción no se puede deshacer</span>
+                <span>{WORK_DELETION_CONSEQUENCES.alertTitle}</span>
               </div>
               <p className="leading-relaxed">
-                Se eliminará permanentemente <strong>"{workToEdit?.title}"</strong>, junto con sus tareas asociadas, consultas al docente y citas vinculadas.
+                {workToEdit ? WORK_DELETION_CONSEQUENCES.formatMainWarning(workToEdit.title) : 'Se eliminará permanentemente este trabajo.'}
               </p>
               <p className="text-[11px] text-rose-800 italic">
-                * Las fuentes científicas, citas extraídas y paráfrasis de tu biblioteca se conservarán intactas; únicamente se desvincularán de este trabajo para evitar registros huérfanos.
+                {WORK_DELETION_CONSEQUENCES.dissociationNotice}
               </p>
             </div>
 

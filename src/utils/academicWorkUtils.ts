@@ -82,3 +82,29 @@ export function dissociateWorkIdFromSources<T extends { workIds?: string[] }>(
     workIds: (source.workIds || []).filter((id) => id !== workIdToDelete)
   }));
 }
+
+export function isWorkUpcoming(
+  work: { status: string; deadline: number; isArchived?: boolean },
+  currentTimestamp: number = Date.now(),
+  daysThreshold: number = 14
+): boolean {
+  if (work.status === 'ENTREGADO' || work.status === 'ARCHIVADO' || work.isArchived) return false;
+  const days = calculateDaysRemaining(work.deadline, currentTimestamp);
+  return days >= 0 && days <= daysThreshold;
+}
+
+export function isWorkOverdue(
+  work: { status: string; deadline: number; isArchived?: boolean },
+  currentTimestamp: number = Date.now()
+): boolean {
+  if (work.status === 'ENTREGADO' || work.status === 'ARCHIVADO' || work.isArchived) return false;
+  return calculateDaysRemaining(work.deadline, currentTimestamp) < 0;
+}
+
+export const WORK_DELETION_CONSEQUENCES = {
+  alertTitle: 'Esta acción no se puede deshacer',
+  formatMainWarning: (workTitle: string) =>
+    `Se eliminará permanentemente "${workTitle}", junto con sus tareas asociadas, consultas al docente y citas vinculadas.`,
+  dissociationNotice:
+    '* Las fuentes científicas, notas, ideas extraídas y paráfrasis de tu biblioteca se conservarán intactas; únicamente se desvincularán de este trabajo para evitar registros huérfanos.'
+};

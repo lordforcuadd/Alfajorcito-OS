@@ -27,7 +27,7 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge, VerificationBadge, CitationStyleBadge } from '../../components/common/Badge';
 import { useToast } from '../../components/common/Toast';
-import { calculateDaysRemaining } from '../../utils/academicWorkUtils';
+import { calculateDaysRemaining, isWorkUpcoming, isWorkOverdue } from '../../utils/academicWorkUtils';
 import type { UserProfile, Work, Course, Task, Source, InquiryToTeacher, Note, Concept, Paraphrase } from '../../types';
 import type { NavTab } from '../../components/layout/AppShell';
 
@@ -66,11 +66,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // 2. ¿Qué se acerca? (Works or deadlines in next 14 days)
   const upcomingWorks = works
-    .filter((w) => w.status !== 'ENTREGADO' && w.status !== 'ARCHIVADO' && w.deadline >= now && w.deadline <= now + oneDayMs * 14)
+    .filter((w) => isWorkUpcoming(w, now, 14))
     .sort((a, b) => a.deadline - b.deadline);
 
   // 3. ¿Qué está atrasado? (Overdue tasks or overdue unsubmitted works)
-  const overdueWorks = works.filter((w) => w.status !== 'ENTREGADO' && w.status !== 'ARCHIVADO' && w.deadline < now);
+  const overdueWorks = works.filter((w) => isWorkOverdue(w, now));
   const overdueTasks = tasks.filter((t) => !t.isCompleted && t.dueDate && t.dueDate < now);
 
   // 4. ¿Qué está bloqueado? (Pending teacher inquiries)
