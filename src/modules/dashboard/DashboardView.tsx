@@ -27,6 +27,7 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge, VerificationBadge, CitationStyleBadge } from '../../components/common/Badge';
 import { useToast } from '../../components/common/Toast';
+import { calculateDaysRemaining } from '../../utils/academicWorkUtils';
 import type { UserProfile, Work, Course, Task, Source, InquiryToTeacher, Note, Concept, Paraphrase } from '../../types';
 import type { NavTab } from '../../components/layout/AppShell';
 
@@ -313,7 +314,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
               ) : (
                 upcomingWorks.slice(0, 3).map((work) => {
-                  const daysLeft = Math.ceil((work.deadline - now) / oneDayMs);
+                  const daysLeft = calculateDaysRemaining(work.deadline, now);
                   const course = coursesMap.get(work.courseId);
                   return (
                     <div

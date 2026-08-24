@@ -18,6 +18,7 @@ import { Input, Select, TextArea } from '../common/Input';
 import { db } from '../../db';
 import { useToast } from '../common/Toast';
 import confetti from 'canvas-confetti';
+import { dissociateWorkIdFromSources } from '../../utils/academicWorkUtils';
 import type { Work, WorkType, WorkStatus, CitationStyle, Course, UserProfile } from '../../types';
 
 export interface WorkModalProps {
@@ -36,7 +37,8 @@ export const WorkModal: React.FC<WorkModalProps> = ({
   onDeleted
 }) => {
   const { showToast } = useToast();
-  const courses = useLiveQuery(() => db.courses.where({ isArchived: 0 }).toArray()) || [];
+  const allCourses = useLiveQuery(() => db.courses.toArray()) || [];
+  const courses = allCourses.filter((c) => !c.isArchived);
   const userProfileRecord = useLiveQuery(() => db.settings.get('user_profile'));
   const userProfile = userProfileRecord?.value as UserProfile | undefined;
 
@@ -199,16 +201,31 @@ export const WorkModal: React.FC<WorkModalProps> = ({
           // 3. Delete citations explicitly linked to this work
           await db.citations.where({ workId: workIdToDelete }).delete();
 
-          // 4. Clean workIds array in sources (dissociate rather than hard delete source knowledge)
+          // 4. Dissociate ideas & paraphrases (preserve knowledge in library, remove work link)
+          const relatedIdeas = await db.ideas.where({ workId: workIdToDelete }).toArray();
+          for (const idea of relatedIdeas) {
+            await db.ideas.update(idea.id, { workId: undefined, updatedAt: Date.now() });
+          }
+
+          const relatedParaphrases = await db.paraphrases.where({ workId: workIdToDelete }).toArray();
+          for (const p of relatedParaphrases) {
+            await db.paraphrases.update(p.id, { workId: undefined, updatedAt: Date.now() });
+          }
+
+          // 5. Clean workIds array in sources (dissociate rather than hard delete source knowledge)
           const relatedSources = await db.sources.toArray();
-          for (const s of relatedSources) {
-            if (s.workIds && s.workIds.includes(workIdToDelete)) {
-              const updatedWorkIds = s.workIds.filter((id) => id !== workIdToDelete);
-              await db.sources.update(s.id, { workIds: updatedWorkIds, updatedAt: Date.now() });
+          const dissociated = dissociateWorkIdFromSources(relatedSources, workIdToDelete);
+          for (let i = 0; i < relatedSources.length; i++) {
+            const original = relatedSources[i];
+            if (original.workIds && original.workIds.includes(workIdToDelete)) {
+              await db.sources.update(original.id, {
+                workIds: dissociated[i].workIds,
+                updatedAt: Date.now()
+              });
             }
           }
 
-          // 5. Delete work record itself
+          // 6. Delete work record itself
           await db.works.delete(workIdToDelete);
         }
       );
@@ -430,7 +447,7 @@ export const WorkModal: React.FC<WorkModalProps> = ({
                 Se eliminará permanentemente <strong>"{workToEdit?.title}"</strong>, junto con sus tareas asociadas, consultas al docente y citas vinculadas.
               </p>
               <p className="text-[11px] text-rose-800 italic">
-                * Las fuentes científicas de tu biblioteca no serán borradas; únicamente se desvincularán de este trabajo.
+                * Las fuentes científicas, citas extraídas y paráfrasis de tu biblioteca se conservarán intactas; únicamente se desvincularán de este trabajo para evitar registros huérfanos.
               </p>
             </div>
 

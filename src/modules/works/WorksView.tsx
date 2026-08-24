@@ -29,6 +29,7 @@ import { useToast } from '../../components/common/Toast';
 import { CourseModal } from '../../components/modals/CourseModal';
 import { WorkModal } from '../../components/modals/WorkModal';
 import { WorkWorkspace } from './WorkWorkspace';
+import { calculateDaysRemaining, getDeadlineUrgencyMeta, calculateTaskProgress } from '../../utils/academicWorkUtils';
 import type { Work, Course, WorkStatus, WorkType } from '../../types';
 
 export interface WorksViewProps {
@@ -341,13 +342,12 @@ export const WorksView: React.FC<WorksViewProps> = ({
             const workSources = allSources.filter((s) => s.workIds.includes(work.id));
             const verifiedSourcesCount = workSources.filter((s) => s.verificationStatus === 'VERIFIED').length;
             const workTasks = tasks.filter((t) => t.workId === work.id);
-            const completedTasks = workTasks.filter((t) => t.isCompleted).length;
-            const taskProgress = workTasks.length > 0 ? Math.round((completedTasks / workTasks.length) * 100) : 0;
+            const { completed: completedTasks, percentage: taskProgress } = calculateTaskProgress(workTasks);
             const workInquiries = inquiries.filter((inq) => inq.workId === work.id);
             const pendingInquiries = workInquiries.filter((inq) => inq.status === 'DRAFT' || inq.status === 'SENT').length;
-            const daysLeft = Math.ceil((work.deadline - Date.now()) / 86400000);
-
+            const daysLeft = calculateDaysRemaining(work.deadline);
             const isDelivered = work.status === 'ENTREGADO';
+            const urgencyMeta = getDeadlineUrgencyMeta(daysLeft, isDelivered);
             const typeMeta = WORK_TYPE_META[work.type] || WORK_TYPE_META.OTRO;
 
             return (
@@ -480,28 +480,10 @@ export const WorksView: React.FC<WorksViewProps> = ({
                   {/* Deadline countdown */}
                   <div className="flex items-center gap-1 shrink-0">
                     <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold ${
-                        isDelivered
-                          ? 'bg-emerald-100/70 text-emerald-900'
-                          : daysLeft < 0
-                          ? 'bg-rose-100 text-rose-900 border border-rose-200'
-                          : daysLeft <= 3
-                          ? 'bg-rose-50 text-rose-800 border border-rose-200'
-                          : daysLeft <= 7
-                          ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                          : 'bg-[#FAF8F5] text-[#5A6275] border border-[#EBE5DF]'
-                      }`}
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold ${urgencyMeta.colorClass}`}
                     >
                       <Clock className="w-3 h-3" />
-                      <span>
-                        {isDelivered
-                          ? 'Entregado'
-                          : daysLeft < 0
-                          ? `Venció hace ${Math.abs(daysLeft)}d`
-                          : daysLeft === 0
-                          ? '¡Vence hoy!'
-                          : `${daysLeft} días restantes`}
-                      </span>
+                      <span>{urgencyMeta.label}</span>
                     </span>
                     <ChevronRight className="w-4 h-4 text-[#8D99AE] group-hover:text-[#2B2D42] group-hover:translate-x-0.5 transition-all" />
                   </div>

@@ -2,6 +2,12 @@ import { describe, it, expect } from 'vitest';
 import type { Work, Source, Task, InquiryToTeacher, UserProfile } from '../types';
 import { DEFAULT_USER_PROFILE } from '../types';
 import { validateSourceAge } from '../utils/sourceAgeValidator';
+import {
+  calculateDaysRemaining,
+  getDeadlineUrgencyMeta,
+  calculateTaskProgress,
+  dissociateWorkIdFromSources
+} from '../utils/academicWorkUtils';
 
 describe('Works and Thesis Management Suite', () => {
   const sampleCourse = {
@@ -84,29 +90,45 @@ describe('Works and Thesis Management Suite', () => {
     }
   ];
 
-  it('calculates deadline days remaining and urgency states accurately', () => {
-    const now = Date.now();
-    const futureWork: Work = { ...sampleWork, deadline: now + 86400000 * 5 };
-    const urgentWork: Work = { ...sampleWork, deadline: now + 86400000 * 1 };
-    const overdueWork: Work = { ...sampleWork, deadline: now - 86400000 * 2 };
+  it('calculates deadline days remaining and urgency states accurately using production helper', () => {
+    const fixedNow = 1756000000000;
+    const futureDeadline = fixedNow + 86400000 * 5;
+    const urgentDeadline = fixedNow + 86400000 * 1;
+    const overdueDeadline = fixedNow - 86400000 * 2;
+    const todayDeadline = fixedNow;
 
-    const daysLeftFuture = Math.ceil((futureWork.deadline - now) / 86400000);
-    const daysLeftUrgent = Math.ceil((urgentWork.deadline - now) / 86400000);
-    const daysLeftOverdue = Math.ceil((overdueWork.deadline - now) / 86400000);
+    const daysLeftFuture = calculateDaysRemaining(futureDeadline, fixedNow);
+    const daysLeftUrgent = calculateDaysRemaining(urgentDeadline, fixedNow);
+    const daysLeftOverdue = calculateDaysRemaining(overdueDeadline, fixedNow);
+    const daysLeftToday = calculateDaysRemaining(todayDeadline, fixedNow);
 
     expect(daysLeftFuture).toBe(5);
     expect(daysLeftUrgent).toBe(1);
     expect(daysLeftOverdue).toBe(-2);
+    expect(daysLeftToday).toBe(0);
+
+    const metaFuture = getDeadlineUrgencyMeta(daysLeftFuture, false);
+    const metaUrgent = getDeadlineUrgencyMeta(daysLeftUrgent, false);
+    const metaOverdue = getDeadlineUrgencyMeta(daysLeftOverdue, false);
+    const metaToday = getDeadlineUrgencyMeta(daysLeftToday, false);
+    const metaDelivered = getDeadlineUrgencyMeta(daysLeftFuture, true);
+
+    expect(metaFuture.urgency).toBe('warning');
+    expect(metaUrgent.urgency).toBe('urgent');
+    expect(metaOverdue.urgency).toBe('overdue');
+    expect(metaToday.urgency).toBe('urgent');
+    expect(metaDelivered.label).toContain('Entregado');
   });
 
-  it('calculates task completion percentage for progress bars', () => {
-    const completed = sampleTasks.filter((t) => t.isCompleted).length;
-    const total = sampleTasks.length;
-    const progressPct = Math.round((completed / total) * 100);
+  it('calculates task completion percentage using production helper', () => {
+    const progress = calculateTaskProgress(sampleTasks);
 
-    expect(completed).toBe(1);
-    expect(total).toBe(2);
-    expect(progressPct).toBe(50);
+    expect(progress.completed).toBe(1);
+    expect(progress.total).toBe(2);
+    expect(progress.percentage).toBe(50);
+
+    const emptyProgress = calculateTaskProgress([]);
+    expect(emptyProgress.percentage).toBe(0);
   });
 
   it('validates scientific source age according to work constraints', () => {
@@ -123,14 +145,11 @@ describe('Works and Thesis Management Suite', () => {
     expect(olderCheck.message).toContain('aprobada formalmente');
   });
 
-  it('performs safe source dissociation upon work deletion', () => {
+  it('performs safe source dissociation using production dissociateWorkIdFromSources helper', () => {
     const workIdToDelete = 'work-tesis-1';
 
-    // Simulate dissociation algorithm used in WorkModal.handleDeleteWork
-    const updatedSources = sampleSources.map((source) => ({
-      ...source,
-      workIds: source.workIds.filter((id) => id !== workIdToDelete)
-    }));
+    // Call real shared helper used in WorkModal.handleDeleteWork
+    const updatedSources = dissociateWorkIdFromSources(sampleSources, workIdToDelete);
 
     // Source 1 was exclusively tied to work-tesis-1 -> now empty array but source preserved
     expect(updatedSources[0].workIds).toEqual([]);
