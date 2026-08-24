@@ -112,7 +112,7 @@ function MainApp() {
               setSelectedNoteId(noteId);
               setCurrentTab('brain');
             }}
-            onNavigateTab={(tab) => setCurrentTab(tab as any)}
+            onNavigateTab={(tab) => setCurrentTab(tab)}
             onQuickCapture={(tab) => handleOpenQuickCapture(tab || 'note')}
           />
         )}

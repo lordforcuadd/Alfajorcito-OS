@@ -27,6 +27,7 @@ import { USMP_PSYCHOLOGY_CURRICULUM } from '../../services/usmpCurriculum';
 import { db } from '../../db';
 import { useToast } from '../../components/common/Toast';
 import type { CurriculumCourse, Course, Work, UserProfile } from '../../types';
+import { DEFAULT_ACADEMIC_PERIOD } from '../../types';
 
 export interface CurriculumViewProps {
   onOpenQuickCapture: (tab?: 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task', courseId?: string) => void;
@@ -115,10 +116,10 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
       const colors = ['#D98880', '#B39DDB', '#80CBC4', '#FFCC80', '#90CAF9'];
       const assignedColor = colors[Math.floor(Math.random() * colors.length)];
       await db.courses.add({
-        id: `course-${Math.random().toString(36).substring(2, 9)}`,
+        id: `course-${crypto.randomUUID()}`,
         code: curriculumCourse.code,
         name: curriculumCourse.name,
-        period: `2026-II (${curriculumCourse.cycle}vo Ciclo)`,
+        period: `${DEFAULT_ACADEMIC_PERIOD} (${curriculumCourse.cycle}vo Ciclo)`,
         color: assignedColor,
         isArchived: false,
         createdAt: Date.now(),
@@ -451,12 +452,12 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
                     if (existing) {
                       courseId = existing.id;
                     } else {
-                      const newCourseId = `course-${Math.random().toString(36).substring(2, 9)}`;
+                      const newCourseId = `course-${crypto.randomUUID()}`;
                       await db.courses.add({
                         id: newCourseId,
                         code: inspectedCourse.code,
                         name: inspectedCourse.name,
-                        period: `2026-II (${inspectedCourse.cycle}vo Ciclo)`,
+                        period: `${DEFAULT_ACADEMIC_PERIOD} (${inspectedCourse.cycle}vo Ciclo)`,
                         color: '#D98880',
                         isArchived: false,
                         createdAt: Date.now(),

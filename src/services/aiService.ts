@@ -37,30 +37,13 @@ export interface ParaphraseFidelityResult {
 // Helper to get active AI settings from IndexedDB if not explicitly passed
 async function getEffectiveAISettings(passedSettings?: AISettings): Promise<AISettings> {
   if (passedSettings) return passedSettings;
-  const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
   try {
     const record = await db.settings.get('ai_settings');
     if (record?.value) {
-      const val = record.value as AISettings;
-      if (!val.apiKey && envKey) {
-        return {
-          ...val,
-          provider: val.provider === 'offline_heuristics' ? 'gemini' : val.provider,
-          apiKey: envKey,
-          modelName: val.modelName || 'gemini-2.5-flash'
-        };
-      }
-      return val;
+      return record.value as AISettings;
     }
   } catch (err) {
     console.warn('Could not read ai_settings from db:', err);
-  }
-  if (envKey) {
-    return {
-      provider: 'gemini',
-      apiKey: envKey,
-      modelName: 'gemini-2.5-flash'
-    };
   }
   return {
     provider: 'offline_heuristics'
@@ -441,11 +424,36 @@ export function getActiveGeminiModelUsed(): string {
 // Memory cache of verified working model per (API Key + Requested Model) combination
 const verifiedGeminiModelCache = new Map<string, string>();
 
-// Query available models from Gemini ListModels endpoint
+async function trackTokensUsed(estimatedCount: number) {
+  try {
+    const rec = await db.settings.get('ai_settings');
+    if (rec?.value) {
+      const val = rec.value as AISettings;
+      const current = val.tokensUsedThisMonth || 0;
+      await db.settings.put({
+        key: 'ai_settings',
+        value: {
+          ...val,
+          tokensUsedThisMonth: current + estimatedCount
+        },
+        updatedAt: Date.now()
+      });
+    }
+  } catch {
+    // ignore
+  }
+}
+
+// Query available models from Gemini ListModels endpoint using secure headers
 async function discoverSupportedGeminiModels(key: string): Promise<string[]> {
   try {
-    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`;
-    const listRes = await fetch(listUrl, { signal: AbortSignal.timeout(6000) });
+    const listUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
+    const listRes = await fetch(listUrl, {
+      headers: {
+        'x-goog-api-key': key
+      },
+      signal: AbortSignal.timeout(6000)
+    });
     if (listRes.ok) {
       const listData = await listRes.json();
       return (listData.models || [])
@@ -475,10 +483,13 @@ async function callGemini(
   const cachedModel = verifiedGeminiModelCache.get(cacheKey);
   if (cachedModel) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${cachedModel}:generateContent?key=${key}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${cachedModel}:generateContent`;
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': key
+        },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { temperature }
@@ -552,10 +563,13 @@ async function callGemini(
   // 4. Try candidates in order
   for (const model of candidateList) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': key
+        },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { temperature }
@@ -595,15 +609,15 @@ async function callGemini(
   return null;
 }
 
-// Low-level LLM caller supporting Gemini, OpenAI, Claude, OpenRouter, and Ollama
+// Low-level LLM caller supporting Gemini, OpenAI, OpenRouter, and Ollama
 async function callLLM(prompt: string, settings: AISettings): Promise<string | null> {
   const { provider, apiKey, modelName, ollamaEndpoint } = settings;
 
-  if (provider === 'gemini') {
-    return await callGemini(prompt, apiKey || '', modelName, settings.temperature ?? 0.2);
-  }
+  let resultText: string | null = null;
 
-  if (provider === 'openai' || provider === 'openrouter') {
+  if (provider === 'gemini') {
+    resultText = await callGemini(prompt, apiKey || '', modelName, settings.temperature ?? 0.2);
+  } else if (provider === 'openai' || provider === 'openrouter') {
     const endpoint =
       provider === 'openrouter'
         ? 'https://openrouter.ai/api/v1/chat/completions'
@@ -628,10 +642,8 @@ async function callLLM(prompt: string, settings: AISettings): Promise<string | n
       throw new Error(`HTTP ${res.status}: ${errText.slice(0, 120)}`);
     }
     const data = await res.json();
-    return data.choices?.[0]?.message?.content || null;
-  }
-
-  if (provider === 'ollama') {
+    resultText = data.choices?.[0]?.message?.content || null;
+  } else if (provider === 'ollama') {
     const endpoint = (ollamaEndpoint || 'http://localhost:11434').replace(/\/+$/, '') + '/api/generate';
     const res = await fetch(endpoint, {
       method: 'POST',
@@ -648,10 +660,15 @@ async function callLLM(prompt: string, settings: AISettings): Promise<string | n
       throw new Error(`HTTP ${res.status}: ${errText.slice(0, 120)}`);
     }
     const data = await res.json();
-    return data.response || null;
+    resultText = data.response || null;
   }
 
-  return null;
+  if (resultText) {
+    const estimated = Math.ceil((prompt.length + resultText.length) / 4);
+    trackTokensUsed(estimated);
+  }
+
+  return resultText;
 }
 
 // ─── KNOWLEDGE GRAPH AI COPILOT / CHATBOT ───

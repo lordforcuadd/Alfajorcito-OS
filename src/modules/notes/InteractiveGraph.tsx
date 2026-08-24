@@ -384,6 +384,23 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     return active ? getConnectedNodeIds(active) : null;
   }, [selectedNode, hoveredNode, getConnectedNodeIds]);
 
+  // Synced refs for high-performance 60fps rAF loop without unmount thrashing
+  const zoomRef = useRef(zoom);
+  const panRef = useRef(pan);
+  const hoveredNodeRef = useRef(hoveredNode);
+  const selectedNodeRef = useRef(selectedNode);
+  const activeConnectedIdsRef = useRef(activeConnectedIds);
+  const searchQueryRef = useRef(searchQuery);
+  const isPhysicsRunningRef = useRef(isPhysicsRunning);
+
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { panRef.current = pan; }, [pan]);
+  useEffect(() => { hoveredNodeRef.current = hoveredNode; }, [hoveredNode]);
+  useEffect(() => { selectedNodeRef.current = selectedNode; }, [selectedNode]);
+  useEffect(() => { activeConnectedIdsRef.current = activeConnectedIds; }, [activeConnectedIds]);
+  useEffect(() => { searchQueryRef.current = searchQuery; }, [searchQuery]);
+  useEffect(() => { isPhysicsRunningRef.current = isPhysicsRunning; }, [isPhysicsRunning]);
+
   // Canvas DPI Setup & Resize Observer (1:1 Pixel Accuracy on Mobile & PC)
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -430,8 +447,9 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
 
       setZoom((oldZoom) => {
         const newZoom = Math.min(3.2, Math.max(0.35, oldZoom * zoomFactor));
-        const worldX = (mouseX - centerX - pan.x) / oldZoom;
-        const worldY = (mouseY - centerY - pan.y) / oldZoom;
+        const currentPan = panRef.current;
+        const worldX = (mouseX - centerX - currentPan.x) / oldZoom;
+        const worldY = (mouseY - centerY - currentPan.y) / oldZoom;
 
         setPan({
           x: mouseX - centerX - worldX * newZoom,
@@ -449,7 +467,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     };
   }, [isFullscreen]);
 
-  // Main Canvas Render & Physics Loop
+  // Main Canvas Render & Physics Loop (Continuous, high-efficiency)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -462,6 +480,14 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     const render = (currentTime: number) => {
       const dt = Math.min((currentTime - lastTime) / 1000, 0.05);
       lastTime = currentTime;
+
+      const zoom = zoomRef.current;
+      const pan = panRef.current;
+      const hoveredNode = hoveredNodeRef.current;
+      const selectedNode = selectedNodeRef.current;
+      const activeConnectedIds = activeConnectedIdsRef.current;
+      const searchQuery = searchQueryRef.current;
+      const isPhysicsRunning = isPhysicsRunningRef.current;
 
       const { width, height, dpr } = dimensionsRef.current;
       const centerX = width / 2;
@@ -734,16 +760,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     return () => {
       cancelAnimationFrame(animationId);
     };
-  }, [
-    isPhysicsRunning,
-    zoom,
-    pan,
-    hoveredNode,
-    selectedNode,
-    activeConnectedIds,
-    searchQuery,
-    isFullscreen
-  ]);
+  }, []);
 
   // Convert Screen Mouse/Touch Coordinates to Graph World Coordinates
   const getGraphCoords = (clientX: number, clientY: number) => {

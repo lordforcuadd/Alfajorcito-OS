@@ -98,6 +98,12 @@ export function generateICSFile(work: Work, courseName?: string): string {
   const formatICS = (date: Date) => date.toISOString().replace(/-|:|\.\d+/g, '');
   const uid = `alfajorcito-${work.id}@app.local`;
 
+  const escapeICS = (str: string) =>
+    str.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,');
+
+  const summary = escapeICS(`[ENTREGA] ${work.title}`);
+  const description = escapeICS(`Curso: ${courseName || 'N/A'}\nEstilo: ${work.citationStyle}`).replace(/\n/g, '\\n');
+
   return `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Alfajorcito OS//Academic Operations//ES
@@ -108,8 +114,8 @@ UID:${uid}
 DTSTAMP:${formatICS(new Date())}
 DTSTART:${formatICS(d)}
 DTEND:${formatICS(new Date(work.deadline + 3600000))}
-SUMMARY:[ENTREGA] ${work.title}
-DESCRIPTION:Curso: ${courseName || 'N/A'}\\nEstilo: ${work.citationStyle}
+SUMMARY:${summary}
+DESCRIPTION:${description}
 STATUS:CONFIRMED
 END:VEVENT
 END:VCALENDAR`.trim();

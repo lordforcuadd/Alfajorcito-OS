@@ -96,4 +96,14 @@ describe('Exporters Suite', () => {
     expect(ics).toContain('SUMMARY:[ENTREGA] Ensayo sobre Epistemología');
     expect(ics).toContain('END:VCALENDAR');
   });
+
+  it('escapes commas, semicolons, and special characters in ICS exports per RFC 5545', () => {
+    const workWithCommas: Work = {
+      ...sampleWork,
+      title: 'Tesis, Proyecto 1; Parte A & B'
+    };
+    const ics = generateICSFile(workWithCommas, 'Psicología, Clínica');
+    expect(ics).toContain('SUMMARY:[ENTREGA] Tesis\\, Proyecto 1\\; Parte A & B');
+    expect(ics).toContain('DESCRIPTION:Curso: Psicología\\, Clínica\\nEstilo: APA_7');
+  });
 });

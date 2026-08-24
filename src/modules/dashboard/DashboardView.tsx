@@ -26,13 +26,15 @@ import { db } from '../../db';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge, VerificationBadge, CitationStyleBadge } from '../../components/common/Badge';
-import type { Work, Course, Task, Source, InquiryToTeacher, Note, Concept, Paraphrase, UserProfile } from '../../types';
+import { useToast } from '../../components/common/Toast';
+import type { UserProfile, Work, Course, Task, Source, InquiryToTeacher, Note, Concept, Paraphrase } from '../../types';
+import type { NavTab } from '../../components/layout/AppShell';
 
 export interface DashboardViewProps {
   onOpenWork: (workId: string) => void;
   onOpenSource: (sourceId: string) => void;
   onOpenNote: (noteId: string) => void;
-  onNavigateTab?: (tab: 'works' | 'curriculum' | 'research' | 'brain' | 'citations') => void;
+  onNavigateTab?: (tab: NavTab) => void;
   onQuickCapture: (tab?: 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task') => void;
 }
 
@@ -97,13 +99,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     defaultCitationStyle: 'APA_7'
   };
 
-  // Time-aware greeting
+  // Time-aware greeting (updates automatically across midnight/focus)
+  const [currentTime, setCurrentTime] = React.useState(Date.now());
+  React.useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(Date.now()), 60000);
+    const handleFocus = () => setCurrentTime(Date.now());
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
   const greeting = React.useMemo(() => {
-    const hour = new Date().getHours();
+    const hour = new Date(currentTime).getHours();
     if (hour >= 5 && hour < 12) return { text: '¡Buenos días', icon: '☀️' };
     if (hour >= 12 && hour < 19) return { text: '¡Buenas tardes', icon: '🌤️' };
     return { text: '¡Buenas noches', icon: '🌙' };
-  }, []);
+  }, [currentTime]);
 
   // Toggle Task Completion Handler
   const handleToggleTask = async (taskId: string, currentStatus: boolean) => {
@@ -614,7 +627,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {pendingParaphrases.slice(0, 2).map((para) => (
                     <div
                       key={para.id}
-                      onClick={() => onNavigateTab?.('citations')}
+                      onClick={() => onNavigateTab?.('pipeline')}
                       className="p-2.5 rounded-xl bg-[#FFF8E1]/60 border border-[#FFE082] text-xs space-y-0.5 cursor-pointer hover:bg-[#FFF8E1] transition-colors"
                     >
                       <span className="text-[10px] font-bold text-[#E65100] uppercase">Auditoría de Paráfrasis</span>
@@ -638,7 +651,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <div className="pt-2 mt-auto">
             <button
-              onClick={() => onNavigateTab?.('citations')}
+              onClick={() => onNavigateTab?.('pipeline')}
               className="w-full py-1.5 text-[11px] font-bold text-[#E65100] hover:bg-[#FFF8E1] rounded-xl transition-colors flex items-center justify-center gap-1 cursor-pointer"
             >
               <span>Ir a Trazabilidad de Citas</span>

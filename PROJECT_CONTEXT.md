@@ -20,36 +20,35 @@
 - **Motor de Citación**: Algoritmo determinista de estilos de citación (APA 7, MLA 9, IEEE, Chicago, Vancouver) + Parser CSL-JSON / BibTeX.
 - **Integraciones Académicas**: Conexión directa a APIs públicas (Crossref, OpenAlex, Semantic Scholar, DOI.org).
 - **Integraciones Externas**: Google Docs (Export/Web OAuth), Google Calendar (.ics/Intents), Canva (Deep Linking), Obsidian (Local REST API / Vault Exporter).
-- **IA Contextual**: Arquitectura multimodelo (BYOK: Gemini, OpenAI, Anthropic, OpenRouter, Ollama local) con fallback heurístico offline.
+- **IA Contextual**: Arquitectura multimodelo (BYOK: Gemini, OpenAI, OpenRouter, Ollama local) con fallback heurístico offline.
 
 ## 4. Estructura de Directorios
 ```text
 Alfajorcito OS/
 ├── docs/                      # Documentación arquitectónica y funcional
-├── public/                    # PWA Manifest, iconos, service worker
+├── public/                    # PWA Manifest, iconos, animaciones WebP/WebM de mascota
 ├── src/
 │   ├── assets/                # Imágenes, logos, texturas
 │   ├── components/            # Componentes UI reutilizables
-│   │   ├── common/            # Buttons, Inputs, Cards, Badges, Tabs, etc.
-│   │   ├── layout/            # AppShell, BottomNav, Sidebar, TopBar, SplitView
+│   │   ├── common/            # Buttons, Inputs, Cards, Badges, Modals, Toasts
+│   │   ├── layout/            # AppShell (Sidebar, BottomNav, Mascota Reactiva)
 │   │   ├── modals/            # QuickCaptureModal, CommandPalette, SettingsModal
 │   │   └── academic/          # Trazabilidad, Lector de fuentes, CitationPreview
-│   ├── db/                    # Esquema Dexie.js, repositorios y seeds
-│   ├── hooks/                 # Custom React hooks (useSync, useOffline, useAI, useSplitView)
+│   ├── db/                    # Esquema Dexie.js (index.ts) y datos demo (seed.ts)
 │   ├── modules/               # Módulos de dominio de la aplicación
 │   │   ├── dashboard/         # Dashboard operativo (las 8 preguntas)
-│   │   ├── works/             # Gestor de Trabajos Académicos y Workspaces
+│   │   ├── works/             # Gestor de Trabajos Académicos, Workspaces y Redacción
+│   │   ├── curriculum/        # Plan de Estudios, Malla Curricular y Progreso USMP
 │   │   ├── research/          # Búsqueda académica y Biblioteca de Fuentes
-│   │   ├── citations/         # Gestor de Citas, Paráfrasis y Referencias
-│   │   ├── notes/             # Segundo Cerebro, Notas Atómicas y Grafo
-│   │   ├── professor/         # Consultas y Feedback docente
-│   │   └── integrations/      # Google, Obsidian, Canva, AI Providers
-│   ├── services/              # Clientes de API externa (Crossref, OpenAlex, Semantic Scholar, AI)
+│   │   ├── citations/         # Trazabilidad de Citas (Source → Idea → Paraphrase → Citation)
+│   │   └── notes/             # Segundo Cerebro (P.A.R.A.), Notas Atómicas y Grafo
+│   ├── services/              # Clientes de API externa (OpenAlex, Crossref, Semantic Scholar, AI)
 │   ├── types/                 # Definiciones de TypeScript canónicas
-│   ├── utils/                 # Formateadores de citas, sanitizadores, exportadores
-│   ├── App.tsx                # Entrada principal y enrutador
-│   ├── index.css              # Tokens CSS y estilos globales
-│   └── main.tsx               # Montaje React y Service Worker
+│   ├── utils/                 # Formateadores de citas, sanitizadores, exportadores (Obsidian/Google)
+│   ├── tests/                 # Suites de pruebas automatizadas (Vitest)
+│   ├── App.tsx                # Entrada principal y enrutador de pestañas
+│   ├── index.css              # Tokens CSS, tema Tailwind v4 y animaciones
+│   └── main.tsx               # Montaje React y registro PWA
 ├── package.json
 ├── tsconfig.json
 └── vite.config.ts

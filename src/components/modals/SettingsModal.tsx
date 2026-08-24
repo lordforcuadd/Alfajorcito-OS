@@ -24,7 +24,22 @@ import { db, initializeDatabaseSeed, clearAllDatabaseData } from '../../db';
 import { exportVaultZip } from '../../utils/obsidianExporter';
 import { testAIConnection } from '../../services/aiService';
 import { useToast } from '../common/Toast';
-import type { AISettings, ObsidianSettings, UserProfile, CitationStyle } from '../../types';
+import type {
+  AISettings,
+  UserProfile,
+  CitationStyle,
+  Course,
+  Work,
+  Source,
+  Idea,
+  Paraphrase,
+  Citation,
+  Note,
+  Concept,
+  Task,
+  InquiryToTeacher,
+  SettingRecord
+} from '../../types';
 
 export interface SettingsModalProps {
   isOpen: boolean;
@@ -38,14 +53,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   // AI State
   const [aiProvider, setAiProvider] = useState<AISettings['provider']>('offline_heuristics');
   const [aiApiKey, setAiApiKey] = useState('');
-  const [aiModel, setAiModel] = useState('gemini-1.5-flash');
+  const [aiModel, setAiModel] = useState('gemini-2.5-flash');
   const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434');
-
-  // Obsidian State
-  const [obsidianRestApi, setObsidianRestApi] = useState(false);
-  const [obsidianToken, setObsidianToken] = useState('');
-  const [obsidianEndpoint, setObsidianEndpoint] = useState('http://127.0.0.1:27124');
-  const [obsidianFolder, setObsidianFolder] = useState('Alfajorcito OS/Notes');
 
   // Confirmation States
   const [isConfirmClearOpen, setIsConfirmClearOpen] = useState(false);
@@ -90,30 +99,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     }
   };
 
-  // Load existing settings
+  // Load existing settings strictly from IndexedDB (Pure BYOK)
   const settingsRecords = useLiveQuery(() => db.settings.toArray());
 
   useEffect(() => {
     if (settingsRecords) {
-      const envKey = ((import.meta as unknown) as { env?: { VITE_GEMINI_API_KEY?: string } }).env?.VITE_GEMINI_API_KEY || '';
       const ai = settingsRecords.find((s) => s.key === 'ai_settings')?.value as AISettings | undefined;
       if (ai) {
-        setAiProvider(ai.provider || (envKey ? 'gemini' : 'offline_heuristics'));
-        setAiApiKey(ai.apiKey || envKey);
+        setAiProvider(ai.provider || 'offline_heuristics');
+        setAiApiKey(ai.apiKey || '');
         setAiModel(ai.modelName || 'gemini-2.5-flash');
         setOllamaUrl(ai.ollamaEndpoint || 'http://localhost:11434');
-      } else if (envKey) {
-        setAiProvider('gemini');
-        setAiApiKey(envKey);
-        setAiModel('gemini-2.5-flash');
-      }
-
-      const obs = settingsRecords.find((s) => s.key === 'obsidian_settings')?.value as ObsidianSettings | undefined;
-      if (obs) {
-        setObsidianRestApi(obs.restApiEnabled || false);
-        setObsidianToken(obs.restApiToken || '');
-        setObsidianEndpoint(obs.restApiEndpoint || 'http://127.0.0.1:27124');
-        setObsidianFolder(obs.defaultParaFolder || 'Alfajorcito OS/Notes');
       }
 
       const prof = settingsRecords.find((s) => s.key === 'user_profile')?.value as UserProfile | undefined;
@@ -172,22 +168,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     onClose();
   };
 
-  // Save Obsidian Settings
-  const handleSaveObsidianSettings = async () => {
-    await db.settings.put({
-      key: 'obsidian_settings',
-      value: {
-        restApiEnabled: obsidianRestApi,
-        restApiToken: obsidianToken.trim(),
-        restApiEndpoint: obsidianEndpoint.trim() || 'http://127.0.0.1:27124',
-        defaultParaFolder: obsidianFolder.trim() || 'Alfajorcito OS/Notes'
-      } as ObsidianSettings,
-      updatedAt: Date.now()
-    });
-    showToast('Obsidian configurado', 'Ajustes de sincronización guardados.', 'success');
-    onClose();
-  };
-
   // Export JSON Backup
   const handleExportJsonBackup = async () => {
     const backup = {
@@ -216,7 +196,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     showToast('Copia generada', 'Archivo JSON descargado exitosamente.', 'success');
   };
 
-  // Import JSON Backup with Strict Schema Validation
+  // Import JSON Backup with Strict Schema Validation & Atomic Transaction
   const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -226,30 +206,87 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       const data = JSON.parse(text);
 
       if (typeof data !== 'object' || data === null) {
-        throw new Error('Formato inválido');
+        throw new Error('Formato inválido: el archivo debe ser un objeto JSON.');
       }
 
-      const isValidEntityArray = <T extends { id: string }>(arr: unknown): arr is T[] =>
-        Array.isArray(arr) && arr.every(item => item && typeof item === 'object' && typeof (item as Record<string, unknown>).id === 'string');
+      const validateItems = <T extends { id: string }>(
+        arr: unknown,
+        requiredFields: string[] = []
+      ): T[] => {
+        if (!Array.isArray(arr)) return [];
+        for (const item of arr) {
+          if (!item || typeof item !== 'object') {
+            throw new Error('Elemento inválido en lista');
+          }
+          const rec = item as Record<string, unknown>;
+          if (typeof rec.id !== 'string' || !rec.id.trim()) {
+            throw new Error('Elemento sin ID válido');
+          }
+          for (const field of requiredFields) {
+            if (rec[field] === undefined || rec[field] === null) {
+              throw new Error(`Elemento sin campo requerido: ${field}`);
+            }
+          }
+        }
+        return arr as T[];
+      };
 
-      if (isValidEntityArray(data.courses)) await db.courses.bulkPut(data.courses);
-      if (isValidEntityArray(data.works)) await db.works.bulkPut(data.works);
-      if (isValidEntityArray(data.sources)) await db.sources.bulkPut(data.sources);
-      if (isValidEntityArray(data.ideas)) await db.ideas.bulkPut(data.ideas);
-      if (isValidEntityArray(data.paraphrases)) await db.paraphrases.bulkPut(data.paraphrases);
-      if (isValidEntityArray(data.citations)) await db.citations.bulkPut(data.citations);
-      if (isValidEntityArray(data.notes)) await db.notes.bulkPut(data.notes);
-      if (isValidEntityArray(data.concepts)) await db.concepts.bulkPut(data.concepts);
-      if (isValidEntityArray(data.tasks)) await db.tasks.bulkPut(data.tasks);
-      if (isValidEntityArray(data.inquiries)) await db.inquiries.bulkPut(data.inquiries);
-      if (Array.isArray(data.settings) && data.settings.every((s: unknown) => s && typeof s === 'object' && typeof (s as Record<string, unknown>).key === 'string')) {
-        await db.settings.bulkPut(data.settings);
+      const validCourses = validateItems<Course>(data.courses, ['name']);
+      const validWorks = validateItems<Work>(data.works, ['title', 'status', 'deadline']);
+      const validSources = validateItems<Source>(data.sources, ['title']);
+      const validIdeas = validateItems<Idea>(data.ideas, ['content']);
+      const validParaphrases = validateItems<Paraphrase>(data.paraphrases, ['finalParaphrase']);
+      const validCitations = validateItems<Citation>(data.citations, ['text']);
+      const validNotes = validateItems<Note>(data.notes, ['title']);
+      const validConcepts = validateItems<Concept>(data.concepts, ['name']);
+      const validTasks = validateItems<Task>(data.tasks, ['title']);
+      const validInquiries = validateItems<InquiryToTeacher>(data.inquiries, ['topic']);
+
+      let validSettings: { key: string; value: unknown; updatedAt: number }[] = [];
+      if (Array.isArray(data.settings)) {
+        for (const s of data.settings) {
+          if (!s || typeof s !== 'object' || typeof (s as Record<string, unknown>).key !== 'string') {
+            throw new Error('Ajuste inválido en settings');
+          }
+        }
+        validSettings = data.settings;
       }
 
-      showToast('Copia restaurada', 'Todos los datos se han importado correctamente.', 'success');
+      await db.transaction(
+        'rw',
+        [
+          db.courses,
+          db.works,
+          db.sources,
+          db.ideas,
+          db.paraphrases,
+          db.citations,
+          db.notes,
+          db.concepts,
+          db.tasks,
+          db.inquiries,
+          db.settings
+        ],
+        async () => {
+          if (validCourses.length > 0) await db.courses.bulkPut(validCourses);
+          if (validWorks.length > 0) await db.works.bulkPut(validWorks);
+          if (validSources.length > 0) await db.sources.bulkPut(validSources);
+          if (validIdeas.length > 0) await db.ideas.bulkPut(validIdeas);
+          if (validParaphrases.length > 0) await db.paraphrases.bulkPut(validParaphrases);
+          if (validCitations.length > 0) await db.citations.bulkPut(validCitations);
+          if (validNotes.length > 0) await db.notes.bulkPut(validNotes);
+          if (validConcepts.length > 0) await db.concepts.bulkPut(validConcepts);
+          if (validTasks.length > 0) await db.tasks.bulkPut(validTasks);
+          if (validInquiries.length > 0) await db.inquiries.bulkPut(validInquiries);
+          if (validSettings.length > 0) await db.settings.bulkPut(validSettings);
+        }
+      );
+
+      showToast('Copia restaurada', 'Todos los datos se han importado y validado correctamente.', 'success');
       onClose();
-    } catch {
-      showToast('Error de importación', 'El archivo no contiene un esquema de datos válido.', 'error');
+    } catch (err) {
+      console.error('Error al importar backup JSON:', err);
+      showToast('Error de importación', 'El archivo no contiene un esquema de datos válido o está dañado.', 'error');
     }
   };
 
@@ -497,56 +534,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       {/* 2. Obsidian Settings */}
       {activeTab === 'obsidian' && (
         <div className="space-y-4">
-          <div className="p-4 rounded-2xl bg-white border border-[#EBE5DF] space-y-3">
-            <div className="flex items-start justify-between">
-              <div>
-                <h4 className="font-bold text-sm text-[#2B2D42]">Exportador Universal de Vault (.zip)</h4>
-                <p className="text-xs text-[#5A6275] mt-0.5">
-                  Descarga un paquete ZIP estructurado según la metodología PARA y Zettelkasten con todas tus notas, fichas de fuentes y trabajos con frontmatter YAML compatible con Obsidian.
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="lavender"
-              onClick={handleExportObsidianZip}
-              isLoading={isExportingZip}
-              icon={<FolderDown className="w-4 h-4" />}
-            >
-              Exportar Vault a Obsidian (.zip)
-            </Button>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white border border-[#EBE5DF] space-y-3 opacity-90">
+          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#EBE5DF] space-y-4">
             <div>
-              <h4 className="font-bold text-sm text-[#2B2D42]">Obsidian Local REST API (Avanzado)</h4>
-              <p className="text-xs text-[#5A6275] mt-0.5">
-                Sincronización en tiempo real con el plugin 'Local REST API' de Obsidian.
+              <div className="flex items-center gap-2">
+                <FolderDown className="w-5 h-5 text-[#80CBC4]" />
+                <h4 className="font-bold text-sm sm:text-base text-[#2B2D42]">Exportador Universal de Vault (.zip)</h4>
+              </div>
+              <p className="text-xs text-[#5A6275] mt-1.5 leading-relaxed">
+                Descarga un paquete ZIP estructurado según la metodología <strong>P.A.R.A.</strong> (Proyectos, Áreas, Recursos y Archivo) y <strong>Zettelkasten</strong> con todas tus notas atómicas, fichas de fuentes y trabajos de investigación con metadatos YAML compatibles con Obsidian.
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input
-                label="Endpoint Local"
-                placeholder="http://127.0.0.1:27124"
-                value={obsidianEndpoint}
-                onChange={(e) => setObsidianEndpoint(e.target.value)}
-              />
-              <Input
-                label="Carpeta Destino en el Vault"
-                placeholder="Alfajorcito OS/Notes"
-                value={obsidianFolder}
-                onChange={(e) => setObsidianFolder(e.target.value)}
-              />
+
+            <div className="p-3.5 rounded-xl bg-[#F0FDF4] border border-emerald-200/70 text-xs text-emerald-950 space-y-2">
+              <span className="font-bold text-emerald-900 block">¿Cómo usarlo en Obsidian?</span>
+              <ol className="list-decimal list-inside space-y-1 text-[11px] text-emerald-900/90 leading-relaxed">
+                <li>Haz clic en el botón inferior para descargar el archivo <code className="bg-emerald-100/70 px-1 py-0.5 rounded font-mono text-[10px]">.zip</code>.</li>
+                <li>Descomprime la carpeta en cualquier directorio de tu computadora.</li>
+                <li>En Obsidian, selecciona <em>"Abrir carpeta como Vault" (Open folder as vault)</em> y elige la carpeta descomprimida.</li>
+                <li>¡Listo! Podrás navegar todas tus notas interconectadas con enlaces bidireccionales <code className="bg-emerald-100/70 px-1 py-0.5 rounded font-mono text-[10px]">[[wikilinks]]</code> y Graph View nativo.</li>
+              </ol>
             </div>
-            <Input
-              label="Token de Autorización de Obsidian"
-              type="password"
-              placeholder="Bearer Token de Local REST API"
-              value={obsidianToken}
-              onChange={(e) => setObsidianToken(e.target.value)}
-            />
-            <div className="pt-2 flex justify-end">
-              <Button variant="primary" size="sm" onClick={handleSaveObsidianSettings} className="font-bold">
-                Guardar Ajustes de Obsidian
+
+            <div className="pt-1">
+              <Button
+                variant="lavender"
+                size="md"
+                onClick={handleExportObsidianZip}
+                isLoading={isExportingZip}
+                icon={<FolderDown className="w-4 h-4" />}
+                className="w-full sm:w-auto font-bold"
+              >
+                Exportar Vault Completo a Obsidian (.zip)
               </Button>
             </div>
           </div>

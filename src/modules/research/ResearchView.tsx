@@ -37,7 +37,7 @@ import {
   searchCrossref,
   type AcademicSearchResult
 } from '../../services/academicApis';
-import { auditSourceMetadata } from '../../utils/antiHallucination';
+import { auditSourceMetadata, sanitizeAcademicText } from '../../utils/antiHallucination';
 import { validateSourceAge } from '../../utils/sourceAgeValidator';
 import {
   formatFullReference,
@@ -173,7 +173,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
   const handleImportResult = async (item: AcademicSearchResult) => {
     const audit = auditSourceMetadata(item);
     const newSource: Source = {
-      id: `src-${Math.random().toString(36).substring(2, 9)}`,
+      id: `src-${crypto.randomUUID()}`,
       workIds: [],
       title: item.title,
       authors: item.authors,
@@ -185,7 +185,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
       pages: item.pages,
       doi: item.doi,
       url: item.url,
-      abstract: item.abstract,
+      abstract: item.abstract ? sanitizeAcademicText(item.abstract) : undefined,
       accessedAt: Date.now(),
       verificationStatus: audit.status,
       verificationProvider: item.provider,
@@ -1004,7 +1004,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                     setIsSavingQuote(true);
                     try {
                       const now = Date.now();
-                      const ideaId = `idea-${Math.random().toString(36).substring(2, 9)}`;
+                      const ideaId = `idea-${crypto.randomUUID()}`;
                       const assignedWorkId = inspectedSource.workIds?.[0] || (libraryWorkFilter !== 'ALL' ? libraryWorkFilter : undefined);
 
                       await db.ideas.add({
@@ -1020,7 +1020,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                       });
 
                       await db.paraphrases.add({
-                        id: `para-${Math.random().toString(36).substring(2, 9)}`,
+                        id: `para-${crypto.randomUUID()}`,
                         ideaId,
                         sourceId: inspectedSource.id,
                         workId: assignedWorkId,
@@ -1059,7 +1059,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                     setIsSavingQuote(true);
                     try {
                       const now = Date.now();
-                      const ideaId = `idea-${Math.random().toString(36).substring(2, 9)}`;
+                      const ideaId = `idea-${crypto.randomUUID()}`;
                       const assignedWorkId = inspectedSource.workIds?.[0] || (libraryWorkFilter !== 'ALL' ? libraryWorkFilter : undefined);
 
                       const auditRes = await checkParaphraseFidelity(newQuote.trim(), newParaphraseText.trim());
@@ -1077,7 +1077,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                       });
 
                       await db.paraphrases.add({
-                        id: `para-${Math.random().toString(36).substring(2, 9)}`,
+                        id: `para-${crypto.randomUUID()}`,
                         ideaId,
                         sourceId: inspectedSource.id,
                         workId: assignedWorkId,

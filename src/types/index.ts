@@ -45,7 +45,8 @@ export type VerificationProvider =
   | 'OPENALEX' 
   | 'SEMANTIC_SCHOLAR' 
   | 'MANUAL' 
-  | 'DOI_ORG';
+  | 'DOI_ORG'
+  | 'DOAJ';
 
 export type FidelityStatus = 
   | 'PENDING_REVIEW' 
@@ -252,8 +253,14 @@ export interface Task {
   updatedAt: number;
 }
 
+export interface SettingRecord {
+  key: string;
+  value: unknown;
+  updatedAt: number;
+}
+
 export interface AISettings {
-  provider: 'gemini' | 'openai' | 'anthropic' | 'openrouter' | 'ollama' | 'offline_heuristics';
+  provider: 'gemini' | 'openai' | 'openrouter' | 'ollama' | 'offline_heuristics';
   apiKey?: string;
   modelName?: string;
   ollamaEndpoint?: string;
@@ -262,10 +269,8 @@ export interface AISettings {
 }
 
 export interface ObsidianSettings {
-  restApiEnabled: boolean;
-  restApiEndpoint: string;
-  restApiToken: string;
-  defaultParaFolder: string;
+  vaultName?: string;
+  defaultParaFolder?: string;
 }
 
 export interface CurriculumCourse {
@@ -291,3 +296,17 @@ export interface UserProfile {
   internshipSite?: string;
   defaultCitationStyle: CitationStyle;
 }
+
+export const DEFAULT_ACADEMIC_PERIOD = '2026-II';
+
+export const DEFAULT_USER_PROFILE: UserProfile = {
+  name: 'Saory',
+  institution: 'Universidad de San Martín de Porres (USMP)',
+  faculty: 'Facultad de Ciencias de la Comunicación, Turismo y Psicología',
+  major: 'Psicología',
+  currentCycle: 'VIII Ciclo (8vo Ciclo)',
+  specialty: 'CLINICA',
+  thesisTitle: 'Regulación Emocional, Autoeficacia Académica y Sintomatología Ansiosa en Estudiantes de la USMP',
+  internshipSite: 'Postulación a Sedes de Internado USMP (Hospitales MINSA/EsSalud / CSMC) (9no Ciclo)',
+  defaultCitationStyle: 'APA_7'
+};

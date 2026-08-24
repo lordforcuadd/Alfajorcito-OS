@@ -240,30 +240,51 @@ export function formatFullReference(source: Source, style: CitationStyle = 'APA_
   }
 }
 
+export function escapeHtml(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export function formatFullReferenceHTML(source: Source, style: CitationStyle = 'APA_7'): string {
   const year = source.year || 's.f.';
-  const title = source.title || 'Título desconocido';
+  const title = escapeHtml(source.title || 'Título desconocido');
   const doi = source.doi ? (source.doi.startsWith('http') ? source.doi : `https://doi.org/${source.doi}`) : '';
-  const url = source.url || doi;
+  const rawUrl = source.url || doi;
+  const url = escapeHtml(rawUrl);
+
+  const safeAuthors = (source.authors || []).map((a) => ({
+    firstName: escapeHtml(a.firstName || ''),
+    lastName: escapeHtml(a.lastName || '')
+  }));
+
+  const pubEsc = escapeHtml(source.publication || '');
+  const volEsc = escapeHtml(source.volume || '');
+  const issEsc = escapeHtml(source.issue || '');
+  const pgsEsc = escapeHtml(source.pages || '');
 
   switch (style) {
     case 'APA_7': {
-      const authors = formatAuthorNamesAPA(source.authors);
+      const authors = formatAuthorNamesAPA(safeAuthors);
       if (source.type === 'JOURNAL_ARTICLE') {
-        const pub = source.publication ? ` <i>${source.publication}</i>` : '';
-        const vol = source.volume ? `, <i>${source.volume}</i>` : '';
-        const iss = source.issue ? `(${source.issue})` : '';
-        const pgs = source.pages ? `, ${source.pages}` : '';
+        const pub = pubEsc ? ` <i>${pubEsc}</i>` : '';
+        const vol = volEsc ? `, <i>${volEsc}</i>` : '';
+        const iss = issEsc ? `(${issEsc})` : '';
+        const pgs = pgsEsc ? `, ${pgsEsc}` : '';
         const doiPart = url ? ` ${url}` : '';
         return `${authors} (${year}). ${title}.${pub}${vol}${iss}${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
       } else if (source.type === 'BOOK_CHAPTER') {
-        const book = source.publication ? ` En <i>${source.publication}</i>` : '';
-        const pgs = source.pages ? ` (pp. ${source.pages})` : '';
+        const book = pubEsc ? ` En <i>${pubEsc}</i>` : '';
+        const pgs = pgsEsc ? ` (pp. ${pgsEsc})` : '';
         const doiPart = url ? ` <a href="${url}">${url}</a>` : '';
         return `${authors} (${year}). ${title}.${book}${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
       } else {
         const italicTitle = `<i>${title}</i>`;
-        const pub = source.publication ? ` ${source.publication}.` : '';
+        const pub = pubEsc ? ` ${pubEsc}.` : '';
         const doiPart = url ? ` ${url}` : '';
         return `${authors} (${year}). ${italicTitle}.${pub}${doiPart}`.replace(/\.\./g, '.').trim();
       }
@@ -271,85 +292,85 @@ export function formatFullReferenceHTML(source: Source, style: CitationStyle = '
 
     case 'MLA_9': {
       let authorStr = 'Anon.';
-      if (source.authors && source.authors.length > 0) {
-        if (source.authors.length === 1) {
-          authorStr = `${source.authors[0].lastName}, ${source.authors[0].firstName}.`;
-        } else if (source.authors.length === 2) {
-          authorStr = `${source.authors[0].lastName}, ${source.authors[0].firstName}, and ${source.authors[1].firstName} ${source.authors[1].lastName}.`;
+      if (safeAuthors && safeAuthors.length > 0) {
+        if (safeAuthors.length === 1) {
+          authorStr = `${safeAuthors[0].lastName}, ${safeAuthors[0].firstName}.`;
+        } else if (safeAuthors.length === 2) {
+          authorStr = `${safeAuthors[0].lastName}, ${safeAuthors[0].firstName}, and ${safeAuthors[1].firstName} ${safeAuthors[1].lastName}.`;
         } else {
-          authorStr = `${source.authors[0].lastName}, ${source.authors[0].firstName}, et al.`;
+          authorStr = `${safeAuthors[0].lastName}, ${safeAuthors[0].firstName}, et al.`;
         }
       }
-      const pub = source.publication ? ` <i>${source.publication}</i>,` : '';
-      const vol = source.volume ? ` vol. ${source.volume},` : '';
-      const iss = source.issue ? ` no. ${source.issue},` : '';
-      const pgs = source.pages ? ` pp. ${source.pages},` : '';
+      const pub = pubEsc ? ` <i>${pubEsc}</i>,` : '';
+      const vol = volEsc ? ` vol. ${volEsc},` : '';
+      const iss = issEsc ? ` no. ${issEsc},` : '';
+      const pgs = pgsEsc ? ` pp. ${pgsEsc},` : '';
       const doiPart = url ? ` ${url}.` : '.';
       return `${authorStr} "${title}."${pub}${vol}${iss} ${year},${pgs}${doiPart}`.replace(/\s+/g, ' ').replace(/\.\./g, '.').trim();
     }
 
     case 'IEEE': {
       let authorStr = 'Anon.';
-      if (source.authors && source.authors.length > 0) {
-        authorStr = source.authors.map(a => `${a.firstName ? a.firstName.charAt(0) + '. ' : ''}${a.lastName}`).join(', ');
+      if (safeAuthors && safeAuthors.length > 0) {
+        authorStr = safeAuthors.map(a => `${a.firstName ? a.firstName.charAt(0) + '. ' : ''}${a.lastName}`).join(', ');
       }
       if (source.type === 'JOURNAL_ARTICLE') {
-        const pub = source.publication ? `, <i>${source.publication}</i>` : '';
-        const vol = source.volume ? `, vol. ${source.volume}` : '';
-        const iss = source.issue ? `, no. ${source.issue}` : '';
-        const pgs = source.pages ? `, pp. ${source.pages}` : '';
-        const doiPart = url ? `, doi: <a href="${url}">${source.doi || url}</a>` : '';
+        const pub = pubEsc ? `, <i>${pubEsc}</i>` : '';
+        const vol = volEsc ? `, vol. ${volEsc}` : '';
+        const iss = issEsc ? `, no. ${issEsc}` : '';
+        const pgs = pgsEsc ? `, pp. ${pgsEsc}` : '';
+        const doiPart = url ? `, doi: <a href="${url}">${escapeHtml(source.doi || url)}</a>` : '';
         return `${authorStr}, "${title}"${pub}${vol}${iss}${pgs}, ${year}${doiPart}.`.replace(/\s+/g, ' ').trim();
       } else if (source.type === 'BOOK_CHAPTER') {
-        const pub = source.publication ? ` en <i>${source.publication}</i>` : '';
-        const pgs = source.pages ? `, pp. ${source.pages}` : '';
-        const doiPart = url ? `, doi: <a href="${url}">${source.doi || url}</a>` : '';
+        const pub = pubEsc ? ` en <i>${pubEsc}</i>` : '';
+        const pgs = pgsEsc ? `, pp. ${pgsEsc}` : '';
+        const doiPart = url ? `, doi: <a href="${url}">${escapeHtml(source.doi || url)}</a>` : '';
         return `${authorStr}, "${title}"${pub}${pgs}, ${year}${doiPart}.`.replace(/\s+/g, ' ').trim();
       } else {
-        const pub = source.publication ? `, ${source.publication}` : '';
+        const pub = pubEsc ? `, ${pubEsc}` : '';
         const doiPart = url ? `, <a href="${url}">${url}</a>` : '';
         return `${authorStr}, <i>${title}</i>${pub}, ${year}${doiPart}.`.replace(/\s+/g, ' ').trim();
       }
     }
 
     case 'CHICAGO_AUTHOR_DATE': {
-      const authors = formatAuthorNamesAPA(source.authors).replace(/&/g, 'and');
-      const pub = source.publication ? ` <i>${source.publication}</i>` : '';
-      const vol = source.volume ? ` ${source.volume}` : '';
-      const iss = source.issue ? `, no. ${source.issue}` : '';
-      const pgs = source.pages ? `: ${source.pages}` : '';
+      const authors = formatAuthorNamesAPA(safeAuthors).replace(/&/g, 'and');
+      const pub = pubEsc ? ` <i>${pubEsc}</i>` : '';
+      const vol = volEsc ? ` ${volEsc}` : '';
+      const iss = issEsc ? `, no. ${issEsc}` : '';
+      const pgs = pgsEsc ? `: ${pgsEsc}` : '';
       const doiPart = url ? ` ${url}` : '';
       return `${authors}. ${year}. "${title}."${pub}${vol}${iss}${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
     }
 
     case 'CHICAGO_NOTES': {
       let authorStr = 'Anon.';
-      if (source.authors && source.authors.length > 0) {
-        if (source.authors.length === 1) {
-          authorStr = `${source.authors[0].lastName}, ${source.authors[0].firstName}.`;
+      if (safeAuthors && safeAuthors.length > 0) {
+        if (safeAuthors.length === 1) {
+          authorStr = `${safeAuthors[0].lastName}, ${safeAuthors[0].firstName}.`;
         } else {
-          authorStr = `${source.authors[0].lastName}, ${source.authors[0].firstName}, et al.`;
+          authorStr = `${safeAuthors[0].lastName}, ${safeAuthors[0].firstName}, et al.`;
         }
       }
-      const pub = source.publication ? ` <i>${source.publication}</i>` : '';
-      const pgs = source.pages ? `, ${source.pages}` : '';
+      const pub = pubEsc ? ` <i>${pubEsc}</i>` : '';
+      const pgs = pgsEsc ? `, ${pgsEsc}` : '';
       const doiPart = url ? ` <a href="${url}">${url}</a>` : '';
       return `${authorStr} "${title}."${pub} (${year})${pgs}.${doiPart}`.replace(/\.\./g, '.').trim();
     }
 
     case 'VANCOUVER': {
       let authorStr = 'Anon';
-      if (source.authors && source.authors.length > 0) {
-        authorStr = source.authors.map(a => `${a.lastName} ${a.firstName ? a.firstName.charAt(0) : ''}`).join(', ');
+      if (safeAuthors && safeAuthors.length > 0) {
+        authorStr = safeAuthors.map(a => `${a.lastName} ${a.firstName ? a.firstName.charAt(0) : ''}`).join(', ');
       }
       if (source.type === 'JOURNAL_ARTICLE') {
-        const pub = source.publication ? ` <i>${source.publication}</i>.` : '';
-        const vol = source.volume ? `;${source.volume}` : '';
-        const iss = source.issue ? `(${source.issue})` : '';
-        const pgs = source.pages ? `:${source.pages}` : '';
+        const pub = pubEsc ? ` <i>${pubEsc}</i>.` : '';
+        const vol = volEsc ? `;${volEsc}` : '';
+        const iss = issEsc ? `(${issEsc})` : '';
+        const pgs = pgsEsc ? `:${pgsEsc}` : '';
         return `${authorStr}. ${title}.${pub} ${year}${vol}${iss}${pgs}.`.replace(/\s+/g, ' ').replace(/\.\./g, '.').trim();
       } else {
-        const pub = source.publication ? ` ${source.publication};` : '';
+        const pub = pubEsc ? ` ${pubEsc};` : '';
         return `${authorStr}. <i>${title}</i>.${pub} ${year}.`.replace(/\s+/g, ' ').replace(/\.\./g, '.').trim();
       }
     }

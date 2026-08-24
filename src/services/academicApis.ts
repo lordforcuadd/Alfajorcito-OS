@@ -13,7 +13,7 @@ export interface AcademicSearchResult {
   url?: string;
   abstract?: string;
   citationCount?: number;
-  provider: 'OPENALEX' | 'CROSSREF' | 'SEMANTIC_SCHOLAR' | 'DOI_ORG';
+  provider: 'OPENALEX' | 'CROSSREF' | 'SEMANTIC_SCHOLAR' | 'DOI_ORG' | 'DOAJ';
 }
 
 /**

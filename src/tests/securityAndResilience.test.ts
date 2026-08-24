@@ -58,4 +58,41 @@ describe('Security, XSS & Extreme Inputs Resilience Suite', () => {
     expect(html).toContain('Palabra');
     expect(html.length).toBeGreaterThan(50000);
   });
+
+  it('escapes HTML tags from malicious author/title/publication inputs in citation HTML', () => {
+    const maliciousSource: Source = {
+      id: 'src-xss',
+      workIds: ['work-1'],
+      title: '<script>alert("XSS")</script> Estudio sobre Ansiedad',
+      authors: [{ firstName: '<img src=x onerror=alert(1)>', lastName: '<b>Hacker</b>' }],
+      year: 2024,
+      type: 'JOURNAL_ARTICLE',
+      publication: '<iframe src="evil.com"></iframe> Revista Peruana',
+      accessedAt: Date.now(),
+      verificationStatus: 'PARTIALLY_VERIFIED',
+      verificationProvider: 'MANUAL',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    const mockWork: Work = {
+      id: 'work-1',
+      courseId: 'course-1',
+      title: 'Trabajo Seguro',
+      type: 'ENSAYO',
+      status: 'INVESTIGACION',
+      deadline: Date.now(),
+      citationStyle: 'APA_7',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      isArchived: false
+    };
+
+    const html = generateGoogleDocsRichHTML(mockWork, [maliciousSource]);
+    expect(html).not.toContain('<script>alert("XSS")</script>');
+    expect(html).not.toContain('<iframe src="evil.com">');
+    expect(html).not.toContain('<img src=x onerror=alert(1)>');
+    expect(html).toContain('&lt;script&gt;');
+    expect(html).toContain('&lt;iframe');
+  });
 });

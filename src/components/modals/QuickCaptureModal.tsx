@@ -22,10 +22,11 @@ import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { Input, Select, TextArea } from '../common/Input';
 import { db } from '../../db';
-import { resolveDOI } from '../../services/academicApis';
+import { resolveDOI, extractDOI } from '../../services/academicApis';
+import { auditSourceMetadata } from '../../utils/antiHallucination';
 import { formulateQuestionForTeacher, analyzeInstructionsOffline } from '../../services/aiService';
 import { useToast } from '../common/Toast';
-import type { CitationStyle, WorkType, WorkStatus, ParaCategory, TaskPriority, SourceType, Author, UserProfile } from '../../types';
+import type { CitationStyle, WorkType, WorkStatus, ParaCategory, TaskPriority, SourceType, Author, UserProfile, Source } from '../../types';
 
 export type CaptureTab = 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task';
 
@@ -203,7 +204,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         .filter(Boolean);
 
       await db.notes.add({
-        id: `note-${Math.random().toString(36).substring(2, 9)}`,
+        id: `note-${crypto.randomUUID()}`,
         slug,
         title: noteTitle.trim(),
         content: noteContent.trim(),
@@ -252,7 +253,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       const deadlineMs = workDeadline ? new Date(workDeadline).getTime() : now + 86400000 * 7;
       const analysis = analyzeInstructionsOffline(workInstructions);
 
-      const newWorkId = `work-${Math.random().toString(36).substring(2, 9)}`;
+      const newWorkId = `work-${crypto.randomUUID()}`;
       await db.works.add({
         id: newWorkId,
         courseId: workCourseId,
@@ -271,11 +272,10 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         isArchived: false
       });
 
-      showToast('Trabajo creado', 'Espacio de trabajo listo para investigar y redactar.', 'success');
+      showToast('Trabajo registrado', `"${workTitle}" añadido a tus entregables.`, 'success');
       setWorkTitle('');
       setWorkInstructions('');
-      setWorkGoogleDocUrl('');
-      setWorkCanvaUrl('');
+      setWorkDeadline('');
       onClose();
     } catch {
       showToast('Error', 'No se pudo guardar el trabajo en la base de datos.', 'error');
@@ -286,7 +286,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
 
   const handleSaveCourse = async () => {
     if (!courseName.trim()) {
-      showToast('Nombre requerido', 'Por favor ingresa el nombre del curso.', 'warning');
+      showToast('Nombre requerido', 'Por favor ingresa el nombre de la asignatura.', 'warning');
       return;
     }
     if (courseTeacherEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(courseTeacherEmail.trim())) {
@@ -298,7 +298,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
     try {
       const now = Date.now();
       await db.courses.add({
-        id: `course-${Math.random().toString(36).substring(2, 9)}`,
+        id: `course-${crypto.randomUUID()}`,
         name: courseName.trim(),
         code: courseCode.trim() || undefined,
         period: coursePeriod.trim() || '2026-II',
@@ -349,23 +349,74 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
           }).filter(a => a.lastName || a.firstName)
         : [];
 
+      const rawDoi = sourceDoiOrSearch.trim();
+      const extractedDoi = extractDOI(rawDoi);
+      let verifiedStatus: 'VERIFIED' | 'PARTIALLY_VERIFIED' | 'UNVERIFIED' = 'PARTIALLY_VERIFIED';
+      let verifiedProvider: 'CROSSREF' | 'OPENALEX' | 'SEMANTIC_SCHOLAR' | 'MANUAL' | 'DOI_ORG' | 'DOAJ' = 'MANUAL';
+      let finalTitle = sourceTitle.trim();
+      let finalAuthors = authors.length > 0 ? authors : [{ firstName: '', lastName: 'Autor' }];
+      let finalYear = parsedYear;
+      let finalPub = sourcePublication.trim() || undefined;
+
+      if (extractedDoi) {
+        try {
+          const resolved = await resolveDOI(extractedDoi);
+          if (resolved) {
+            finalTitle = resolved.title || finalTitle;
+            if (resolved.authors && resolved.authors.length > 0) {
+              finalAuthors = resolved.authors;
+            }
+            if (resolved.year) finalYear = resolved.year;
+            if (resolved.publication) finalPub = resolved.publication;
+
+            const tempSource: Source = {
+              id: 'temp',
+              workIds: [],
+              title: finalTitle,
+              authors: finalAuthors,
+              year: finalYear,
+              type: 'JOURNAL_ARTICLE',
+              publication: finalPub,
+              doi: extractedDoi,
+              accessedAt: now,
+              verificationStatus: 'PARTIALLY_VERIFIED',
+              verificationProvider: resolved.provider,
+              createdAt: now,
+              updatedAt: now
+            };
+            const audit = auditSourceMetadata(tempSource);
+            verifiedStatus = audit.status;
+            verifiedProvider = resolved.provider;
+          }
+        } catch {
+          verifiedStatus = 'PARTIALLY_VERIFIED';
+          verifiedProvider = 'MANUAL';
+        }
+      }
+
       await db.sources.add({
-        id: `src-${Math.random().toString(36).substring(2, 9)}`,
+        id: `src-${crypto.randomUUID()}`,
         workIds: sourceWorkId ? [sourceWorkId] : [],
-        title: sourceTitle.trim(),
-        authors: authors.length > 0 ? authors : [{ firstName: '', lastName: 'Autor' }],
-        year: parsedYear,
+        title: finalTitle,
+        authors: finalAuthors,
+        year: finalYear,
         type: 'JOURNAL_ARTICLE',
-        publication: sourcePublication.trim() || undefined,
-        doi: sourceDoiOrSearch.trim() || undefined,
+        publication: finalPub,
+        doi: extractedDoi || (rawDoi.length > 0 ? rawDoi : undefined),
         accessedAt: now,
-        verificationStatus: sourceDoiOrSearch.includes('10.') ? 'VERIFIED' : 'PARTIALLY_VERIFIED',
-        verificationProvider: sourceDoiOrSearch.includes('10.') ? 'CROSSREF' : 'MANUAL',
+        verificationStatus: verifiedStatus,
+        verificationProvider: verifiedProvider,
         createdAt: now,
         updatedAt: now
       });
 
-      showToast('Fuente guardada', 'Registrada en tu biblioteca de investigación.', 'success');
+      showToast(
+        verifiedStatus === 'VERIFIED' ? 'Fuente verificada y guardada' : 'Fuente guardada',
+        verifiedStatus === 'VERIFIED'
+          ? 'Metadatos validados con éxito desde registro académico.'
+          : 'Registrada en tu biblioteca de investigación.',
+        'success'
+      );
       setSourceTitle('');
       setSourceAuthor('');
       setSourcePublication('');
@@ -401,7 +452,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
     try {
       const now = Date.now();
       await db.inquiries.add({
-        id: `inq-${Math.random().toString(36).substring(2, 9)}`,
+        id: `inq-${crypto.randomUUID()}`,
         courseId: inquiryCourseId,
         workId: inquiryWorkId || '',
         topic: inquiryTopic.trim(),
@@ -441,7 +492,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       const linkedWork = works.find((w) => w.id === taskWorkId);
 
       await db.tasks.add({
-        id: `task-${Math.random().toString(36).substring(2, 9)}`,
+        id: `task-${crypto.randomUUID()}`,
         title: taskTitle.trim(),
         dueDate: dueMs && !isNaN(dueMs) ? dueMs : undefined,
         priority: taskPriority,

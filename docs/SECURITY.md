@@ -9,7 +9,7 @@ Alfajorcito OS está concebido con un modelo de seguridad centrado en el usuario
 ---
 
 ## 2. Gestión Segura de Credenciales y API Keys
-- Las API Keys (Gemini, OpenAI, Anthropic, OpenRouter) se almacenan localmente en la tabla `settings` de IndexedDB del navegador.
+- Las API Keys (Gemini, OpenAI, OpenRouter) se almacenan localmente en la tabla `settings` de IndexedDB del navegador.
 - Las peticiones a las APIs de IA se realizan directamente desde el cliente (navegador) hacia los endpoints oficiales de cada proveedor mediante HTTPS.
 - El usuario puede borrar sus API keys en cualquier momento desde la pantalla de Configuración con un solo toque.
 
