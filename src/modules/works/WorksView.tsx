@@ -18,7 +18,8 @@ import {
   HelpCircle,
   Sparkles,
   TrendingUp,
-  FolderOpen
+  FolderOpen,
+  Trash2
 } from 'lucide-react';
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';
@@ -26,6 +27,7 @@ import { Button } from '../../components/common/Button';
 import { Badge, CitationStyleBadge, WorkStatusBadge, WORK_STATUS_META, type BadgeVariant } from '../../components/common/Badge';
 import { useToast } from '../../components/common/Toast';
 import { CourseModal } from '../../components/modals/CourseModal';
+import { WorkModal } from '../../components/modals/WorkModal';
 import { WorkWorkspace } from './WorkWorkspace';
 import type { Work, Course, WorkStatus, WorkType } from '../../types';
 
@@ -57,6 +59,8 @@ export const WorksView: React.FC<WorksViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [courseToEdit, setCourseToEdit] = useState<Course | null>(null);
+  const [isWorkModalOpen, setIsWorkModalOpen] = useState(false);
+  const [workToEdit, setWorkToEdit] = useState<Work | null>(null);
 
   const courses = useLiveQuery(() => db.courses.toArray()) || [];
   const works = useLiveQuery(() => db.works.toArray()) || [];
@@ -147,8 +151,8 @@ export const WorksView: React.FC<WorksViewProps> = ({
 
             <Button
               onClick={() => {
-                const preselectedCourse = selectedCourseFilter !== 'ALL' ? selectedCourseFilter : undefined;
-                onOpenQuickCapture('work', preselectedCourse);
+                setWorkToEdit(null);
+                setIsWorkModalOpen(true);
               }}
               variant="primary"
               size="md"
@@ -381,12 +385,12 @@ export const WorksView: React.FC<WorksViewProps> = ({
                       <CitationStyleBadge style={work.citationStyle} />
                     </div>
 
-                    {/* Interactive Status Dropdown */}
-                    <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {/* Interactive Status Dropdown & Edit / Delete Buttons */}
+                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                       <select
                         value={work.status}
                         onChange={(e) => handleCardStatusChange(e, work)}
-                        className="text-[11px] font-bold bg-[#FAF8F5] border border-[#EBE5DF] rounded-xl px-2.5 py-1 text-[#2B2D42] focus:outline-none focus:border-[#E8A598] cursor-pointer shadow-2xs hover:bg-white transition-colors"
+                        className="text-[11px] font-bold bg-[#FAF8F5] border border-[#EBE5DF] rounded-xl px-2 py-1 text-[#2B2D42] focus:outline-none focus:border-[#E8A598] cursor-pointer shadow-2xs hover:bg-white transition-colors"
                         title="Cambiar estado del trabajo"
                       >
                         <option value="PLANIFICACION">Planificación</option>
@@ -397,6 +401,32 @@ export const WorksView: React.FC<WorksViewProps> = ({
                         <option value="ENTREGADO">Entregado 🎉</option>
                         <option value="ARCHIVADO">Archivado</option>
                       </select>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setWorkToEdit(work);
+                          setIsWorkModalOpen(true);
+                        }}
+                        className="p-1 hover:bg-[#F5F1EB] text-[#8D99AE] hover:text-[#2B2D42] rounded-lg transition-colors cursor-pointer"
+                        title={`Editar trabajo: ${work.title}`}
+                        aria-label={`Editar trabajo: ${work.title}`}
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setWorkToEdit(work);
+                          setIsWorkModalOpen(true);
+                        }}
+                        className="p-1 hover:bg-rose-50 text-[#8D99AE] hover:text-[#C62828] rounded-lg transition-colors cursor-pointer"
+                        title={`Eliminar trabajo: ${work.title}`}
+                        aria-label={`Eliminar trabajo: ${work.title}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
 
@@ -490,6 +520,17 @@ export const WorksView: React.FC<WorksViewProps> = ({
           setCourseToEdit(null);
         }}
         courseToEdit={courseToEdit}
+      />
+
+      {/* Work Modal for creating/editing/deleting works and theses */}
+      <WorkModal
+        isOpen={isWorkModalOpen}
+        onClose={() => {
+          setIsWorkModalOpen(false);
+          setWorkToEdit(null);
+        }}
+        workToEdit={workToEdit}
+        initialCourseId={selectedCourseFilter !== 'ALL' ? selectedCourseFilter : undefined}
       />
     </div>
   );

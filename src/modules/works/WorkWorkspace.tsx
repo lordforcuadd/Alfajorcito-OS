@@ -32,6 +32,7 @@ import { Button } from '../../components/common/Button';
 import { Badge, CitationStyleBadge, VerificationBadge, WorkStatusBadge, WORK_STATUS_META, type BadgeVariant } from '../../components/common/Badge';
 import { Tabs } from '../../components/common/Tabs';
 import { Modal } from '../../components/common/Modal';
+import { WorkModal } from '../../components/modals/WorkModal';
 import { Input, TextArea, Select } from '../../components/common/Input';
 import { useToast } from '../../components/common/Toast';
 import { validateSourceAge } from '../../utils/sourceAgeValidator';
@@ -92,6 +93,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
 
   // Google Docs & Canva link modal state
   const [isLinksModalOpen, setIsLinksModalOpen] = useState(false);
+  const [isEditWorkModalOpen, setIsEditWorkModalOpen] = useState(false);
   const [editGoogleDocUrl, setEditGoogleDocUrl] = useState('');
   const [editCanvaUrl, setEditCanvaUrl] = useState('');
 
@@ -265,6 +267,17 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsEditWorkModalOpen(true)}
+              icon={<Edit3 className="w-4 h-4 text-[#8C3A32]" />}
+              title="Editar parámetros, consignas y fechas del trabajo"
+              className="font-bold shadow-2xs"
+            >
+              Editar Trabajo
+            </Button>
+
             {/* Split-View Toggle for Tablets / Large screens */}
             <Button
               variant={splitMode ? 'primary' : 'secondary'}
@@ -1294,6 +1307,16 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Edit Work Modal */}
+      {work && (
+        <WorkModal
+          isOpen={isEditWorkModalOpen}
+          onClose={() => setIsEditWorkModalOpen(false)}
+          workToEdit={work}
+          onDeleted={onBack}
+        />
       )}
     </div>
   );
