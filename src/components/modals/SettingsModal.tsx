@@ -15,7 +15,9 @@ import {
   ExternalLink,
   User,
   GraduationCap,
-  Award
+  Award,
+  BookMarked,
+  FileText
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
@@ -67,8 +69,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [userMajor, setUserMajor] = useState('Psicología');
   const [userCycle, setUserCycle] = useState('VIII Ciclo (8vo Ciclo)');
   const [userSpecialty, setUserSpecialty] = useState<UserProfile['specialty']>('CLINICA');
-  const [userThesis, setUserThesis] = useState('Regulación Emocional, Autoeficacia Académica y Sintomatología Ansiosa en Estudiantes de la USMP');
-  const [userInternship, setUserInternship] = useState('Sedes de Internado USMP (Hospitales MINSA/EsSalud / CSMC / Empresas) (9no Ciclo)');
+  const [userThesis, setUserThesis] = useState('');
+  const [userInternship, setUserInternship] = useState('');
   const [userCitationStyle, setUserCitationStyle] = useState<CitationStyle>('APA_7');
 
   const [isExportingZip, setIsExportingZip] = useState(false);
@@ -358,84 +360,144 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       {/* 0. User Profile (Psicología USMP) */}
       {activeTab === 'profile' && (
         <div className="space-y-4">
-          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#FDF2F0] to-[#F3E5F5] border border-[#E8A598]/50 space-y-1">
-            <span className="font-bold text-xs text-[#8C3A32] flex items-center gap-1.5">
-              <Award className="w-4 h-4 text-[#D98880]" />
-              <span>Estudiante de la Facultad de Ciencias de la Comunicación, Turismo y Psicología - USMP</span>
-            </span>
-            <p className="text-xs text-[#5A6275] leading-relaxed">
-              Configura tu información académica para personalizar los encabezados de tesis, portadas institucionales, consultas con docentes y el plan de Internado I y II.
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/50 space-y-1.5 shadow-2xs">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-[#E8A598]/30 flex items-center justify-center text-[#8C3A32]">
+                <GraduationCap className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold text-xs sm:text-sm text-[#2B2D42] block">
+                  Perfil Académico & Formato Institucional
+                </span>
+                <span className="text-[11px] text-[#5A6275]">
+                  Universidad de San Martín de Porres (USMP) • Psicología
+                </span>
+              </div>
+            </div>
+            <p className="text-xs text-[#5A6275] leading-relaxed pt-1">
+              Estos datos se utilizan automáticamente para generar portadas oficiales en formato APA 7, encabezados de investigación y parametrizar consultas docentes.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input
-              label="Nombre de la Estudiante"
-              placeholder="e.g. Saory"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-            />
-            <Input
-              label="Universidad"
-              placeholder="Universidad de San Martín de Porres (USMP)"
-              value={userInstitution}
-              onChange={(e) => setUserInstitution(e.target.value)}
-            />
+          {/* Section 1: Datos Básicos e Institucionales */}
+          <div className="p-4 rounded-2xl bg-white border border-[#EBE5DF] space-y-3 shadow-2xs">
+            <h4 className="font-bold text-xs uppercase tracking-wider text-[#8C3A32] flex items-center gap-1.5">
+              <Award className="w-3.5 h-3.5 text-[#D98880]" />
+              <span>Datos Básicos de la Estudiante</span>
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Nombre de la Estudiante"
+                placeholder="e.g. Saory"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+              />
+              <Input
+                label="Universidad"
+                placeholder="Universidad de San Martín de Porres (USMP)"
+                value={userInstitution}
+                onChange={(e) => setUserInstitution(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Facultad"
+                placeholder="Facultad de Ciencias de la Comunicación, Turismo y Psicología"
+                value={userFaculty}
+                onChange={(e) => setUserFaculty(e.target.value)}
+              />
+              <Input
+                label="Carrera / Escuela Profesional"
+                placeholder="Psicología"
+                value={userMajor}
+                onChange={(e) => setUserMajor(e.target.value)}
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Input
-              label="Facultad"
-              placeholder="Facultad de Psicología"
-              value={userFaculty}
-              onChange={(e) => setUserFaculty(e.target.value)}
-            />
+          {/* Section 2: Configuración Académica */}
+          <div className="p-4 rounded-2xl bg-white border border-[#EBE5DF] space-y-3 shadow-2xs">
+            <h4 className="font-bold text-xs uppercase tracking-wider text-[#8C3A32] flex items-center gap-1.5">
+              <BookMarked className="w-3.5 h-3.5 text-[#80CBC4]" />
+              <span>Ciclo, Especialidad & Citación</span>
+            </h4>
 
-            <Select
-              label="Ciclo Actual"
-              value={userCycle}
-              onChange={(e) => setUserCycle(e.target.value)}
-            >
-              <option value="I Ciclo">I Ciclo (1er Ciclo)</option>
-              <option value="II Ciclo">II Ciclo (2do Ciclo)</option>
-              <option value="III Ciclo">III Ciclo (3er Ciclo)</option>
-              <option value="IV Ciclo">IV Ciclo (4to Ciclo)</option>
-              <option value="V Ciclo">V Ciclo (5to Ciclo)</option>
-              <option value="VI Ciclo">VI Ciclo (6to Ciclo)</option>
-              <option value="VII Ciclo">VII Ciclo (7mo Ciclo)</option>
-              <option value="VIII Ciclo (8vo Ciclo)">VIII Ciclo (8vo Ciclo)</option>
-              <option value="IX Ciclo (9no Ciclo - Internado I)">IX Ciclo (9no Ciclo - Internado I)</option>
-              <option value="X Ciclo (10mo Ciclo - Internado II & Tesis)">X Ciclo (10mo Ciclo - Internado II & Tesis)</option>
-            </Select>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Select
+                label="Ciclo Actual"
+                value={userCycle}
+                onChange={(e) => setUserCycle(e.target.value)}
+              >
+                <option value="I Ciclo">I Ciclo (1er Ciclo)</option>
+                <option value="II Ciclo">II Ciclo (2do Ciclo)</option>
+                <option value="III Ciclo">III Ciclo (3er Ciclo)</option>
+                <option value="IV Ciclo">IV Ciclo (4to Ciclo)</option>
+                <option value="V Ciclo">V Ciclo (5to Ciclo)</option>
+                <option value="VI Ciclo">VI Ciclo (6to Ciclo)</option>
+                <option value="VII Ciclo">VII Ciclo (7mo Ciclo)</option>
+                <option value="VIII Ciclo (8vo Ciclo)">VIII Ciclo (8vo Ciclo)</option>
+                <option value="IX Ciclo (9no Ciclo - Internado I)">IX Ciclo (9no Ciclo - Internado I)</option>
+                <option value="X Ciclo (10mo Ciclo - Internado II & Tesis)">X Ciclo (10mo Ciclo - Internado II & Tesis)</option>
+              </Select>
 
-            <Select
-              label="Área de Especialidad"
-              value={userSpecialty}
-              onChange={(e) => setUserSpecialty(e.target.value as UserProfile['specialty'])}
-            >
-              <option value="CLINICA">Psicología Clínica y de la Salud</option>
-              <option value="EDUCATIVA">Psicología Educativa</option>
-              <option value="ORGANIZACIONAL">Psicología Organizacional</option>
-              <option value="SOCIAL_COMUNITARIA">Psicología Social-Comunitaria</option>
-            </Select>
+              <Select
+                label="Área de Especialidad"
+                value={userSpecialty}
+                onChange={(e) => setUserSpecialty(e.target.value as UserProfile['specialty'])}
+              >
+                <option value="CLINICA">Psicología Clínica y de la Salud</option>
+                <option value="EDUCATIVA">Psicología Educativa</option>
+                <option value="ORGANIZACIONAL">Psicología Organizacional</option>
+                <option value="SOCIAL_COMUNITARIA">Psicología Social-Comunitaria</option>
+              </Select>
+
+              <Select
+                label="Estilo de Citación por Defecto"
+                value={userCitationStyle}
+                onChange={(e) => setUserCitationStyle(e.target.value as CitationStyle)}
+              >
+                <option value="APA_7">APA 7ma Edición (Psicología / Salud)</option>
+                <option value="MLA_9">MLA 9na Edición (Humanidades)</option>
+                <option value="VANCOUVER">Vancouver (Biomédicas)</option>
+                <option value="IEEE">IEEE (Ingenierías)</option>
+                <option value="CHICAGO">Chicago 17th Edición</option>
+              </Select>
+            </div>
           </div>
 
-          <Input
-            label="Tema / Título del Proyecto de Tesis (Taller de Tesis I / II / III)"
-            placeholder="e.g. Regulación Emocional y Autoeficacia en Universitarios de Lima"
-            value={userThesis}
-            onChange={(e) => setUserThesis(e.target.value)}
-          />
+          {/* Section 3: Tesis e Internado (Opcionales / Vacíos por defecto) */}
+          <div className="p-4 rounded-2xl bg-white border border-[#EBE5DF] space-y-3 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-xs uppercase tracking-wider text-[#5A6275] flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-[#8D99AE]" />
+                <span>Proyectos de Grado & Prácticas (Opcionales)</span>
+              </h4>
+              <span className="text-[10px] text-[#8D99AE] bg-[#F5F1EB] px-2 py-0.5 rounded-full font-bold">
+                Opcional
+              </span>
+            </div>
 
-          <Input
-            label="Sede / Proyecto de Internado (9no y 10mo Ciclo)"
-            placeholder="e.g. Hospital Nacional / Centro de Salud Mental Comunitaria (CSMC)"
-            value={userInternship}
-            onChange={(e) => setUserInternship(e.target.value)}
-          />
+            <div className="space-y-3">
+              <Input
+                label="Tema / Título del Proyecto de Tesis (Taller de Tesis I / II / III)"
+                placeholder="Sin título definido aún (opcional — e.g. Regulación Emocional en Universitarios)"
+                value={userThesis}
+                onChange={(e) => setUserThesis(e.target.value)}
+              />
+
+              <Input
+                label="Sede / Proyecto de Internado (9no y 10mo Ciclo)"
+                placeholder="Sin sede asignada aún (opcional — e.g. Hospital Nacional / CSMC)"
+                value={userInternship}
+                onChange={(e) => setUserInternship(e.target.value)}
+              />
+            </div>
+          </div>
 
           <div className="pt-2 flex flex-col sm:flex-row sm:justify-end">
-            <Button variant="primary" onClick={handleSaveProfile} className="w-full sm:w-auto">
+            <Button variant="primary" size="md" onClick={handleSaveProfile} className="w-full sm:w-auto font-bold shadow-2xs">
               Guardar Perfil Académico
             </Button>
           </div>

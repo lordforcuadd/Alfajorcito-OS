@@ -214,59 +214,79 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
   };
 
   return (
-    <div className="space-y-5 animate-fade-in">
-      {/* Top Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#EBE5DF]">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            className="p-2 rounded-xl text-[#5A6275] hover:bg-white hover:border-[#EBE5DF] border border-transparent transition-all cursor-pointer"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-[#8C3A32] uppercase">{course?.name || 'Materia'}</span>
-              <CitationStyleBadge style={work.citationStyle} />
-              <select
-                value={work.status}
-                onChange={(e) => handleStatusChange(e.target.value as WorkStatus)}
-                className="bg-[#FAF8F5] text-[#2B2D42] text-xs font-extrabold border border-[#EBE5DF] rounded-xl px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-[#E8A598] cursor-pointer shadow-2xs hover:border-[#E8A598]"
-                title="Cambiar estado del trabajo"
-              >
-                <option value="PLANIFICACION">Planificación</option>
-                <option value="INVESTIGACION">Investigando</option>
-                <option value="REDACTANDO">Redactando</option>
-                <option value="EN_REVISION">En Revisión</option>
-                <option value="CORRECCION">En Corrección</option>
-                <option value="ENTREGADO">Entregado</option>
-                <option value="ARCHIVADO">Archivado</option>
-              </select>
+    <div className="space-y-5 sm:space-y-6 animate-fade-in pb-12">
+      {/* Top Header Cockpit */}
+      <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/40 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start sm:items-center gap-3">
+            <button
+              onClick={onBack}
+              className="p-2 sm:p-2.5 rounded-xl bg-white text-[#5A6275] hover:text-[#2B2D42] hover:bg-[#F5F1EB] border border-[#EBE5DF] transition-all cursor-pointer shadow-2xs shrink-0"
+              title="Volver al listado de trabajos"
+              aria-label="Volver al listado de trabajos"
+            >
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+            <div className="space-y-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-bold text-[#2B2D42]"
+                  style={{
+                    backgroundColor: course?.color ? `${course.color}25` : '#FAF8F5',
+                    border: `1px solid ${course?.color ? `${course.color}50` : '#EBE5DF'}`
+                  }}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: course?.color || '#D98880' }}
+                  />
+                  <span>{course?.name || 'Materia'}</span>
+                </span>
+                <CitationStyleBadge style={work.citationStyle} />
+                <select
+                  value={work.status}
+                  onChange={(e) => handleStatusChange(e.target.value as WorkStatus)}
+                  className="bg-white text-[#2B2D42] text-xs font-bold border border-[#EBE5DF] rounded-lg px-2.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#E8A598] cursor-pointer shadow-2xs hover:border-[#E8A598]"
+                  title="Cambiar estado del trabajo"
+                >
+                  <option value="PLANIFICACION">Planificación</option>
+                  <option value="INVESTIGACION">Investigando</option>
+                  <option value="REDACTANDO">Redactando</option>
+                  <option value="EN_REVISION">En Revisión</option>
+                  <option value="CORRECCION">En Corrección</option>
+                  <option value="ENTREGADO">Entregado 🎉</option>
+                  <option value="ARCHIVADO">Archivado</option>
+                </select>
+              </div>
+              <h2 className="text-base sm:text-xl font-extrabold text-[#2B2D42] tracking-tight leading-snug">
+                {work.title}
+              </h2>
             </div>
-            <h2 className="text-lg sm:text-xl font-extrabold text-[#2B2D42] mt-0.5">{work.title}</h2>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          {/* Split-View Toggle for Tablets / Large screens */}
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setSplitMode(!splitMode)}
-            icon={<Columns className="w-4 h-4" />}
-            title="Alternar vista dividida (Split View)"
-          >
-            {splitMode ? 'Vista Única' : 'Split View'}
-          </Button>
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            {/* Split-View Toggle for Tablets / Large screens */}
+            <Button
+              variant={splitMode ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setSplitMode(!splitMode)}
+              icon={<Columns className="w-4 h-4" />}
+              title="Alternar vista dividida (Split View)"
+              className="font-bold shadow-2xs"
+            >
+              {splitMode ? 'Vista Dividida Activa' : 'Split View'}
+            </Button>
 
-          <Button
-            variant={work.status === 'ENTREGADO' ? 'secondary' : 'mint'}
-            size="sm"
-            onClick={handleMarkDelivered}
-            icon={<CheckCircle2 className="w-4 h-4" />}
-          >
-            {work.status === 'ENTREGADO' ? 'Reabrir Trabajo' : 'Marcar Entregado'}
-          </Button>
+            <Button
+              variant={work.status === 'ENTREGADO' ? 'secondary' : 'mint'}
+              size="sm"
+              onClick={handleMarkDelivered}
+              icon={<CheckCircle2 className="w-4 h-4" />}
+              className="font-bold shadow-2xs"
+            >
+              {work.status === 'ENTREGADO' ? 'Reabrir Trabajo' : 'Marcar Entregado'}
+            </Button>
+          </div>
         </div>
       </div>
 

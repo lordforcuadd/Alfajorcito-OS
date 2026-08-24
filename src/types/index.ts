@@ -306,7 +306,7 @@ export const DEFAULT_USER_PROFILE: UserProfile = {
   major: 'Psicología',
   currentCycle: 'VIII Ciclo (8vo Ciclo)',
   specialty: 'CLINICA',
-  thesisTitle: 'Regulación Emocional, Autoeficacia Académica y Sintomatología Ansiosa en Estudiantes de la USMP',
-  internshipSite: 'Postulación a Sedes de Internado USMP (Hospitales MINSA/EsSalud / CSMC) (9no Ciclo)',
+  thesisTitle: '',
+  internshipSite: '',
   defaultCitationStyle: 'APA_7'
 };
