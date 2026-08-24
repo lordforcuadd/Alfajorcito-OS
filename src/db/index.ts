@@ -29,19 +29,26 @@ export class AlfajorcitoDB extends Dexie {
   constructor() {
     super('AlfajorcitoDB');
 
-    // Schema definition (Version 1)
+    // Schema definition (Version 1 baseline)
     this.version(1).stores({
       courses: '&id, code, name, period, isArchived, updatedAt',
       works: '&id, courseId, type, status, deadline, isArchived, updatedAt',
       sources: '&id, *workIds, type, year, verificationStatus, updatedAt',
-      ideas: '&id, sourceId, *workIds, isParaphrased, updatedAt',
-      paraphrases: '&id, ideaId, sourceId, *workIds, fidelityReviewStatus, updatedAt',
-      citations: '&id, sourceId, *workIds, style, isVerifiedInDraft, updatedAt',
+      ideas: '&id, sourceId, workId, updatedAt',
+      paraphrases: '&id, ideaId, sourceId, workId, fidelityReviewStatus, updatedAt',
+      citations: '&id, sourceId, workId, style, updatedAt',
       notes: '&id, slug, paraCategory, courseId, workId, *tags, isPinned, updatedAt',
       concepts: '&id, name, courseId, updatedAt',
       inquiries: '&id, courseId, workId, status, updatedAt',
       tasks: '&id, workId, courseId, dueDate, priority, isCompleted, category, updatedAt',
       settings: '&key, updatedAt'
+    });
+
+    // Version 2: Index workId on ideas, paraphrases and citations
+    this.version(2).stores({
+      ideas: '&id, sourceId, workId, updatedAt',
+      paraphrases: '&id, ideaId, sourceId, workId, fidelityReviewStatus, updatedAt',
+      citations: '&id, sourceId, workId, style, updatedAt'
     });
   }
 }
