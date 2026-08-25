@@ -71,6 +71,42 @@ export const WorksView: React.FC<WorksViewProps> = ({
 
   const coursesMap = useMemo(() => new Map(courses.map((c) => [c.id, c])), [courses]);
 
+  const tasksByWorkId = useMemo(() => {
+    const map = new Map<string, typeof tasks>();
+    for (const t of tasks) {
+      if (t.workId) {
+        const list = map.get(t.workId) || [];
+        list.push(t);
+        map.set(t.workId, list);
+      }
+    }
+    return map;
+  }, [tasks]);
+
+  const sourcesByWorkId = useMemo(() => {
+    const map = new Map<string, typeof allSources>();
+    for (const s of allSources) {
+      for (const wid of s.workIds || []) {
+        const list = map.get(wid) || [];
+        list.push(s);
+        map.set(wid, list);
+      }
+    }
+    return map;
+  }, [allSources]);
+
+  const inquiriesByWorkId = useMemo(() => {
+    const map = new Map<string, typeof inquiries>();
+    for (const inq of inquiries) {
+      if (inq.workId) {
+        const list = map.get(inq.workId) || [];
+        list.push(inq);
+        map.set(inq.workId, list);
+      }
+    }
+    return map;
+  }, [inquiries]);
+
   // Overall Stats
   const activeWorks = works.filter((w) => w.status !== 'ENTREGADO' && w.status !== 'ARCHIVADO');
   const deliveredWorks = works.filter((w) => w.status === 'ENTREGADO');
@@ -339,11 +375,11 @@ export const WorksView: React.FC<WorksViewProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredWorks.map((work) => {
             const course = coursesMap.get(work.courseId);
-            const workSources = allSources.filter((s) => s.workIds.includes(work.id));
+            const workSources = sourcesByWorkId.get(work.id) || [];
             const verifiedSourcesCount = workSources.filter((s) => s.verificationStatus === 'VERIFIED').length;
-            const workTasks = tasks.filter((t) => t.workId === work.id);
+            const workTasks = tasksByWorkId.get(work.id) || [];
             const { completed: completedTasks, percentage: taskProgress } = calculateTaskProgress(workTasks);
-            const workInquiries = inquiries.filter((inq) => inq.workId === work.id);
+            const workInquiries = inquiriesByWorkId.get(work.id) || [];
             const pendingInquiries = workInquiries.filter((inq) => inq.status === 'DRAFT' || inq.status === 'SENT').length;
             const daysLeft = calculateDaysRemaining(work.deadline);
             const isDelivered = work.status === 'ENTREGADO';

@@ -58,6 +58,9 @@ export const BrainView: React.FC<BrainViewProps> = ({
   const works = useLiveQuery(() => db.works.toArray()) || [];
   const sources = useLiveQuery(() => db.sources.toArray()) || [];
 
+  const coursesMap = React.useMemo(() => new Map(courses.map((c) => [c.id, c])), [courses]);
+  const worksMap = React.useMemo(() => new Map(works.map((w) => [w.id, w])), [works]);
+
   // Open note if selected from props
   useEffect(() => {
     if (selectedNoteId) {
@@ -271,8 +274,8 @@ export const BrainView: React.FC<BrainViewProps> = ({
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {filteredNotes.map((note) => {
-                const course = courses.find((c) => c.id === note.courseId);
-                const work = works.find((w) => w.id === note.workId);
+                const course = note.courseId ? coursesMap.get(note.courseId) : undefined;
+                const work = note.workId ? worksMap.get(note.workId) : undefined;
 
                 // Count wiki-links in content
                 const wikiLinkMatches = (note.content.match(/\[\[(.*?)\]\]/g) || []).length;
