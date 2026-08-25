@@ -1,17 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { ToastProvider, useToast } from './components/common/Toast';
 import { AppShell, type NavTab } from './components/layout/AppShell';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { DashboardView } from './modules/dashboard/DashboardView';
-import { WorksView } from './modules/works/WorksView';
-import { CurriculumView } from './modules/curriculum/CurriculumView';
-import { ResearchView } from './modules/research/ResearchView';
-import { PipelineView } from './modules/citations/PipelineView';
-import { BrainView } from './modules/notes/BrainView';
 import { QuickCaptureModal, type CaptureTab } from './components/modals/QuickCaptureModal';
-import { CommandPalette } from './components/modals/CommandPalette';
-import { SettingsModal } from './components/modals/SettingsModal';
 import { initializeDatabaseSeed, db } from './db';
+
+// Code-split dynamic views for true on-demand lazy loading
+const WorksView = lazy(() => import('./modules/works/WorksView').then((m) => ({ default: m.WorksView })));
+const CurriculumView = lazy(() => import('./modules/curriculum/CurriculumView').then((m) => ({ default: m.CurriculumView })));
+const ResearchView = lazy(() => import('./modules/research/ResearchView').then((m) => ({ default: m.ResearchView })));
+const PipelineView = lazy(() => import('./modules/citations/PipelineView').then((m) => ({ default: m.PipelineView })));
+const BrainView = lazy(() => import('./modules/notes/BrainView').then((m) => ({ default: m.BrainView })));
+const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then((m) => ({ default: m.SettingsModal })));
+const CommandPalette = lazy(() => import('./components/modals/CommandPalette').then((m) => ({ default: m.CommandPalette })));
+
+const ViewLoadingFallback = () => (
+  <div className="flex items-center justify-center py-20 text-center animate-fade-in">
+    <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white border border-[#EBE5DF] shadow-xs text-xs font-bold text-[#8C3A32]">
+      <span className="w-2 h-2 rounded-full bg-[#E8A598] animate-ping" />
+      <span>Cargando módulo...</span>
+    </div>
+  </div>
+);
 
 interface QuickCaptureConfig {
   isOpen: boolean;
@@ -97,70 +108,72 @@ function MainApp() {
       onOpenSettings={() => setIsSettingsOpen(true)}
     >
       <ErrorBoundary key={currentTab} fallbackTitle="Error al cargar la sección">
-        {/* 1. Dashboard Tab */}
-        {currentTab === 'dashboard' && (
-          <DashboardView
-            onOpenWork={(workId) => {
-              setSelectedWorkId(workId);
-              setCurrentTab('works');
-            }}
-            onOpenSource={(sourceId) => {
-              setSelectedSourceId(sourceId);
-              setCurrentTab('research');
-            }}
-            onOpenNote={(noteId) => {
-              setSelectedNoteId(noteId);
-              setCurrentTab('brain');
-            }}
-            onNavigateTab={(tab) => setCurrentTab(tab)}
-            onQuickCapture={(tab) => handleOpenQuickCapture(tab || 'note')}
-          />
-        )}
+        <Suspense fallback={<ViewLoadingFallback />}>
+          {/* 1. Dashboard Tab */}
+          {currentTab === 'dashboard' && (
+            <DashboardView
+              onOpenWork={(workId) => {
+                setSelectedWorkId(workId);
+                setCurrentTab('works');
+              }}
+              onOpenSource={(sourceId) => {
+                setSelectedSourceId(sourceId);
+                setCurrentTab('research');
+              }}
+              onOpenNote={(noteId) => {
+                setSelectedNoteId(noteId);
+                setCurrentTab('brain');
+              }}
+              onNavigateTab={(tab) => setCurrentTab(tab)}
+              onQuickCapture={(tab) => handleOpenQuickCapture(tab || 'note')}
+            />
+          )}
 
-        {/* 2. Works & Thesis Tab */}
-        {currentTab === 'works' && (
-          <WorksView
-            selectedWorkId={selectedWorkId}
-            onSelectWork={setSelectedWorkId}
-            onOpenQuickCapture={(tab = 'work', courseId?: string) => handleOpenQuickCapture(tab, courseId)}
-          />
-        )}
+          {/* 2. Works & Thesis Tab */}
+          {currentTab === 'works' && (
+            <WorksView
+              selectedWorkId={selectedWorkId}
+              onSelectWork={setSelectedWorkId}
+              onOpenQuickCapture={(tab = 'work', courseId?: string) => handleOpenQuickCapture(tab, courseId)}
+            />
+          )}
 
-        {/* 3. USMP Psychology Curriculum Tab */}
-        {currentTab === 'curriculum' && (
-          <CurriculumView
-            onOpenQuickCapture={(tab = 'work', courseId?: string) => handleOpenQuickCapture(tab, courseId)}
-            onOpenWork={(workId) => {
-              setSelectedWorkId(workId);
-              setCurrentTab('works');
-            }}
-          />
-        )}
+          {/* 3. USMP Psychology Curriculum Tab */}
+          {currentTab === 'curriculum' && (
+            <CurriculumView
+              onOpenQuickCapture={(tab = 'work', courseId?: string) => handleOpenQuickCapture(tab, courseId)}
+              onOpenWork={(workId) => {
+                setSelectedWorkId(workId);
+                setCurrentTab('works');
+              }}
+            />
+          )}
 
-        {/* 4. Research & Sources Tab */}
-        {currentTab === 'research' && (
-          <ResearchView
-            onOpenQuickCapture={() => handleOpenQuickCapture('source')}
-            selectedSourceId={selectedSourceId}
-            onSelectSource={setSelectedSourceId}
-          />
-        )}
+          {/* 4. Research & Sources Tab */}
+          {currentTab === 'research' && (
+            <ResearchView
+              onOpenQuickCapture={() => handleOpenQuickCapture('source')}
+              selectedSourceId={selectedSourceId}
+              onSelectSource={setSelectedSourceId}
+            />
+          )}
 
-        {/* 5. Citations & References Tab */}
-        {currentTab === 'pipeline' && <PipelineView />}
+          {/* 5. Citations & References Tab */}
+          {currentTab === 'pipeline' && <PipelineView />}
 
-        {/* 6. Second Brain & Notes Tab */}
-        {currentTab === 'brain' && (
-          <BrainView
-            onOpenQuickCapture={() => handleOpenQuickCapture('note')}
-            selectedNoteId={selectedNoteId}
-            onSelectNote={setSelectedNoteId}
-            onOpenWork={(workId) => {
-              setSelectedWorkId(workId);
-              setCurrentTab('works');
-            }}
-          />
-        )}
+          {/* 6. Second Brain & Notes Tab */}
+          {currentTab === 'brain' && (
+            <BrainView
+              onOpenQuickCapture={() => handleOpenQuickCapture('note')}
+              selectedNoteId={selectedNoteId}
+              onSelectNote={setSelectedNoteId}
+              onOpenWork={(workId) => {
+                setSelectedWorkId(workId);
+                setCurrentTab('works');
+              }}
+            />
+          )}
+        </Suspense>
       </ErrorBoundary>
 
       {/* Global Modals (Rendered into document.body via createPortal for 100% full-screen backdrop coverage) */}
@@ -172,16 +185,22 @@ function MainApp() {
         onClose={() => setQuickCaptureConfig((prev) => ({ ...prev, isOpen: false }))}
       />
 
-      <CommandPalette
-        isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-        onNavigate={handleNavigateFromSearch}
-      />
+      <Suspense fallback={null}>
+        {isSearchOpen && (
+          <CommandPalette
+            isOpen={isSearchOpen}
+            onClose={() => setIsSearchOpen(false)}
+            onNavigate={handleNavigateFromSearch}
+          />
+        )}
 
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-      />
+        {isSettingsOpen && (
+          <SettingsModal
+            isOpen={isSettingsOpen}
+            onClose={() => setIsSettingsOpen(false)}
+          />
+        )}
+      </Suspense>
     </AppShell>
   );
 }
