@@ -71,7 +71,7 @@ created: "${new Date(source.createdAt).toISOString().split('T')[0]}"
 - **Autores**: ${authorsStr || 'Dato no verificado'}
 - **Año**: ${source.year || 's.f.'}
 - **Publicación**: ${source.publication || 'Dato no verificado'}
-- **DOI**: [${source.doi || 'Sin DOI'}](https://doi.org/${source.doi || ''})
+- **DOI**: ${source.doi ? `[${source.doi}](https://doi.org/${source.doi})` : 'Sin DOI registrado'}
 
 ## Resumen
 ${source.abstract || '*Sin resumen registrado.*'}
