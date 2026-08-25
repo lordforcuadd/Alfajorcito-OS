@@ -1,5 +1,5 @@
 import type { Work, Source, CitationStyle, UserProfile } from '../types';
-import { formatFullReference, formatFullReferenceHTML } from './citationEngine';
+import { formatFullReferenceHTML } from './citationEngine';
 
 function escapeHtml(str: string): string {
   if (!str) return '';
@@ -9,6 +9,17 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+export function formatLocalFloatingDateTime(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const y = date.getFullYear();
+  const m = pad(date.getMonth() + 1);
+  const d = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const mm = pad(date.getMinutes());
+  const ss = pad(date.getSeconds());
+  return `${y}${m}${d}T${hh}${mm}${ss}`;
 }
 
 export function generateGoogleDocsRichHTML(
@@ -87,15 +98,13 @@ export function generateGoogleCalendarUrl(work: Work, courseName?: string): stri
   const startDate = new Date(work.deadline);
   const endDate = new Date(work.deadline + 3600000); // 1 hour duration
 
-  const formatCalTime = (d: Date) => d.toISOString().replace(/-|:|\.\d+/g, '');
-  const dates = `${formatCalTime(startDate)}/${formatCalTime(endDate)}`;
+  const dates = `${formatLocalFloatingDateTime(startDate)}/${formatLocalFloatingDateTime(endDate)}`;
 
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}`;
 }
 
 export function generateICSFile(work: Work, courseName?: string): string {
   const d = new Date(work.deadline);
-  const formatICS = (date: Date) => date.toISOString().replace(/-|:|\.\d+/g, '');
   const uid = `alfajorcito-${work.id}@app.local`;
 
   const escapeICS = (str: string) =>
@@ -111,9 +120,9 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 BEGIN:VEVENT
 UID:${uid}
-DTSTAMP:${formatICS(new Date())}
-DTSTART:${formatICS(d)}
-DTEND:${formatICS(new Date(work.deadline + 3600000))}
+DTSTAMP:${formatLocalFloatingDateTime(new Date())}
+DTSTART:${formatLocalFloatingDateTime(d)}
+DTEND:${formatLocalFloatingDateTime(new Date(work.deadline + 3600000))}
 SUMMARY:${summary}
 DESCRIPTION:${description}
 STATUS:CONFIRMED
