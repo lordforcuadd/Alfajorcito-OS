@@ -265,8 +265,6 @@ export async function initializeDatabaseSeed(force = false) {
     }
   ];
 
-  await db.courses.bulkPut(courses);
-
   // =========================================================================
   // 2. TRABAJOS Y TESIS: HISTÓRICO Y ACTUAL (11 Trabajos)
   // =========================================================================
@@ -503,8 +501,6 @@ Se identifican esquemas nucleares de incompetencia personal ("No soy lo suficien
     }
   ];
 
-  await db.works.bulkPut(works);
-
   // =========================================================================
   // 3. FUENTES CIENTÍFICAS REALES INDEXADAS (8 Fuentes Reales)
   // =========================================================================
@@ -674,8 +670,6 @@ Se identifican esquemas nucleares de incompetencia personal ("No soy lo suficien
     }
   ];
 
-  await db.sources.bulkPut(sources);
-
   // =========================================================================
   // 4. IDEAS Y PARÁFRASIS VINCULADAS
   // =========================================================================
@@ -715,8 +709,6 @@ Se identifican esquemas nucleares de incompetencia personal ("No soy lo suficien
     }
   ];
 
-  await db.ideas.bulkPut(ideas);
-
   const paraphrases: Paraphrase[] = [
     {
       id: 'para-gross-1',
@@ -742,10 +734,74 @@ Se identifican esquemas nucleares de incompetencia personal ("No soy lo suficien
     }
   ];
 
-  await db.paraphrases.bulkPut(paraphrases);
+  // =========================================================================
+  // 5. CITAS FORMATEADAS VINCULADAS (Pipeline de Trazabilidad)
+  // =========================================================================
+  const citations: Citation[] = [
+    {
+      id: 'citation-gross-tesis',
+      sourceId: 'src-gross-2015-emotion',
+      ideaId: 'idea-gross-process-model',
+      paraphraseId: 'para-gross-1',
+      workId: 'work-proyecto-tesis-regulacion',
+      style: 'APA_7',
+      inTextNarrative: 'Gross (2015)',
+      inTextParenthetical: '(Gross, 2015, p. 5)',
+      fullReferenceFormatted: 'Gross, J. J. (2015). Emotion regulation: Current status and future prospects. Psychological Inquiry, 26(1), 1-26. https://doi.org/10.1080/1047840X.2014.940781',
+      createdAt: now - dayMs * 11,
+      updatedAt: now - dayMs * 1
+    },
+    {
+      id: 'citation-ders-tesis',
+      sourceId: 'src-gargurevich-soenens-2018-ders',
+      ideaId: 'idea-ders-peru-factors',
+      paraphraseId: 'para-ders-1',
+      workId: 'work-proyecto-tesis-regulacion',
+      style: 'APA_7',
+      inTextNarrative: 'Gargurevich y Soenens (2018)',
+      inTextParenthetical: '(Gargurevich & Soenens, 2018, p. 118)',
+      fullReferenceFormatted: 'Gargurevich, N., & Soenens, B. (2018). Psychometric properties of the Difficulties in Emotion Regulation Scale (DERS) among Peruvian university students. Revista Latinoamericana de Psicología, 50(2), 112-124. https://doi.org/10.14349/rlp.2018.v50.n2.5',
+      createdAt: now - dayMs * 9,
+      updatedAt: now - dayMs * 1
+    },
+    {
+      id: 'citation-omega-tesis',
+      sourceId: 'src-dominguez-merino-2019-omega',
+      ideaId: 'idea-omega-mcdonald-superiority',
+      workId: 'work-proyecto-tesis-regulacion',
+      style: 'APA_7',
+      inTextNarrative: 'Domínguez-Lara y Merino-Soto (2019)',
+      inTextParenthetical: '(Domínguez-Lara & Merino-Soto, 2019, p. 297)',
+      fullReferenceFormatted: 'Domínguez-Lara, S., & Merino-Soto, C. (2019). ¿Por qué es importante el coeficiente Omega en la investigación psicológica peruana? Liberabit: Revista Peruana de Psicología, 25(2), 295-302. https://doi.org/10.24265/liberabit.2019.v25n2.09',
+      createdAt: now - dayMs * 8,
+      updatedAt: now - dayMs * 1
+    },
+    {
+      id: 'citation-beck-clinica',
+      sourceId: 'src-beck-2011-cbt',
+      workId: 'work-caso-clinico-salud',
+      style: 'APA_7',
+      inTextNarrative: 'Beck (2011)',
+      inTextParenthetical: '(Beck, 2011)',
+      fullReferenceFormatted: 'Beck, J. S. (2011). Cognitive behavior therapy: Basics and beyond. Guilford Press.',
+      createdAt: now - dayMs * 14,
+      updatedAt: now - dayMs * 1
+    },
+    {
+      id: 'citation-barlow-clinica',
+      sourceId: 'src-barlow-2018-unified',
+      workId: 'work-caso-clinico-salud',
+      style: 'APA_7',
+      inTextNarrative: 'Barlow y Sauer-Zavala (2018)',
+      inTextParenthetical: '(Barlow & Sauer-Zavala, 2018)',
+      fullReferenceFormatted: 'Barlow, D. H., & Sauer-Zavala, S. (2018). Unified Protocol for Transdiagnostic Treatment of Emotional Disorders: Therapist Guide. Oxford University Press. https://doi.org/10.1093/med-psych/9780190685973.001.0001',
+      createdAt: now - dayMs * 13,
+      updatedAt: now - dayMs * 1
+    }
+  ];
 
   // =========================================================================
-  // 5. CONCEPTOS PSICOLÓGICOS DEL GRAFO (12 Conceptos Interconectados)
+  // 6. CONCEPTOS PSICOLÓGICOS DEL GRAFO (12 Conceptos Interconectados)
   // =========================================================================
   const concepts: Concept[] = [
     { id: 'concept-regulacion-emocional', name: 'Regulación Emocional (Modelo de Gross)', description: 'Modulación consciente e inconsciente de la intensidad, duración y expresión de las respuestas afectivas.', color: '#D98880', createdAt: now - dayMs * 20, updatedAt: now - dayMs * 1 },
@@ -762,10 +818,8 @@ Se identifican esquemas nucleares de incompetencia personal ("No soy lo suficien
     { id: 'concept-terapia-grupal', name: 'Dinámica de Grupos y Psicoterapia Vivencial', description: 'Intervenciones interpersonales grupales basadas en aprendizaje vicario y cohesión afectiva.', color: '#80CBC4', createdAt: now - dayMs * 20, updatedAt: now - dayMs * 1 }
   ];
 
-  await db.concepts.bulkPut(concepts);
-
   // =========================================================================
-  // 6. NOTAS DENSAS DEL SEGUNDO CEREBRO (PARA + WIKI-LINKS) (12 Notas Ricas)
+  // 7. NOTAS DENSAS DEL SEGUNDO CEREBRO (PARA + WIKI-LINKS) (12 Notas Ricas)
   // =========================================================================
   const notes: Note[] = [
     // 1. Tesis - Regulación Emocional
@@ -1077,10 +1131,8 @@ Conectado a: [[Terapia de Aceptación y Compromiso (ACT)]].`,
     }
   ];
 
-  await db.notes.bulkPut(notes);
-
   // =========================================================================
-  // 7. TAREAS ACADÉMICAS VINCULADAS (Históricas y Actuales)
+  // 8. TAREAS ACADÉMICAS VINCULADAS (Históricas y Actuales)
   // =========================================================================
   const tasks: Task[] = [
     // Tareas Urgentes / Activas (8vo Ciclo)
@@ -1209,10 +1261,8 @@ Conectado a: [[Terapia de Aceptación y Compromiso (ACT)]].`,
     }
   ];
 
-  await db.tasks.bulkPut(tasks);
-
   // =========================================================================
-  // 8. CONSULTAS AL DOCENTE (INQUIRIES)
+  // 9. CONSULTAS AL DOCENTE (INQUIRIES)
   // =========================================================================
   const inquiries: InquiryToTeacher[] = [
     {
@@ -1247,15 +1297,41 @@ Conectado a: [[Terapia de Aceptación y Compromiso (ACT)]].`,
     }
   ];
 
-  await db.inquiries.bulkPut(inquiries);
-
   // =========================================================================
-  // 9. CONFIGURACIÓN Y CONFIRMACIÓN DE INICIALIZACIÓN
+  // 10. EJECUCIÓN ATÓMICA TRANSACCIONAL EN BASE DE DATOS
   // =========================================================================
-  await db.settings.bulkPut([
-    defaultUserProfile,
-    defaultAISettings,
-    defaultObsidianSettings,
-    { key: 'has_initialized', value: true, updatedAt: now }
-  ]);
+  await db.transaction(
+    'rw',
+    [
+      db.courses,
+      db.works,
+      db.sources,
+      db.ideas,
+      db.paraphrases,
+      db.citations,
+      db.concepts,
+      db.notes,
+      db.tasks,
+      db.inquiries,
+      db.settings
+    ],
+    async () => {
+      await db.courses.bulkPut(courses);
+      await db.works.bulkPut(works);
+      await db.sources.bulkPut(sources);
+      await db.ideas.bulkPut(ideas);
+      await db.paraphrases.bulkPut(paraphrases);
+      await db.citations.bulkPut(citations);
+      await db.concepts.bulkPut(concepts);
+      await db.notes.bulkPut(notes);
+      await db.tasks.bulkPut(tasks);
+      await db.inquiries.bulkPut(inquiries);
+      await db.settings.bulkPut([
+        defaultUserProfile,
+        defaultAISettings,
+        defaultObsidianSettings,
+        { key: 'has_initialized', value: true, updatedAt: now }
+      ]);
+    }
+  );
 }
