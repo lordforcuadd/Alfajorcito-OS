@@ -277,16 +277,6 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
           );
         }
 
-        // Standalone bullet with text directly following or indented
-        if (line.startsWith('- ') || line.startsWith('* ') || line.startsWith('• ')) {
-          return (
-            <div key={lineIdx} className="flex items-start gap-2 pl-1.5 my-0.5">
-              <span className="text-[#D98880] font-bold text-xs shrink-0 select-none">•</span>
-              <div className="flex-1 min-w-0">{renderInlineText(line.slice(2), `li-${lineIdx}`)}</div>
-            </div>
-          );
-        }
-
         // Regular Paragraph
         return (
           <p key={lineIdx} className="leading-relaxed">

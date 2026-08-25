@@ -83,4 +83,49 @@ describe('Interactive Smoke & Integration Suite', () => {
     const slug = sanitizeSlug('¿Evaluación Psicométrica, Ansiedad & Depresión en Jóvenes (USMP)?');
     expect(slug).toBe('evaluacion-psicometrica-ansiedad-depresion-en-jovenes-usmp');
   });
+
+  it('correctly maps Roman numeral cycles without substring collision (IX != X, IV != V)', () => {
+    const parseCycle = (cycleStr: string) => {
+      const s = cycleStr.toUpperCase();
+      if (/\bIX\b/.test(s) || s.includes('IX') || /\b9\b|9NO|NOVENO/i.test(s)) return 9;
+      if (/\bX\b/.test(s) || s.includes('X') || /\b10\b|10MO|DECIMO|DÉCIMO/i.test(s)) return 10;
+      if (/\bVIII\b/.test(s) || s.includes('VIII') || /\b8\b|8VO|OCTAVO/i.test(s)) return 8;
+      if (/\bVII\b/.test(s) || s.includes('VII') || /\b7\b|7MO|SEPTIMO|SÉPTIMO/i.test(s)) return 7;
+      if (/\bVI\b/.test(s) || s.includes('VI') || /\b6\b|6TO|SEXTO/i.test(s)) return 6;
+      if (/\bIV\b/.test(s) || s.includes('IV') || /\b4\b|4TO|CUARTO/i.test(s)) return 4;
+      if (/\bV\b/.test(s) || s.includes('V') || /\b5\b|5TO|QUINTO/i.test(s)) return 5;
+      if (/\bIII\b/.test(s) || s.includes('III') || /\b3\b|3RO|TERCERO/i.test(s)) return 3;
+      if (/\bII\b/.test(s) || s.includes('II') || /\b2\b|2DO|SEGUNDO/i.test(s)) return 2;
+      if (/\bI\b/.test(s) || s.includes('I') || /\b1\b|1RO|PRIMER/i.test(s)) return 1;
+      return 8;
+    };
+
+    expect(parseCycle('IX Ciclo')).toBe(9);
+    expect(parseCycle('X Ciclo')).toBe(10);
+    expect(parseCycle('IV Ciclo')).toBe(4);
+    expect(parseCycle('V Ciclo')).toBe(5);
+    expect(parseCycle('VIII Ciclo')).toBe(8);
+    expect(parseCycle('7mo Ciclo')).toBe(7);
+  });
+
+  it('guarantees overdue tasks are never duplicated in todayTasks and overdueTasks', () => {
+    const fixedNow = 1756000000000;
+    const oneDayMs = 86400000;
+
+    const sampleTaskList = [
+      { id: 't1', title: 'Tarea Vencida', isCompleted: false, dueDate: fixedNow - 3600000 },
+      { id: 't2', title: 'Tarea Para Hoy', isCompleted: false, dueDate: fixedNow + 3600000 },
+      { id: 't3', title: 'Tarea Sin Fecha', isCompleted: false, dueDate: undefined },
+      { id: 't4', title: 'Tarea Futura', isCompleted: false, dueDate: fixedNow + oneDayMs * 5 }
+    ];
+
+    const todayTasks = sampleTaskList.filter((t) => !t.isCompleted && (!t.dueDate || (t.dueDate >= fixedNow && t.dueDate <= fixedNow + oneDayMs)));
+    const overdueTasks = sampleTaskList.filter((t) => !t.isCompleted && t.dueDate && t.dueDate < fixedNow);
+
+    expect(todayTasks.map((t) => t.id)).toEqual(['t2', 't3']);
+    expect(overdueTasks.map((t) => t.id)).toEqual(['t1']);
+    // No intersection between today and overdue
+    const overlap = todayTasks.some((t) => overdueTasks.some((ot) => ot.id === t.id));
+    expect(overlap).toBe(false);
+  });
 });

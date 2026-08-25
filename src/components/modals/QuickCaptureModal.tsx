@@ -24,7 +24,7 @@ import { Input, Select, TextArea } from '../common/Input';
 import { db } from '../../db';
 import { resolveDOI, extractDOI } from '../../services/academicApis';
 import { auditSourceMetadata } from '../../utils/antiHallucination';
-import { formulateQuestionForTeacher, analyzeInstructionsOffline } from '../../services/aiService';
+import { formulateQuestionForTeacher, analyzeInstructionsWithAI } from '../../services/aiService';
 import { useToast } from '../common/Toast';
 import type { CitationStyle, WorkType, WorkStatus, ParaCategory, TaskPriority, SourceType, Author, UserProfile, Source } from '../../types';
 
@@ -251,7 +251,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
     try {
       const now = Date.now();
       const deadlineMs = workDeadline ? new Date(workDeadline).getTime() : now + 86400000 * 7;
-      const analysis = analyzeInstructionsOffline(workInstructions);
+      const analysis = await analyzeInstructionsWithAI(workInstructions.trim());
 
       const newWorkId = `work-${crypto.randomUUID()}`;
       await db.works.add({

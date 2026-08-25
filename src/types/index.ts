@@ -259,8 +259,10 @@ export interface SettingRecord {
   updatedAt: number;
 }
 
+export type AIProvider = 'gemini' | 'openai' | 'openrouter' | 'ollama' | 'offline_heuristics';
+
 export interface AISettings {
-  provider: 'gemini' | 'openai' | 'openrouter' | 'ollama' | 'offline_heuristics';
+  provider: AIProvider;
   apiKey?: string;
   modelName?: string;
   ollamaEndpoint?: string;

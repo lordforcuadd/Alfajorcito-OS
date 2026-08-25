@@ -61,8 +61,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const coursesMap = React.useMemo(() => new Map(courses.map((c) => [c.id, c])), [courses]);
 
-  // 1. ¿Qué debo hacer hoy? (Tasks due today or uncompleted assignment checklist)
-  const todayTasks = tasks.filter((t) => !t.isCompleted && (!t.dueDate || t.dueDate <= now + oneDayMs));
+  // 1. ¿Qué debo hacer hoy? (Tasks due today or uncompleted assignment checklist, excluding overdue)
+  const todayTasks = tasks.filter((t) => !t.isCompleted && (!t.dueDate || (t.dueDate >= now && t.dueDate <= now + oneDayMs)));
 
   // 2. ¿Qué se acerca? (Works or deadlines in next 14 days)
   const upcomingWorks = works

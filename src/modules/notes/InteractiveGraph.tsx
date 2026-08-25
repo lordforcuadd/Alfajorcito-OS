@@ -329,13 +329,13 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
           const targetName = match[1]?.trim().toLowerCase();
           if (!targetName) continue;
 
-          // Search matching node by title or label
+          // Search matching node by title or label with minimum length guard
           const matchedTarget = newNodes.find(
             (node) =>
               node.id !== n.id &&
               (node.label.toLowerCase() === targetName ||
-                node.label.toLowerCase().includes(targetName) ||
-                targetName.includes(node.label.toLowerCase()))
+                (targetName.length >= 3 && node.label.toLowerCase().includes(targetName)) ||
+                (node.label.length >= 3 && targetName.includes(node.label.toLowerCase())))
           );
 
           if (matchedTarget) {
@@ -499,30 +499,37 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
         const nodes = nodesRef.current;
         const edges = edgesRef.current;
 
-        // A. Repulsion (Coulomb with minimum distance clamp)
+        // A. Repulsion (Optimized Spatial Bounding-Box + Coulomb clamp)
+        const MAX_REPULSION_DIST = 200;
+        const MAX_REPULSION_DIST_SQ = MAX_REPULSION_DIST * MAX_REPULSION_DIST;
+
         for (let i = 0; i < nodes.length; i++) {
+          const a = nodes[i];
           for (let j = i + 1; j < nodes.length; j++) {
-            const a = nodes[i];
             const b = nodes[j];
             const dx = b.x - a.x;
+            if (Math.abs(dx) > MAX_REPULSION_DIST) continue;
             const dy = b.y - a.y;
-            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            if (Math.abs(dy) > MAX_REPULSION_DIST) continue;
+
+            const distSq = dx * dx + dy * dy;
+            if (distSq > MAX_REPULSION_DIST_SQ) continue;
+
+            const dist = Math.sqrt(distSq) || 1;
             const safeDist = Math.max(dist, 14);
 
-            if (safeDist < 200) {
-              const force = ((200 - safeDist) / 200) * alpha;
-              const repStrength = (a.radius + b.radius) * 1.5 * force;
-              const fx = (dx / safeDist) * repStrength;
-              const fy = (dy / safeDist) * repStrength;
+            const force = ((MAX_REPULSION_DIST - safeDist) / MAX_REPULSION_DIST) * alpha;
+            const repStrength = (a.radius + b.radius) * 1.5 * force;
+            const fx = (dx / safeDist) * repStrength;
+            const fy = (dy / safeDist) * repStrength;
 
-              if (!a.isDragging) {
-                a.vx -= fx * 0.09;
-                a.vy -= fy * 0.09;
-              }
-              if (!b.isDragging) {
-                b.vx += fx * 0.09;
-                b.vy += fy * 0.09;
-              }
+            if (!a.isDragging) {
+              a.vx -= fx * 0.09;
+              a.vy -= fy * 0.09;
+            }
+            if (!b.isDragging) {
+              b.vx += fx * 0.09;
+              b.vy += fy * 0.09;
             }
           }
         }

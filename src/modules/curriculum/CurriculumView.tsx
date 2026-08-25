@@ -50,17 +50,18 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
 
   // Calculate active cycle number dynamically from userProfile
   const userCycleNum = React.useMemo(() => {
-    const cycleStr = String(userProfile?.currentCycle || '');
-    if (cycleStr.includes('X') || cycleStr.includes('10')) return 10;
-    if (cycleStr.includes('IX') || cycleStr.includes('9')) return 9;
-    if (cycleStr.includes('VIII') || cycleStr.includes('8')) return 8;
-    if (cycleStr.includes('VII') || cycleStr.includes('7')) return 7;
-    if (cycleStr.includes('VI') || cycleStr.includes('6')) return 6;
-    if (cycleStr.includes('V') || cycleStr.includes('5')) return 5;
-    if (cycleStr.includes('IV') || cycleStr.includes('4')) return 4;
-    if (cycleStr.includes('III') || cycleStr.includes('3')) return 3;
-    if (cycleStr.includes('II') || cycleStr.includes('2')) return 2;
-    if (cycleStr.includes('I') || cycleStr.includes('1')) return 1;
+    const cycleStr = String(userProfile?.currentCycle || '').toUpperCase();
+    // 1. Check Roman numerals in strict disambiguation order (IX before X, IV before V, etc.)
+    if (/\bIX\b/.test(cycleStr) || cycleStr.includes('IX') || /\b9\b|9NO|NOVENO/i.test(cycleStr)) return 9;
+    if (/\bX\b/.test(cycleStr) || cycleStr.includes('X') || /\b10\b|10MO|DECIMO|DÉCIMO/i.test(cycleStr)) return 10;
+    if (/\bVIII\b/.test(cycleStr) || cycleStr.includes('VIII') || /\b8\b|8VO|OCTAVO/i.test(cycleStr)) return 8;
+    if (/\bVII\b/.test(cycleStr) || cycleStr.includes('VII') || /\b7\b|7MO|SEPTIMO|SÉPTIMO/i.test(cycleStr)) return 7;
+    if (/\bVI\b/.test(cycleStr) || cycleStr.includes('VI') || /\b6\b|6TO|SEXTO/i.test(cycleStr)) return 6;
+    if (/\bIV\b/.test(cycleStr) || cycleStr.includes('IV') || /\b4\b|4TO|CUARTO/i.test(cycleStr)) return 4;
+    if (/\bV\b/.test(cycleStr) || cycleStr.includes('V') || /\b5\b|5TO|QUINTO/i.test(cycleStr)) return 5;
+    if (/\bIII\b/.test(cycleStr) || cycleStr.includes('III') || /\b3\b|3RO|TERCERO/i.test(cycleStr)) return 3;
+    if (/\bII\b/.test(cycleStr) || cycleStr.includes('II') || /\b2\b|2DO|SEGUNDO/i.test(cycleStr)) return 2;
+    if (/\bI\b/.test(cycleStr) || cycleStr.includes('I') || /\b1\b|1RO|PRIMER/i.test(cycleStr)) return 1;
     return 8;
   }, [userProfile?.currentCycle]);
 

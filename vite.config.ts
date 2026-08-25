@@ -64,6 +64,26 @@ export default defineConfig({
               return 'vendor-utils';
             }
           }
+
+          // Modular Feature Chunks
+          if (id.includes('src/services/aiService') || id.includes('src\\services\\aiService')) {
+            return 'feature-ai';
+          }
+          if (id.includes('src/modules/notes/InteractiveGraph') || id.includes('src\\modules\\notes\\InteractiveGraph') || id.includes('src/modules/notes/GraphAIChatModal') || id.includes('src\\modules\\notes\\GraphAIChatModal')) {
+            return 'feature-graph';
+          }
+          if (
+            id.includes('src/modules/research') ||
+            id.includes('src\\modules\\research') ||
+            id.includes('src/modules/citations') ||
+            id.includes('src\\modules\\citations') ||
+            id.includes('src/services/academicApis') ||
+            id.includes('src\\services\\academicApis') ||
+            id.includes('src/utils/citationEngine') ||
+            id.includes('src\\utils\\citationEngine')
+          ) {
+            return 'feature-academic-core';
+          }
         }
       }
     }

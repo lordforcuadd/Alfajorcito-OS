@@ -393,13 +393,11 @@ export const WorksView: React.FC<WorksViewProps> = ({
                         className="text-[11px] font-bold bg-[#FAF8F5] border border-[#EBE5DF] rounded-xl px-2 py-1 text-[#2B2D42] focus:outline-none focus:border-[#E8A598] cursor-pointer shadow-2xs hover:bg-white transition-colors"
                         title="Cambiar estado del trabajo"
                       >
-                        <option value="PLANIFICACION">Planificación</option>
-                        <option value="INVESTIGACION">Investigando</option>
-                        <option value="REDACTANDO">Redactando</option>
-                        <option value="EN_REVISION">En Revisión</option>
-                        <option value="CORRECCION">En Corrección</option>
-                        <option value="ENTREGADO">Entregado 🎉</option>
-                        <option value="ARCHIVADO">Archivado</option>
+                        {Object.entries(WORK_STATUS_META).map(([statusKey, meta]) => (
+                          <option key={statusKey} value={statusKey}>
+                            {meta.label}{statusKey === 'ENTREGADO' ? ' 🎉' : ''}
+                          </option>
+                        ))}
                       </select>
 
                       <button

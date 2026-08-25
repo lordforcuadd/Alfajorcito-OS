@@ -158,8 +158,10 @@ export const AppShell: React.FC<AppShellProps> = ({
     };
   }, [profile.name, showPusheenBubble]);
 
-  // 3. Live Typing Detector across the entire application
+  // 3. Live Typing Detector across the entire application (Desktop/Tablet only)
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) return;
+
     let typingTimeout: NodeJS.Timeout;
 
     const handleUserTyping = (e: Event) => {
@@ -190,12 +192,15 @@ export const AppShell: React.FC<AppShellProps> = ({
     };
   }, [isCelebratingUntil]);
 
-  // 4. Inactivity / Idle Sleep Detector (2.5 minutes of absolute no activity)
+  // 4. Inactivity / Idle Sleep Detector (Desktop/Tablet only, respects celebrations)
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) return;
+
     let timer: NodeJS.Timeout;
     const resetIdleTimer = () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
+        if (Date.now() < isCelebratingUntil) return;
         setAnimIndex(4); // sleep
         showPusheenBubble('¡Zzz... en modo descanso! Tócame para despertar 🐾', 4000);
       }, 150000); // 2.5 minutes
@@ -209,7 +214,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       clearTimeout(timer);
       events.forEach((ev) => window.removeEventListener(ev, resetIdleTimer));
     };
-  }, [showPusheenBubble]);
+  }, [showPusheenBubble, isCelebratingUntil]);
 
   const currentAnim = pusheenAnimations[animIndex];
 
@@ -255,13 +260,13 @@ export const AppShell: React.FC<AppShellProps> = ({
     };
   }, [onOpenSearch, onOpenQuickCapture]);
 
-  const navItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'dashboard', label: 'Inicio', icon: <LayoutDashboard className="w-4.5 h-4.5" /> },
-    { id: 'works', label: 'Trabajos & Tesis', icon: <GraduationCap className="w-4.5 h-4.5" /> },
-    { id: 'curriculum', label: profile.institution?.includes('USMP') ? 'Malla USMP' : 'Malla Curricular', icon: <Award className="w-4.5 h-4.5" /> },
-    { id: 'research', label: 'Fuentes & Papers', icon: <BookOpen className="w-4.5 h-4.5" /> },
-    { id: 'brain', label: 'Segundo Cerebro', icon: <Brain className="w-4.5 h-4.5" /> },
-    { id: 'pipeline', label: 'Citas & Referencias', icon: <GitFork className="w-4.5 h-4.5" /> }
+  const navItems = [
+    { id: 'dashboard' as NavTab, label: 'Inicio', mobileLabel: 'Inicio', icon: LayoutDashboard },
+    { id: 'works' as NavTab, label: 'Trabajos & Tesis', mobileLabel: 'Trabajos', icon: GraduationCap },
+    { id: 'curriculum' as NavTab, label: profile.institution?.includes('USMP') ? 'Malla USMP' : 'Malla Curricular', mobileLabel: 'Malla', icon: Award },
+    { id: 'research' as NavTab, label: 'Fuentes & Papers', mobileLabel: 'Fuentes', icon: BookOpen },
+    { id: 'pipeline' as NavTab, label: 'Citas & Referencias', mobileLabel: 'Citas', icon: GitFork },
+    { id: 'brain' as NavTab, label: 'Segundo Cerebro', mobileLabel: 'Cerebro', icon: Brain }
   ];
 
   return (
@@ -312,7 +317,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className={`transition-transform duration-200 ${isActive ? 'text-[#8C3A32] scale-110' : 'text-[#8D99AE] group-hover:text-[#2B2D42] group-hover:scale-105'}`}>
-                      {item.icon}
+                      <item.icon className="w-4.5 h-4.5" />
                     </span>
                     <span className="truncate">{item.label}</span>
                   </div>
@@ -441,83 +446,55 @@ export const AppShell: React.FC<AppShellProps> = ({
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation Bar (Fixed bottom for thumb accessibility) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-[#EBE5DF] px-1 py-1 flex items-center justify-between pb-safe shadow-lg">
-        <button
-          onClick={() => onTabChange('dashboard')}
-          className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
-            currentTab === 'dashboard' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
-          }`}
-          title="Inicio"
-        >
-          <LayoutDashboard className="w-4.5 h-4.5" />
-          <span className="text-[9px] truncate">Inicio</span>
-        </button>
+      {/* Mobile Bottom Navigation Bar (Fixed bottom with balanced spacing and touch targets) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-[#EBE5DF] px-1 py-1 shadow-lg">
+        <div className="flex items-center justify-between gap-0.5 max-w-md mx-auto">
+          {navItems.slice(0, 3).map((item) => {
+            const Icon = item.icon;
+            const isActive = currentTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onTabChange(item.id)}
+                className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1 px-0.5 rounded-xl transition-all cursor-pointer ${
+                  isActive ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
+                }`}
+                title={item.label}
+              >
+                <Icon className="w-4.5 h-4.5 shrink-0" />
+                <span className="text-[9px] truncate max-w-full leading-tight">{item.mobileLabel}</span>
+              </button>
+            );
+          })}
 
-        <button
-          onClick={() => onTabChange('works')}
-          className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
-            currentTab === 'works' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
-          }`}
-          title="Trabajos"
-        >
-          <GraduationCap className="w-4.5 h-4.5" />
-          <span className="text-[9px] truncate">Trabajos</span>
-        </button>
+          {/* Central Floating Quick Capture Button */}
+          <button
+            onClick={onOpenQuickCapture}
+            className="relative -top-2.5 mx-0.5 w-10 h-10 rounded-2xl bg-[#E8A598] hover:bg-[#D98880] text-[#2B2D42] shadow-md flex items-center justify-center border-2 border-white active:scale-95 transition-all cursor-pointer shrink-0"
+            aria-label="Captura rápida"
+            title="Captura Rápida"
+          >
+            <Plus className="w-5 h-5 stroke-[2.5]" />
+          </button>
 
-        <button
-          onClick={() => onTabChange('curriculum')}
-          className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
-            currentTab === 'curriculum' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
-          }`}
-          title="Malla"
-        >
-          <Award className="w-4.5 h-4.5" />
-          <span className="text-[9px] truncate">Malla</span>
-        </button>
-
-        {/* Central Floating Quick Capture Button */}
-        <button
-          onClick={onOpenQuickCapture}
-          className="relative -top-2.5 mx-0.5 w-10 h-10 rounded-2xl bg-[#E8A598] hover:bg-[#D98880] text-[#2B2D42] shadow-md flex items-center justify-center border-2 border-white active:scale-95 transition-all cursor-pointer shrink-0"
-          aria-label="Captura rápida"
-          title="Captura Rápida"
-        >
-          <Plus className="w-5 h-5 stroke-[2.5]" />
-        </button>
-
-        <button
-          onClick={() => onTabChange('research')}
-          className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
-            currentTab === 'research' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
-          }`}
-          title="Fuentes"
-        >
-          <BookOpen className="w-4.5 h-4.5" />
-          <span className="text-[9px] truncate">Fuentes</span>
-        </button>
-
-        <button
-          onClick={() => onTabChange('pipeline')}
-          className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
-            currentTab === 'pipeline' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
-          }`}
-          title="Citas & Referencias"
-        >
-          <GitFork className="w-4.5 h-4.5" />
-          <span className="text-[9px] truncate">Citas</span>
-        </button>
-
-        <button
-          onClick={() => onTabChange('brain')}
-          className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 p-1 rounded-xl transition-all cursor-pointer ${
-            currentTab === 'brain' ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
-          }`}
-          title="Cerebro"
-        >
-          <Brain className="w-4.5 h-4.5" />
-          <span className="text-[9px] truncate">Cerebro</span>
-        </button>
+          {navItems.slice(3, 6).map((item) => {
+            const Icon = item.icon;
+            const isActive = currentTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onTabChange(item.id)}
+                className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1 px-0.5 rounded-xl transition-all cursor-pointer ${
+                  isActive ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
+                }`}
+                title={item.label}
+              >
+                <Icon className="w-4.5 h-4.5 shrink-0" />
+                <span className="text-[9px] truncate max-w-full leading-tight">{item.mobileLabel}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

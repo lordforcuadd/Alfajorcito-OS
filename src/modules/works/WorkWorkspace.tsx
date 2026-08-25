@@ -251,13 +251,11 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                   className="bg-white text-[#2B2D42] text-xs font-bold border border-[#EBE5DF] rounded-lg px-2.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#E8A598] cursor-pointer shadow-2xs hover:border-[#E8A598]"
                   title="Cambiar estado del trabajo"
                 >
-                  <option value="PLANIFICACION">Planificación</option>
-                  <option value="INVESTIGACION">Investigando</option>
-                  <option value="REDACTANDO">Redactando</option>
-                  <option value="EN_REVISION">En Revisión</option>
-                  <option value="CORRECCION">En Corrección</option>
-                  <option value="ENTREGADO">Entregado 🎉</option>
-                  <option value="ARCHIVADO">Archivado</option>
+                  {Object.entries(WORK_STATUS_META).map(([statusKey, meta]) => (
+                    <option key={statusKey} value={statusKey}>
+                      {meta.label}{statusKey === 'ENTREGADO' ? ' 🎉' : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
               <h2 className="text-base sm:text-xl font-extrabold text-[#2B2D42] tracking-tight leading-snug">

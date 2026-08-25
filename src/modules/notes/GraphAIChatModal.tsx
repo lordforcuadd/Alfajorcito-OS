@@ -70,6 +70,14 @@ export const GraphAIChatModal: React.FC<GraphAIChatModalProps> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [isOpen]);
 
   const activeNotes = notes.filter((n) => n.paraCategory !== 'ARCHIVE');
   const activeWorks = works.filter((w) => !w.isArchived);
@@ -135,7 +143,8 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
       timestamp: Date.now()
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const updatedHistory = [...messages, userMsg];
+    setMessages(updatedHistory);
     setInputText('');
     setIsLoading(true);
 
@@ -147,8 +156,10 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
         works: activeWorks,
         sources,
         userProfile,
-        history: messages.map((m) => ({ sender: m.sender, text: m.text }))
+        history: updatedHistory.map((m) => ({ sender: m.sender, text: m.text }))
       });
+
+      if (!isMountedRef.current) return;
 
       const aiMsg: ChatMessage = {
         id: `ai-${Date.now()}`,
@@ -160,6 +171,8 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
 
       setMessages((prev) => [...prev, aiMsg]);
     } catch {
+      if (!isMountedRef.current) return;
+
       const errorMsg: ChatMessage = {
         id: `error-${Date.now()}`,
         sender: 'ai',
@@ -168,8 +181,10 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
-      setIsLoading(false);
-      setTimeout(() => inputRef.current?.focus(), 100);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+        setTimeout(() => inputRef.current?.focus(), 100);
+      }
     }
   };
 

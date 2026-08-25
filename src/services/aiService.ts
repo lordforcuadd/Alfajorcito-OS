@@ -1,5 +1,5 @@
 import { db } from '../db';
-import type { AISettings, InstructionAnalysis, CitationStyle, UserProfile, Note, Concept, Course, Work, Source } from '../types';
+import type { AISettings, AIProvider, InstructionAnalysis, CitationStyle, UserProfile, Note, Concept, Course, Work, Source } from '../types';
 
 export interface AIResponse<T> {
   success: boolean;
@@ -71,11 +71,10 @@ export async function testAIConnection(settings: AISettings): Promise<{ success:
     const testPrompt = `Responde brevemente en una sola frase confirmando la conexión para Alfajorcito OS.`;
     const response = await callLLM(testPrompt, settings);
     if (response) {
-      const modelLabel = settings.provider === 'gemini' ? getActiveGeminiModelUsed() : (settings.modelName || 'gpt-4o-mini');
       return {
         success: true,
-        message: `¡Conexión exitosa con ${settings.provider.toUpperCase()} (${modelLabel})! Respuesta: "${response.slice(0, 100).trim()}"`,
-        modelUsed: modelLabel
+        message: `¡Conexión exitosa con ${settings.provider.toUpperCase()} (${response.modelUsed})! Respuesta: "${response.text.slice(0, 100).trim()}"`,
+        modelUsed: response.modelUsed
       };
     }
     return {
@@ -122,8 +121,8 @@ Extrae y estructura la información en formato JSON EXACTO con las siguientes cl
 Devuelve ÚNICAMENTE el objeto JSON sin bloques de texto adicionales.`;
 
       const res = await callLLM(prompt, effectiveSettings);
-      if (res) {
-        const jsonMatch = res.match(/\{[\s\S]*\}/);
+      if (res && res.text) {
+        const jsonMatch = res.text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
           return {
@@ -299,9 +298,9 @@ REGLAS ESTRICTAS DE RESPUESTA:
 5. Devuelve ÚNICAMENTE el texto del mensaje redactado, sin introducciones ni comentarios adicionales.`;
 
       const res = await callLLM(prompt, effectiveSettings);
-      if (res) {
+      if (res && res.text) {
         // Defensive cleanup: remove any bracketed placeholders if the model still generated them
-        const cleaned = res
+        const cleaned = res.text
           .replace(/\[\s*Nombre del estudiante\s*\]/gi, studentName)
           .replace(/\[\s*Código de estudiante\s*\]/gi, '')
           .replace(/\[\s*Código\s*\]/gi, '')
@@ -366,15 +365,15 @@ Devuelve ÚNICAMENTE un objeto JSON válido con este formato exacto:
 (Si detectas plagio potencial, solapamiento excesivo o distorsión del sentido, usa "status": "NEEDS_ADJUSTMENT" con sugerencias específicas de mejora).`;
 
       const res = await callLLM(prompt, effectiveSettings);
-      if (res) {
-        const jsonMatch = res.match(/\{[\s\S]*\}/);
+      if (res && res.text) {
+        const jsonMatch = res.text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
           return {
             status: parsed.status === 'CONFIRMED_FAITHFUL' ? 'CONFIRMED_FAITHFUL' : 'NEEDS_ADJUSTMENT',
             feedback: parsed.feedback || 'Evaluación completada con inteligencia artificial.',
-            providerUsed: effectiveSettings.provider,
-            modelUsed: effectiveSettings.modelName || (effectiveSettings.provider === 'gemini' ? 'gemini-1.5-flash' : 'gpt-4o-mini')
+            providerUsed: res.providerUsed,
+            modelUsed: res.modelUsed
           };
         }
       }
@@ -471,12 +470,10 @@ async function discoverSupportedGeminiModels(key: string): Promise<string[]> {
 
 async function callGemini(
   prompt: string,
-  apiKey: string,
-  modelName?: string,
-  temperature: number = 0.2
-): Promise<string | null> {
-  const key = apiKey.trim();
-  let requestedModel = (modelName || '').trim().replace(/^models\//, '');
+  key: string,
+  requestedModel?: string,
+  temperature = 0.2
+): Promise<{ text: string; modelUsed: string } | null> {
   const cacheKey = `${key}:${requestedModel}`;
 
   // 1. Try cached verified model first (instant, 0 errors!)
@@ -498,8 +495,10 @@ async function callGemini(
       });
       if (res.ok) {
         const data = await res.json();
-        activeGeminiModelUsed = `${cachedModel} (v1beta)`;
-        return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+        return {
+          text: data.candidates?.[0]?.content?.parts?.[0]?.text || '',
+          modelUsed: `${cachedModel} (v1beta)`
+        };
       }
     } catch {
       verifiedGeminiModelCache.delete(cacheKey);
@@ -509,10 +508,11 @@ async function callGemini(
   // 2. Discover exact models available for this API Key
   const discovered = await discoverSupportedGeminiModels(key);
 
-  // 3. Build candidate list prioritizing user choice and fast flash models
+  // 3. Build candidate list
   const candidateList: string[] = [];
-  if (requestedModel && (discovered.length === 0 || discovered.includes(requestedModel))) {
-    candidateList.push(requestedModel);
+  const model = (requestedModel || '').trim().replace(/^models\//, '');
+  if (model && (discovered.length === 0 || discovered.includes(model))) {
+    candidateList.push(model);
   }
 
   const preferredOrder = [
@@ -535,23 +535,9 @@ async function callGemini(
     }
   }
 
-  // Add any remaining discovered models (excluding TTS/Image/Embedding)
-  for (const d of discovered) {
-    if (
-      !candidateList.includes(d) &&
-      !d.includes('tts') &&
-      !d.includes('image') &&
-      !d.includes('embedding') &&
-      !d.includes('clip')
-    ) {
-      candidateList.push(d);
-    }
-  }
-
-  // Fallback defaults if discovery failed
   if (candidateList.length === 0) {
     candidateList.push(
-      requestedModel || 'gemini-3.5-flash-lite',
+      model || 'gemini-3.5-flash-lite',
       'gemini-2.5-flash',
       'gemini-flash-latest',
       'gemini-1.5-flash'
@@ -580,8 +566,10 @@ async function callGemini(
       if (res.ok) {
         const data = await res.json();
         verifiedGeminiModelCache.set(cacheKey, model);
-        activeGeminiModelUsed = `${model} (v1beta)`;
-        return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+        return {
+          text: data.candidates?.[0]?.content?.parts?.[0]?.text || '',
+          modelUsed: `${model} (v1beta)`
+        };
       }
 
       const errText = await res.text();
@@ -609,20 +597,31 @@ async function callGemini(
   return null;
 }
 
+export interface LLMCallResult {
+  text: string;
+  modelUsed: string;
+  providerUsed: AIProvider;
+}
+
 // Low-level LLM caller supporting Gemini, OpenAI, OpenRouter, and Ollama
-async function callLLM(prompt: string, settings: AISettings): Promise<string | null> {
+async function callLLM(prompt: string, settings: AISettings): Promise<LLMCallResult | null> {
   const { provider, apiKey, modelName, ollamaEndpoint } = settings;
 
   let resultText: string | null = null;
+  let resolvedModel = modelName || '';
 
   if (provider === 'gemini') {
-    resultText = await callGemini(prompt, apiKey || '', modelName, settings.temperature ?? 0.2);
+    const geminiRes = await callGemini(prompt, apiKey || '', modelName, settings.temperature ?? 0.2);
+    if (geminiRes) {
+      resultText = geminiRes.text;
+      resolvedModel = geminiRes.modelUsed;
+    }
   } else if (provider === 'openai' || provider === 'openrouter') {
+    resolvedModel = modelName || (provider === 'openrouter' ? 'meta-llama/llama-3.3-70b-instruct' : 'gpt-4o-mini');
     const endpoint =
       provider === 'openrouter'
         ? 'https://openrouter.ai/api/v1/chat/completions'
         : 'https://api.openai.com/v1/chat/completions';
-    const model = modelName || (provider === 'openrouter' ? 'meta-llama/llama-3.3-70b-instruct' : 'gpt-4o-mini');
 
     const res = await fetch(endpoint, {
       method: 'POST',
@@ -631,7 +630,7 @@ async function callLLM(prompt: string, settings: AISettings): Promise<string | n
         Authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model,
+        model: resolvedModel,
         messages: [{ role: 'user', content: prompt }],
         temperature: settings.temperature ?? 0.2
       }),
@@ -644,12 +643,13 @@ async function callLLM(prompt: string, settings: AISettings): Promise<string | n
     const data = await res.json();
     resultText = data.choices?.[0]?.message?.content || null;
   } else if (provider === 'ollama') {
+    resolvedModel = modelName || 'llama3';
     const endpoint = (ollamaEndpoint || 'http://localhost:11434').replace(/\/+$/, '') + '/api/generate';
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: modelName || 'llama3',
+        model: resolvedModel,
         prompt,
         stream: false
       }),
@@ -666,9 +666,14 @@ async function callLLM(prompt: string, settings: AISettings): Promise<string | n
   if (resultText) {
     const estimated = Math.ceil((prompt.length + resultText.length) / 4);
     trackTokensUsed(estimated);
+    return {
+      text: resultText,
+      modelUsed: resolvedModel || provider,
+      providerUsed: provider
+    };
   }
 
-  return resultText;
+  return null;
 }
 
 // ─── KNOWLEDGE GRAPH AI COPILOT / CHATBOT ───
@@ -795,11 +800,10 @@ NUEVO MENSAJE DE ${studentName.toUpperCase()}:
 "${userQuery}"`;
 
       const response = await callLLM(prompt, settings);
-      if (response && response.trim()) {
-        const modelLabel = settings.provider === 'gemini' ? getActiveGeminiModelUsed() : (settings.modelName || settings.provider);
+      if (response && response.text.trim()) {
         return {
-          answer: response.trim(),
-          modelUsed: modelLabel,
+          answer: response.text.trim(),
+          modelUsed: response.modelUsed,
           matchedConcepts,
           matchedNotes,
           isOfflineHeuristic: false
