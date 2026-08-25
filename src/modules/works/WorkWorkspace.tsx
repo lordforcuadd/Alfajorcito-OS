@@ -973,6 +973,31 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                   );
                 })}
               </div>
+
+              {/* Registered Citations List */}
+              {citations.length > 0 && (
+                <div className="space-y-3 pt-4 border-t border-[#EBE5DF]">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-sm text-[#2B2D42]">Citas & Trazabilidad Registradas ({citations.length})</h4>
+                    <span className="text-[11px] font-bold text-[#8C3A32] bg-[#FDF2F0] px-2.5 py-0.5 rounded-lg border border-[#E8A598]/40">
+                      {work.citationStyle}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {citations.map((c) => (
+                      <div key={c.id} className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#EBE5DF] space-y-1.5 shadow-2xs">
+                        <div className="flex items-center justify-between gap-2 text-xs">
+                          <span className="font-bold text-[#8C3A32]">{c.inTextNarrative || c.inTextParenthetical}</span>
+                          <span className="text-[10px] font-mono bg-white px-2 py-0.5 rounded-md border border-[#EBE5DF] text-[#5A6275]">{c.style}</span>
+                        </div>
+                        <p className="text-xs text-[#2B2D42] font-serif leading-relaxed pl-3 border-l-2 border-[#E8A598]">
+                          {c.fullReferenceFormatted}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

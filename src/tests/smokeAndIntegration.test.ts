@@ -130,8 +130,90 @@ describe('Interactive Smoke & Integration Suite', () => {
   });
 
   it('guarantees complete referential integrity across 3-year seed data structures', async () => {
-    // Dynamically test initializeDatabaseSeed data structures
-    const { initializeDatabaseSeed } = await import('../db/seed');
-    expect(typeof initializeDatabaseSeed).toBe('function');
+    const { getSeedData } = await import('../db/seed');
+    const {
+      courses,
+      works,
+      sources,
+      ideas,
+      paraphrases,
+      citations,
+      concepts,
+      notes,
+      tasks,
+      inquiries
+    } = getSeedData(Date.now());
+
+    // 1. Entities non-empty
+    expect(courses.length).toBeGreaterThanOrEqual(10);
+    expect(works.length).toBeGreaterThanOrEqual(8);
+    expect(sources.length).toBeGreaterThanOrEqual(6);
+    expect(ideas.length).toBeGreaterThanOrEqual(3);
+    expect(paraphrases.length).toBeGreaterThanOrEqual(2);
+    expect(citations.length).toBeGreaterThanOrEqual(5);
+    expect(concepts.length).toBeGreaterThanOrEqual(10);
+    expect(notes.length).toBeGreaterThanOrEqual(10);
+    expect(tasks.length).toBeGreaterThanOrEqual(8);
+    expect(inquiries.length).toBeGreaterThanOrEqual(2);
+
+    const courseIds = new Set(courses.map((c) => c.id));
+    const workIds = new Set(works.map((w) => w.id));
+    const sourceIds = new Set(sources.map((s) => s.id));
+    const ideaIds = new Set(ideas.map((i) => i.id));
+    const paraphraseIds = new Set(paraphrases.map((p) => p.id));
+    const conceptIds = new Set(concepts.map((c) => c.id));
+
+    // 2. All works link to a valid course
+    for (const w of works) {
+      expect(courseIds.has(w.courseId)).toBe(true);
+    }
+
+    // 3. All sources link to valid works
+    for (const s of sources) {
+      for (const wid of s.workIds) {
+        expect(workIds.has(wid)).toBe(true);
+      }
+    }
+
+    // 4. Ideas link to valid sources and works
+    for (const idea of ideas) {
+      expect(sourceIds.has(idea.sourceId)).toBe(true);
+      if (idea.workId) expect(workIds.has(idea.workId)).toBe(true);
+    }
+
+    // 5. Paraphrases link to valid ideas and sources
+    for (const p of paraphrases) {
+      expect(ideaIds.has(p.ideaId)).toBe(true);
+      expect(sourceIds.has(p.sourceId)).toBe(true);
+      if (p.workId) expect(workIds.has(p.workId)).toBe(true);
+    }
+
+    // 6. Citations link to valid sources, works, ideas and paraphrases
+    for (const c of citations) {
+      expect(sourceIds.has(c.sourceId)).toBe(true);
+      expect(workIds.has(c.workId)).toBe(true);
+      if (c.ideaId) expect(ideaIds.has(c.ideaId)).toBe(true);
+      if (c.paraphraseId) expect(paraphraseIds.has(c.paraphraseId)).toBe(true);
+    }
+
+    // 7. Notes link to valid courses, works, sources and concepts
+    for (const n of notes) {
+      if (n.courseId) expect(courseIds.has(n.courseId)).toBe(true);
+      if (n.workId) expect(workIds.has(n.workId)).toBe(true);
+      for (const sid of n.sourceIds) expect(sourceIds.has(sid)).toBe(true);
+      for (const cid of n.conceptIds) expect(conceptIds.has(cid)).toBe(true);
+    }
+
+    // 8. Tasks link to valid works and courses
+    for (const t of tasks) {
+      if (t.workId) expect(workIds.has(t.workId)).toBe(true);
+      if (t.courseId) expect(courseIds.has(t.courseId)).toBe(true);
+    }
+
+    // 9. Inquiries link to valid works and courses
+    for (const inq of inquiries) {
+      expect(workIds.has(inq.workId)).toBe(true);
+      expect(courseIds.has(inq.courseId)).toBe(true);
+    }
   });
 });

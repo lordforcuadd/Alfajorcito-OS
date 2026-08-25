@@ -17,51 +17,8 @@ import {
 } from '../types';
 
 // Helper to seed complete, realistic 3-year academic history for USMP Psychology student
-export async function initializeDatabaseSeed(force = false) {
-  const isInitialized = await db.settings.get('has_initialized');
-  if (isInitialized && !force) {
-    return;
-  }
-
-  const now = Date.now();
+export function getSeedData(now = Date.now()) {
   const dayMs = 86400000;
-
-  const defaultUserProfile: SettingRecord = {
-    key: 'user_profile',
-    value: DEFAULT_USER_PROFILE,
-    updatedAt: now
-  };
-
-  const defaultAISettings: SettingRecord = {
-    key: 'ai_settings',
-    value: {
-      provider: 'offline_heuristics',
-      modelName: 'gemini-2.5-flash',
-      temperature: 0.2,
-      tokensUsedThisMonth: 0
-    } as AISettings,
-    updatedAt: now
-  };
-
-  const defaultObsidianSettings: SettingRecord = {
-    key: 'obsidian_settings',
-    value: {
-      vaultName: 'Alfajorcito Vault',
-      defaultParaFolder: 'Alfajorcito OS/Notes'
-    } as ObsidianSettings,
-    updatedAt: now
-  };
-
-  if (!force) {
-    // Fresh clean startup: Initialize default profile and settings with 0 courses/works
-    await db.settings.bulkPut([
-      defaultUserProfile,
-      defaultAISettings,
-      defaultObsidianSettings,
-      { key: 'has_initialized', value: true, updatedAt: now }
-    ]);
-    return;
-  }
 
   // =========================================================================
   // 1. CURSOS: 3 AÑOS DE HISTORIAL ACADÉMICO (FCCTP - USMP)
@@ -1297,9 +1254,79 @@ Conectado a: [[Terapia de Aceptación y Compromiso (ACT)]].`,
     }
   ];
 
-  // =========================================================================
-  // 10. EJECUCIÓN ATÓMICA TRANSACCIONAL EN BASE DE DATOS
-  // =========================================================================
+  return {
+    courses,
+    works,
+    sources,
+    ideas,
+    paraphrases,
+    citations,
+    concepts,
+    notes,
+    tasks,
+    inquiries
+  };
+}
+
+export async function initializeDatabaseSeed(force = false) {
+  const isInitialized = await db.settings.get('has_initialized');
+  if (isInitialized && !force) {
+    return;
+  }
+
+  const now = Date.now();
+
+  const defaultUserProfile: SettingRecord = {
+    key: 'user_profile',
+    value: DEFAULT_USER_PROFILE,
+    updatedAt: now
+  };
+
+  const defaultAISettings: SettingRecord = {
+    key: 'ai_settings',
+    value: {
+      provider: 'offline_heuristics',
+      modelName: 'gemini-2.5-flash',
+      temperature: 0.2,
+      tokensUsedThisMonth: 0
+    } as AISettings,
+    updatedAt: now
+  };
+
+  const defaultObsidianSettings: SettingRecord = {
+    key: 'obsidian_settings',
+    value: {
+      vaultName: 'Alfajorcito Vault',
+      defaultParaFolder: 'Alfajorcito OS/Notes'
+    } as ObsidianSettings,
+    updatedAt: now
+  };
+
+  if (!force) {
+    // Fresh clean startup: Initialize default profile and settings with 0 courses/works
+    await db.settings.bulkPut([
+      defaultUserProfile,
+      defaultAISettings,
+      defaultObsidianSettings,
+      { key: 'has_initialized', value: true, updatedAt: now }
+    ]);
+    return;
+  }
+
+  const {
+    courses,
+    works,
+    sources,
+    ideas,
+    paraphrases,
+    citations,
+    concepts,
+    notes,
+    tasks,
+    inquiries
+  } = getSeedData(now);
+
+  // Atomic transaction across all 11 tables
   await db.transaction(
     'rw',
     [
