@@ -45,6 +45,7 @@ import {
 } from '../../utils/citationEngine';
 import { generateGoogleDocsRichHTML, generateGoogleCalendarUrl, generateICSFile } from '../../utils/googleExporter';
 import { formulateQuestionForTeacher, analyzeInstructionsWithAI } from '../../services/aiService';
+import { copyText } from '../../utils/clipboardHelper';
 import type { Work, Course, Source, Task, InquiryToTeacher, Citation, Paraphrase, Idea, UserProfile, TaskPriority, WorkStatus } from '../../types';
 
 export interface WorkWorkspaceProps {
@@ -765,11 +766,15 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                           Consulta Formal para el Profesor:
                         </span>
                         <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(inq.formalQuestion);
-                            setCopiedInquiryId(inq.id);
-                            showToast('Mensaje copiado', 'Consulta formal copiada al portapapeles.', 'success');
-                            setTimeout(() => setCopiedInquiryId(null), 2000);
+                          onClick={async () => {
+                            const ok = await copyText(inq.formalQuestion);
+                            if (ok) {
+                              setCopiedInquiryId(inq.id);
+                              showToast('Mensaje copiado', 'Consulta formal copiada al portapapeles.', 'success');
+                              setTimeout(() => setCopiedInquiryId(null), 2000);
+                            } else {
+                              showToast('Error', 'No se pudo copiar al portapapeles.', 'error');
+                            }
                           }}
                           className="inline-flex items-center gap-1 text-[11px] font-bold text-[#8C3A32] hover:text-[#2B2D42] bg-white px-2.5 py-1 rounded-lg border border-[#EBE5DF] transition-colors cursor-pointer shadow-2xs"
                           title="Copiar texto formal"

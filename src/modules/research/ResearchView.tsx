@@ -48,7 +48,29 @@ import {
   generateBibTeX
 } from '../../utils/citationEngine';
 import { checkParaphraseFidelity } from '../../services/aiService';
+import { copyText } from '../../utils/clipboardHelper';
 import type { Source, VerificationStatus, Idea, Paraphrase, Work, Author, CitationStyle, SourceType } from '../../types';
+
+export function computeReferenceNumber(
+  sources: Source[],
+  workId?: string,
+  sourceId?: string
+): number {
+  if (!sourceId) return 1;
+  if (workId) {
+    const workSources = sources.filter((s) => (s.workIds || []).includes(workId));
+    const sorted = [...workSources].sort((a, b) =>
+      formatFullReference(a, 'APA_7').localeCompare(formatFullReference(b, 'APA_7'))
+    );
+    const idx = sorted.findIndex((s) => s.id === sourceId);
+    return idx !== -1 ? idx + 1 : 1;
+  }
+  const sortedGlobal = [...sources].sort((a, b) =>
+    formatFullReference(a, 'APA_7').localeCompare(formatFullReference(b, 'APA_7'))
+  );
+  const globalIdx = sortedGlobal.findIndex((s) => s.id === sourceId);
+  return globalIdx !== -1 ? globalIdx + 1 : 1;
+}
 
 const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
   JOURNAL_ARTICLE: 'Artículo Científico',
@@ -67,6 +89,8 @@ export interface ResearchViewProps {
   onSelectSource?: (sourceId: string | null) => void;
 }
 
+export type SearchEngineType = 'DOAJ' | 'CROSSREF' | 'OPENALEX' | 'SEMANTIC_SCHOLAR' | 'DOI';
+
 export const ResearchView: React.FC<ResearchViewProps> = ({
   onOpenQuickCapture,
   selectedSourceId,
@@ -75,7 +99,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'library' | 'search'>('library');
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchEngine, setSearchEngine] = useState<'DOAJ' | 'CROSSREF' | 'OPENALEX' | 'SEMANTIC_SCHOLAR' | 'DOI'>('DOAJ');
+  const [searchEngine, setSearchEngine] = useState<SearchEngineType>('DOAJ');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<AcademicSearchResult[]>([]);
   const [verificationFilter, setVerificationFilter] = useState<'ALL' | VerificationStatus>('ALL');
@@ -103,14 +127,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
 
   const sourceRefNum = React.useMemo(() => {
     if (!inspectedSource) return 1;
-    const primaryWorkId = inspectedSource.workIds?.[0];
-    if (primaryWorkId) {
-      const workSources = sources.filter((s) => (s.workIds || []).includes(primaryWorkId));
-      const idx = workSources.findIndex((s) => s.id === inspectedSource.id);
-      return idx !== -1 ? idx + 1 : 1;
-    }
-    const globalIdx = sources.findIndex((s) => s.id === inspectedSource.id);
-    return globalIdx !== -1 ? globalIdx + 1 : 1;
+    return computeReferenceNumber(sources, inspectedSource.workIds?.[0], inspectedSource.id);
   }, [inspectedSource, sources]);
 
   // Execute Academic Search
@@ -284,16 +301,18 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                 <span>Proveedor de Búsqueda Académica</span>
               </span>
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-touch touch-pan-x flex-nowrap py-1">
-                {[
-                  { id: 'DOAJ', label: '🇪🇸 DOAJ (En Español / Iberoamérica)' },
-                  { id: 'CROSSREF', label: '🌐 Crossref (Tesis & DOIs)' },
-                  { id: 'OPENALEX', label: '🔬 OpenAlex (250M+ Papers)' },
-                  { id: 'SEMANTIC_SCHOLAR', label: '🧠 Semantic Scholar (IA)' },
-                  { id: 'DOI', label: '🔗 DOI Directo' }
-                ].map((eng) => (
+                {(
+                  [
+                    { id: 'DOAJ', label: '🇪🇸 DOAJ (En Español / Iberoamérica)' },
+                    { id: 'CROSSREF', label: '🌐 Crossref (Tesis & DOIs)' },
+                    { id: 'OPENALEX', label: '🔬 OpenAlex (250M+ Papers)' },
+                    { id: 'SEMANTIC_SCHOLAR', label: '🧠 Semantic Scholar (IA)' },
+                    { id: 'DOI', label: '🔗 DOI Directo' }
+                  ] as const
+                ).map((eng) => (
                   <button
                     key={eng.id}
-                    onClick={() => setSearchEngine(eng.id as any)}
+                    onClick={() => setSearchEngine(eng.id)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap text-center select-none shrink-0 ${
                       searchEngine === eng.id
                         ? 'bg-[#8C3A32] text-white shadow-xs'
@@ -1037,6 +1056,8 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                       setNewParaphraseText('');
                       showToast('Cita guardada', 'Idea y paráfrasis conectadas con éxito.', 'success');
                       setInspectedSource(null);
+                    } catch {
+                      showToast('Error', 'No se pudo guardar la cita.', 'error');
                     } finally {
                       setIsSavingQuote(false);
                     }
