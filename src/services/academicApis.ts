@@ -25,6 +25,75 @@ export function extractDOI(input: string): string | null {
   return match ? match[0].replace(/[.,;)]+$/, '') : null;
 }
 
+/**
+ * Robustly parses a raw author string into firstName and lastName,
+ * supporting inverted names ("Last, First"), compound Hispanic surnames,
+ * and noble/particle prefixes (de, del, la, van, von, etc.).
+ */
+export function parseDisplayName(rawName: string): Author {
+  if (!rawName || !rawName.trim()) return { firstName: '', lastName: '' };
+  const trimmed = rawName.trim();
+
+  // If format is "LastName, FirstName"
+  if (trimmed.includes(',')) {
+    const parts = trimmed.split(',');
+    const lastName = parts[0].trim();
+    const firstName = parts.slice(1).join(',').trim();
+    return { firstName, lastName };
+  }
+
+  const tokens = trimmed.split(/\s+/);
+  if (tokens.length === 1) {
+    return { firstName: '', lastName: tokens[0] };
+  }
+  if (tokens.length === 2) {
+    return { firstName: tokens[0], lastName: tokens[1] };
+  }
+
+  const particles = new Set([
+    'de',
+    'del',
+    'la',
+    'las',
+    'los',
+    'van',
+    'von',
+    'der',
+    'den',
+    'da',
+    'do',
+    'dos',
+    'das',
+    'san',
+    'santa',
+    'y'
+  ]);
+
+  // Check if there is an explicit particle (e.g. "Marcia de la Cruz")
+  for (let i = 1; i < tokens.length; i++) {
+    if (particles.has(tokens[i].toLowerCase())) {
+      return {
+        firstName: tokens.slice(0, i).join(' '),
+        lastName: tokens.slice(i).join(' ')
+      };
+    }
+  }
+
+  // Hispanic default for 3 words (e.g. "María Delgado Chacón" -> firstName: "María", lastName: "Delgado Chacón")
+  if (tokens.length === 3) {
+    return {
+      firstName: tokens[0],
+      lastName: tokens.slice(1).join(' ')
+    };
+  }
+
+  // 4+ words default (e.g. "Ana María Delgado Chacón" -> firstName: "Ana María", lastName: "Delgado Chacón")
+  return {
+    firstName: tokens.slice(0, tokens.length - 2).join(' '),
+    lastName: tokens.slice(tokens.length - 2).join(' ')
+  };
+}
+
 interface OpenAlexAuthorship {
   author?: {
     display_name?: string;
@@ -54,11 +123,7 @@ interface OpenAlexWorkItem {
 
 function parseOpenAlexWork(item: OpenAlexWorkItem): AcademicSearchResult {
   const authors: Author[] = (item.authorships || []).map((a) => {
-    const rawName = a.author?.display_name || '';
-    const parts = rawName.split(' ');
-    const lastName = parts.length > 1 ? parts[parts.length - 1] : rawName;
-    const firstName = parts.length > 1 ? parts.slice(0, -1).join(' ') : '';
-    return { firstName, lastName };
+    return parseDisplayName(a.author?.display_name || '');
   });
 
   let abstract = '';
@@ -76,7 +141,7 @@ function parseOpenAlexWork(item: OpenAlexWorkItem): AcademicSearchResult {
   return {
     title: item.title || item.display_name || 'Sin título',
     authors,
-    year: item.publication_year || new Date().getFullYear(),
+    year: item.publication_year || 0,
     type: item.type === 'book' ? 'BOOK' : 'JOURNAL_ARTICLE',
     publication: item.primary_location?.source?.display_name || '',
     volume: item.biblio?.volume,
@@ -93,12 +158,30 @@ function parseOpenAlexWork(item: OpenAlexWorkItem): AcademicSearchResult {
   };
 }
 
+interface CrossrefApiItem {
+  title?: string[];
+  author?: Array<{ given?: string; family?: string; name?: string }>;
+  published?: { 'date-parts'?: number[][] };
+  'published-print'?: { 'date-parts'?: number[][] };
+  'published-online'?: { 'date-parts'?: number[][] };
+  type?: string;
+  'container-title'?: string[];
+  publisher?: string;
+  volume?: string;
+  issue?: string;
+  page?: string;
+  DOI?: string;
+  URL?: string;
+  abstract?: string;
+  'is-referenced-by-count'?: number;
+}
+
 /**
  * Resolves a DOI or academic URL with multi-layer fallback:
  * 1. OpenAlex DOI endpoint (CORS-friendly, highly available)
  * 2. Crossref Works API
  * 3. DOI.org Content Negotiation
- * 4. Fallback search on OpenAlex if input is a URL/identifier without standard DOI format
+ * 4. Fallback search on OpenAlex ONLY if input was NOT a valid DOI
  */
 export async function resolveDOI(doiInput: string): Promise<AcademicSearchResult | null> {
   const trimmed = doiInput.trim();
@@ -132,18 +215,23 @@ export async function resolveDOI(doiInput: string): Promise<AcademicSearchResult
 
       if (res.ok) {
         const data = await res.json();
-        const item = data.message;
+        const item: CrossrefApiItem = data.message;
 
-        const authors: Author[] = (item.author || []).map((a: { given?: string; family?: string }) => ({
-          firstName: a.given || '',
-          lastName: a.family || ''
-        }));
+        const authors: Author[] = (item.author || []).map((a) => {
+          if (a.given || a.family) {
+            return {
+              firstName: a.given || '',
+              lastName: a.family || ''
+            };
+          }
+          return parseDisplayName(a.name || '');
+        });
 
         const year =
           item.published?.['date-parts']?.[0]?.[0] ||
           item['published-print']?.['date-parts']?.[0]?.[0] ||
           item['published-online']?.['date-parts']?.[0]?.[0] ||
-          new Date().getFullYear();
+          0;
 
         return {
           title: item.title?.[0] || 'Sin título',
@@ -177,11 +265,16 @@ export async function resolveDOI(doiInput: string): Promise<AcademicSearchResult
         const csl = await doiRes.json();
         return {
           title: csl.title || 'Sin título',
-          authors: (csl.author || []).map((a: { given?: string; family?: string }) => ({
-            firstName: a.given || '',
-            lastName: a.family || ''
-          })),
-          year: csl.issued?.['date-parts']?.[0]?.[0] || new Date().getFullYear(),
+          authors: (csl.author || []).map((a: { given?: string; family?: string; literal?: string }) => {
+            if (a.given || a.family) {
+              return {
+                firstName: a.given || '',
+                lastName: a.family || ''
+              };
+            }
+            return parseDisplayName(a.literal || '');
+          }),
+          year: csl.issued?.['date-parts']?.[0]?.[0] || 0,
           type: csl.type === 'book' ? 'BOOK' : 'JOURNAL_ARTICLE',
           publication: csl['container-title'] || csl.publisher || '',
           volume: csl.volume ? String(csl.volume) : undefined,
@@ -196,9 +289,12 @@ export async function resolveDOI(doiInput: string): Promise<AcademicSearchResult
     } catch {
       // Fallback
     }
+
+    // If valid DOI had 3 failed strategies, do NOT return a random search result from OpenAlex
+    return null;
   }
 
-  // Strategy 4: If input is a URL or search identifier (like SciELO, Dialnet, title), search OpenAlex
+  // Strategy 4: If input is a URL or search identifier without DOI, search OpenAlex
   try {
     const results = await searchOpenAlex(trimmed, 1);
     if (results.length > 0) {
@@ -248,23 +344,17 @@ export async function searchSemanticScholar(query: string, limit = 8): Promise<A
     const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=${limit}&fields=${fields}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) {
-      // If Semantic Scholar is rate-limited (HTTP 429) or fails, gracefully fallback to OpenAlex
       return await searchOpenAlex(query, limit);
     }
     const data = await res.json();
 
     return (data.data || []).map((item: SemanticScholarPaper) => {
-      const authors: Author[] = (item.authors || []).map((a) => {
-        const parts = (a.name || '').split(' ');
-        const lastName = parts.length > 1 ? parts[parts.length - 1] : a.name || '';
-        const firstName = parts.length > 1 ? parts.slice(0, -1).join(' ') : '';
-        return { firstName, lastName };
-      });
+      const authors: Author[] = (item.authors || []).map((a) => parseDisplayName(a.name || ''));
 
       return {
         title: item.title || 'Sin título',
         authors,
-        year: item.year || new Date().getFullYear(),
+        year: item.year || 0,
         type: 'JOURNAL_ARTICLE' as SourceType,
         publication: item.venue || '',
         doi: item.externalIds?.DOI,
@@ -274,14 +364,29 @@ export async function searchSemanticScholar(query: string, limit = 8): Promise<A
         provider: 'SEMANTIC_SCHOLAR' as const
       };
     });
-  } catch (err) {
-    // If browser blocks fetch due to CORS or 429 network error, seamlessly fallback to OpenAlex
+  } catch {
     try {
       return await searchOpenAlex(query, limit);
     } catch {
       return [];
     }
   }
+}
+
+interface DoajApiBibjson {
+  title?: string;
+  author?: Array<{ name?: string }>;
+  year?: string | number;
+  identifier?: Array<{ type?: string; id?: string }>;
+  link?: Array<{ type?: string; url?: string }>;
+  journal?: { title?: string; publisher?: string; volume?: string; number?: string };
+  start_page?: string;
+  end_page?: string;
+  abstract?: string;
+}
+
+interface DoajApiResult {
+  bibjson?: DoajApiBibjson;
 }
 
 // 4. Search DOAJ API (Directory of Open Access Journals - Massive Spanish / Ibero-America coverage)
@@ -294,15 +399,9 @@ export async function searchDOAJ(query: string, limit = 8): Promise<AcademicSear
     if (!res.ok) return [];
     const data = await res.json();
 
-    return (data.results || []).map((item: any) => {
+    return (data.results || []).map((item: DoajApiResult) => {
       const bib = item.bibjson || {};
-      const authors: Author[] = (bib.author || []).map((a: { name?: string }) => {
-        const rawName = a.name || '';
-        const parts = rawName.split(' ');
-        const lastName = parts.length > 1 ? parts[parts.length - 1] : rawName;
-        const firstName = parts.length > 1 ? parts.slice(0, -1).join(' ') : '';
-        return { firstName, lastName };
-      });
+      const authors: Author[] = (bib.author || []).map((a) => parseDisplayName(a.name || ''));
 
       const doiObj = (bib.identifier || []).find(
         (id: { type?: string; id?: string }) => id.type?.toLowerCase() === 'doi'
@@ -315,7 +414,7 @@ export async function searchDOAJ(query: string, limit = 8): Promise<AcademicSear
       return {
         title: bib.title || 'Sin título',
         authors,
-        year: bib.year ? Number(bib.year) : new Date().getFullYear(),
+        year: bib.year ? Number(bib.year) : 0,
         type: 'JOURNAL_ARTICLE' as SourceType,
         publication: bib.journal?.title || bib.journal?.publisher || 'Revista Indexada DOAJ',
         volume: bib.journal?.volume,
@@ -350,17 +449,22 @@ export async function searchCrossref(query: string, limit = 8): Promise<Academic
     if (!res.ok) return [];
     const data = await res.json();
 
-    return (data.message?.items || []).map((item: any) => {
-      const authors: Author[] = (item.author || []).map((a: { given?: string; family?: string }) => ({
-        firstName: a.given || '',
-        lastName: a.family || ''
-      }));
+    return (data.message?.items || []).map((item: CrossrefApiItem) => {
+      const authors: Author[] = (item.author || []).map((a) => {
+        if (a.given || a.family) {
+          return {
+            firstName: a.given || '',
+            lastName: a.family || ''
+          };
+        }
+        return parseDisplayName(a.name || '');
+      });
 
       const year =
         item.published?.['date-parts']?.[0]?.[0] ||
         item['published-print']?.['date-parts']?.[0]?.[0] ||
         item['published-online']?.['date-parts']?.[0]?.[0] ||
-        new Date().getFullYear();
+        0;
 
       return {
         title: item.title?.[0] || 'Sin título',
