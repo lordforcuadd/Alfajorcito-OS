@@ -1343,6 +1343,18 @@ export async function initializeDatabaseSeed(force = false) {
       db.settings
     ],
     async () => {
+      // Clear entity tables to prevent duplicate / fragmented data when re-seeding
+      await db.courses.clear();
+      await db.works.clear();
+      await db.sources.clear();
+      await db.ideas.clear();
+      await db.paraphrases.clear();
+      await db.citations.clear();
+      await db.concepts.clear();
+      await db.notes.clear();
+      await db.tasks.clear();
+      await db.inquiries.clear();
+
       await db.courses.bulkPut(courses);
       await db.works.bulkPut(works);
       await db.sources.bulkPut(sources);

@@ -44,7 +44,7 @@ export class AlfajorcitoDB extends Dexie {
       settings: '&key, updatedAt'
     });
 
-    // Version 2: Index workId on ideas, paraphrases and citations
+    // Version 2: Preserved for backwards compatibility with existing PWA client migrations
     this.version(2).stores({
       ideas: '&id, sourceId, workId, updatedAt',
       paraphrases: '&id, ideaId, sourceId, workId, fidelityReviewStatus, updatedAt',
@@ -55,8 +55,9 @@ export class AlfajorcitoDB extends Dexie {
 
 export const db = new AlfajorcitoDB();
 
-// Helper to clear all academic entities atomically (leaving database clean at 0)
+// Helper to clear all academic entities atomically (restoring default user settings)
 export async function clearAllDatabaseData(): Promise<void> {
+  const now = Date.now();
   await db.transaction(
     'rw',
     [
@@ -83,7 +84,41 @@ export async function clearAllDatabaseData(): Promise<void> {
       await db.concepts.clear();
       await db.tasks.clear();
       await db.inquiries.clear();
-      await db.settings.put({ key: 'has_initialized', value: true, updatedAt: Date.now() });
+      await db.settings.bulkPut([
+        {
+          key: 'user_profile',
+          value: {
+            name: 'Saory',
+            institution: 'Universidad de San Martín de Porres (USMP)',
+            faculty: 'Facultad de Ciencias de la Comunicación, Turismo y Psicología',
+            major: 'Psicología',
+            currentCycle: 'VIII Ciclo',
+            specialty: 'CLINICA',
+            thesisTitle: 'Regulación Emocional y Ansiedad Académica',
+            defaultCitationStyle: 'APA_7'
+          },
+          updatedAt: now
+        },
+        {
+          key: 'ai_settings',
+          value: {
+            provider: 'offline_heuristics',
+            modelName: 'gemini-2.5-flash',
+            temperature: 0.2,
+            tokensUsedThisMonth: 0
+          },
+          updatedAt: now
+        },
+        {
+          key: 'obsidian_settings',
+          value: {
+            vaultName: 'Alfajorcito Vault',
+            defaultParaFolder: 'Alfajorcito OS/Notes'
+          },
+          updatedAt: now
+        },
+        { key: 'has_initialized', value: true, updatedAt: now }
+      ]);
     }
   );
 }
