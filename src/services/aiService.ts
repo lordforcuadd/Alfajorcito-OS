@@ -423,17 +423,39 @@ export function getActiveGeminiModelUsed(): string {
 // Memory cache of verified working model per (API Key + Requested Model) combination
 const verifiedGeminiModelCache = new Map<string, string>();
 
+export function resolveTokenCount(
+  previous: { tokensUsedThisMonth?: number; tokensMonthKey?: string },
+  addedTokens: number,
+  now: Date = new Date()
+): { tokensUsedThisMonth: number; tokensMonthKey: string } {
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  if (previous.tokensMonthKey !== currentMonthKey) {
+    return {
+      tokensUsedThisMonth: addedTokens,
+      tokensMonthKey: currentMonthKey
+    };
+  }
+  return {
+    tokensUsedThisMonth: (previous.tokensUsedThisMonth || 0) + addedTokens,
+    tokensMonthKey: currentMonthKey
+  };
+}
+
 async function trackTokensUsed(estimatedCount: number) {
   try {
     const rec = await db.settings.get('ai_settings');
     if (rec?.value) {
       const val = rec.value as AISettings;
-      const current = val.tokensUsedThisMonth || 0;
+      const updated = resolveTokenCount(
+        { tokensUsedThisMonth: val.tokensUsedThisMonth, tokensMonthKey: val.tokensMonthKey },
+        estimatedCount
+      );
       await db.settings.put({
         key: 'ai_settings',
         value: {
           ...val,
-          tokensUsedThisMonth: current + estimatedCount
+          tokensUsedThisMonth: updated.tokensUsedThisMonth,
+          tokensMonthKey: updated.tokensMonthKey
         },
         updatedAt: Date.now()
       });
@@ -491,7 +513,7 @@ async function callGemini(
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { temperature }
         }),
-        signal: AbortSignal.timeout(12000)
+        signal: AbortSignal.timeout(8000)
       });
       if (res.ok) {
         const data = await res.json();
@@ -516,17 +538,11 @@ async function callGemini(
   }
 
   const preferredOrder = [
-    'gemini-3.5-flash-lite',
-    'gemini-3.5-flash',
     'gemini-2.5-flash',
     'gemini-2.5-flash-lite',
-    'gemini-flash-latest',
-    'gemini-flash-lite-latest',
-    'gemini-3.6-flash',
-    'gemini-3.7-flash',
     'gemini-2.5-pro',
-    'gemini-3-flash-preview',
-    'gemini-1.5-flash'
+    'gemini-1.5-flash',
+    'gemini-1.5-pro'
   ];
 
   for (const pref of preferredOrder) {
@@ -537,9 +553,8 @@ async function callGemini(
 
   if (candidateList.length === 0) {
     candidateList.push(
-      model || 'gemini-3.5-flash-lite',
-      'gemini-2.5-flash',
-      'gemini-flash-latest',
+      model || 'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
       'gemini-1.5-flash'
     );
   }
@@ -560,7 +575,7 @@ async function callGemini(
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { temperature }
         }),
-        signal: AbortSignal.timeout(12000)
+        signal: AbortSignal.timeout(8000)
       });
 
       if (res.ok) {

@@ -268,6 +268,7 @@ export interface AISettings {
   ollamaEndpoint?: string;
   temperature?: number;
   tokensUsedThisMonth?: number;
+  tokensMonthKey?: string;
 }
 
 export interface ObsidianSettings {
