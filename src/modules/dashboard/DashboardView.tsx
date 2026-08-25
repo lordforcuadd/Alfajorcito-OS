@@ -28,7 +28,7 @@ import { Button } from '../../components/common/Button';
 import { Badge, VerificationBadge, CitationStyleBadge } from '../../components/common/Badge';
 import { useToast } from '../../components/common/Toast';
 import { calculateDaysRemaining, isWorkUpcoming, isWorkOverdue } from '../../utils/academicWorkUtils';
-import type { UserProfile, Work, Course, Task, Source, InquiryToTeacher, Note, Concept, Paraphrase } from '../../types';
+import { DEFAULT_USER_PROFILE, type UserProfile, type Work, type Course, type Task, type Source, type InquiryToTeacher, type Note, type Concept, type Paraphrase } from '../../types';
 import type { NavTab } from '../../components/layout/AppShell';
 
 export interface DashboardViewProps {
@@ -61,17 +61,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const coursesMap = React.useMemo(() => new Map(courses.map((c) => [c.id, c])), [courses]);
 
-  // 1. ¿Qué debo hacer hoy? (Tasks due today or uncompleted assignment checklist, excluding overdue)
-  const todayTasks = tasks.filter((t) => !t.isCompleted && (!t.dueDate || (t.dueDate >= now && t.dueDate <= now + oneDayMs)));
+  const startOfToday = new Date().setHours(0, 0, 0, 0);
+  const endOfToday = new Date().setHours(23, 59, 59, 999);
+
+  // 1. ¿Qué debo hacer hoy? (Tasks due today or checklist items without date, strictly not past days)
+  const todayTasks = tasks.filter(
+    (t) => !t.isCompleted && (!t.dueDate || (t.dueDate >= startOfToday && t.dueDate <= endOfToday))
+  );
 
   // 2. ¿Qué se acerca? (Works or deadlines in next 14 days)
   const upcomingWorks = works
     .filter((w) => isWorkUpcoming(w, now, 14))
     .sort((a, b) => a.deadline - b.deadline);
 
-  // 3. ¿Qué está atrasado? (Overdue tasks or overdue unsubmitted works)
+  // 3. ¿Qué está atrasado? (Overdue tasks strictly before today or overdue unsubmitted works)
   const overdueWorks = works.filter((w) => isWorkOverdue(w, now));
-  const overdueTasks = tasks.filter((t) => !t.isCompleted && t.dueDate && t.dueDate < now);
+  const overdueTasks = tasks.filter((t) => !t.isCompleted && t.dueDate && t.dueDate < startOfToday);
 
   // 4. ¿Qué está bloqueado? (Pending teacher inquiries)
   const blockedInquiries = inquiries.filter((inq) => inq.status === 'SENT' || inq.status === 'DRAFT');
@@ -91,14 +96,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Dynamic user profile query
   const userProfileRecord = useLiveQuery(() => db.settings.get('user_profile'));
-  const userProfile = (userProfileRecord?.value as UserProfile | undefined) || {
-    name: 'Estudiante',
-    institution: 'Universidad de San Martín de Porres',
-    faculty: 'Facultad de Ciencias de la Comunicación, Turismo y Psicología',
-    major: 'Psicología',
-    currentCycle: '8vo Ciclo',
-    defaultCitationStyle: 'APA_7'
-  };
+  const userProfile = (userProfileRecord?.value as UserProfile | undefined) || DEFAULT_USER_PROFILE;
 
   // Time-aware greeting (updates automatically across midnight/focus)
   const [currentTime, setCurrentTime] = React.useState(Date.now());

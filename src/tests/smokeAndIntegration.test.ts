@@ -108,19 +108,24 @@ describe('Interactive Smoke & Integration Suite', () => {
     expect(parseCycle('7mo Ciclo')).toBe(7);
   });
 
-  it('guarantees overdue tasks are never duplicated in todayTasks and overdueTasks', () => {
+  it('guarantees overdue tasks are never duplicated in todayTasks and overdueTasks across full day boundaries', () => {
     const fixedNow = 1756000000000;
-    const oneDayMs = 86400000;
+    const startOfToday = fixedNow - 3600000 * 4; // 4 hours into today
+    const endOfToday = startOfToday + 86399999;
 
     const sampleTaskList = [
-      { id: 't1', title: 'Tarea Vencida', isCompleted: false, dueDate: fixedNow - 3600000 },
-      { id: 't2', title: 'Tarea Para Hoy', isCompleted: false, dueDate: fixedNow + 3600000 },
+      { id: 't1', title: 'Tarea Vencida Ayer', isCompleted: false, dueDate: startOfToday - 3600000 },
+      { id: 't2', title: 'Tarea Para Hoy Mañana', isCompleted: false, dueDate: startOfToday + 3600000 },
       { id: 't3', title: 'Tarea Sin Fecha', isCompleted: false, dueDate: undefined },
-      { id: 't4', title: 'Tarea Futura', isCompleted: false, dueDate: fixedNow + oneDayMs * 5 }
+      { id: 't4', title: 'Tarea Futura', isCompleted: false, dueDate: endOfToday + 86400000 * 3 }
     ];
 
-    const todayTasks = sampleTaskList.filter((t) => !t.isCompleted && (!t.dueDate || (t.dueDate >= fixedNow && t.dueDate <= fixedNow + oneDayMs)));
-    const overdueTasks = sampleTaskList.filter((t) => !t.isCompleted && t.dueDate && t.dueDate < fixedNow);
+    const todayTasks = sampleTaskList.filter(
+      (t) => !t.isCompleted && (!t.dueDate || (t.dueDate >= startOfToday && t.dueDate <= endOfToday))
+    );
+    const overdueTasks = sampleTaskList.filter(
+      (t) => !t.isCompleted && t.dueDate && t.dueDate < startOfToday
+    );
 
     expect(todayTasks.map((t) => t.id)).toEqual(['t2', 't3']);
     expect(overdueTasks.map((t) => t.id)).toEqual(['t1']);

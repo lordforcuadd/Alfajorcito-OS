@@ -158,13 +158,12 @@ export const AppShell: React.FC<AppShellProps> = ({
     };
   }, [profile.name, showPusheenBubble]);
 
-  // 3. Live Typing Detector across the entire application (Desktop/Tablet only)
+  // 3. Live Typing Detector across the entire application (Desktop/Tablet only, evaluated dynamically)
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) return;
-
     let typingTimeout: NodeJS.Timeout;
 
     const handleUserTyping = (e: Event) => {
+      if (typeof window !== 'undefined' && window.innerWidth < 768) return;
       if (Date.now() < isCelebratingUntil) return;
       const target = e.target as HTMLElement | null;
       if (!target) return;
@@ -192,12 +191,11 @@ export const AppShell: React.FC<AppShellProps> = ({
     };
   }, [isCelebratingUntil]);
 
-  // 4. Inactivity / Idle Sleep Detector (Desktop/Tablet only, respects celebrations)
+  // 4. Inactivity / Idle Sleep Detector (Desktop/Tablet only, evaluated dynamically)
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) return;
-
     let timer: NodeJS.Timeout;
     const resetIdleTimer = () => {
+      if (typeof window !== 'undefined' && window.innerWidth < 768) return;
       clearTimeout(timer);
       timer = setTimeout(() => {
         if (Date.now() < isCelebratingUntil) return;
