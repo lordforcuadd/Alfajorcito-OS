@@ -17,7 +17,7 @@ import { Button } from '../common/Button';
 import { Input, Select, TextArea } from '../common/Input';
 import { db } from '../../db';
 import { useToast } from '../common/Toast';
-import confetti from 'canvas-confetti';
+import { triggerCelebrationConfetti } from '../../utils/confettiHelper';
 import { dissociateWorkIdFromSources, WORK_DELETION_CONSEQUENCES } from '../../utils/academicWorkUtils';
 import type { Work, WorkType, WorkStatus, CitationStyle, Course, UserProfile } from '../../types';
 
@@ -134,7 +134,7 @@ export const WorkModal: React.FC<WorkModalProps> = ({
         });
 
         if (status === 'ENTREGADO' && workToEdit.status !== 'ENTREGADO') {
-          confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+          triggerCelebrationConfetti();
           window.dispatchEvent(new CustomEvent('work-delivered', { detail: { title: title.trim() } }));
         }
 

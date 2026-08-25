@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import confetti from 'canvas-confetti';
+import { triggerCelebrationConfetti } from '../../utils/confettiHelper';
 import {
   ArrowLeft,
   GraduationCap,
@@ -152,11 +152,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
     await db.works.update(workId, { status: newStatus, updatedAt: Date.now() });
 
     if (newStatus === 'ENTREGADO') {
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
+      triggerCelebrationConfetti();
       window.dispatchEvent(new CustomEvent('work-delivered', { detail: { title: work.title } }));
       showToast('¡Felicitaciones!', 'Trabajo marcado como ENTREGADO. El conocimiento ha sido preservado.', 'success');
     }
@@ -203,11 +199,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
   const handleStatusChange = async (newStatus: WorkStatus) => {
     await db.works.update(work.id, { status: newStatus, updatedAt: Date.now() });
     if (newStatus === 'ENTREGADO') {
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
+      triggerCelebrationConfetti();
       window.dispatchEvent(new CustomEvent('work-delivered', { detail: { title: work.title } }));
       showToast('¡Felicitaciones!', 'Trabajo marcado como ENTREGADO.', 'success');
     } else {

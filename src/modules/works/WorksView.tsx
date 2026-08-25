@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import confetti from 'canvas-confetti';
+import { triggerCelebrationConfetti } from '../../utils/confettiHelper';
 import {
   GraduationCap,
   Plus,
@@ -118,11 +118,7 @@ export const WorksView: React.FC<WorksViewProps> = ({
     await db.works.update(work.id, { status: newStatus, updatedAt: Date.now() });
 
     if (newStatus === 'ENTREGADO') {
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
+      triggerCelebrationConfetti();
       window.dispatchEvent(new CustomEvent('work-delivered', { detail: { title: work.title } }));
       showToast('¡Felicitaciones!', `"${work.title}" marcado como ENTREGADO.`, 'success');
     } else {

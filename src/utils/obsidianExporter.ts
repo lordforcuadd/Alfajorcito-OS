@@ -88,8 +88,7 @@ export async function exportVaultZip(
   courses: Course[],
   concepts: Concept[]
 ): Promise<Blob> {
-  const JSZipModule = await import('jszip');
-  const JSZip = (JSZipModule as any).default || JSZipModule;
+  const { default: JSZip } = await import('jszip');
   const zip = new JSZip();
 
   const coursesMap = new Map(courses.map(c => [c.id, c]));
