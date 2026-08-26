@@ -35,6 +35,7 @@ import {
   searchSemanticScholar,
   searchDOAJ,
   searchCrossref,
+  getGoogleScholarSearchUrl,
   type AcademicSearchResult
 } from '../../services/academicApis';
 import { auditSourceMetadata, sanitizeAcademicText } from '../../utils/antiHallucination';
@@ -90,7 +91,7 @@ export interface ResearchViewProps {
   onSelectSource?: (sourceId: string | null) => void;
 }
 
-export type SearchEngineType = 'DOAJ' | 'CROSSREF' | 'OPENALEX' | 'SEMANTIC_SCHOLAR' | 'DOI';
+export type SearchEngineType = 'DOAJ' | 'GOOGLE_SCHOLAR' | 'CROSSREF' | 'OPENALEX' | 'SEMANTIC_SCHOLAR' | 'DOI';
 
 export const ResearchView: React.FC<ResearchViewProps> = ({
   onOpenQuickCapture,
@@ -225,7 +226,35 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
         if (res.length > 0) {
           showToast('Búsqueda en Español lista', `Encontramos ${res.length} artículos indexados en DOAJ (Iberoamérica).`, 'success');
         } else {
-          showToast('Sin resultados en DOAJ', 'Prueba con términos más generales o busca en OpenAlex / Crossref.', 'info');
+          showToast('Sin resultados en DOAJ', 'Prueba con términos más generales o busca en Google Académico / OpenAlex.', 'info');
+        }
+      } else if (searchEngine === 'GOOGLE_SCHOLAR') {
+        // Multi-index academic search (combining OpenAlex & Crossref / Semantic Scholar)
+        const [openAlexRes, crossrefRes] = await Promise.allSettled([
+          searchOpenAlex(searchQuery.trim(), 8),
+          searchCrossref(searchQuery.trim(), 8)
+        ]);
+        const results: AcademicSearchResult[] = [];
+        const seenDoi = new Set<string>();
+
+        if (openAlexRes.status === 'fulfilled') {
+          openAlexRes.value.forEach((r) => {
+            if (r.doi) seenDoi.add(r.doi.toLowerCase());
+            results.push({ ...r, provider: 'GOOGLE_SCHOLAR' });
+          });
+        }
+        if (crossrefRes.status === 'fulfilled') {
+          crossrefRes.value.forEach((r) => {
+            if (!r.doi || !seenDoi.has(r.doi.toLowerCase())) {
+              results.push({ ...r, provider: 'GOOGLE_SCHOLAR' });
+            }
+          });
+        }
+        setSearchResults(results);
+        if (results.length > 0) {
+          showToast('Google Académico listo', `Encontramos ${results.length} artículos del catálogo académico global.`, 'success');
+        } else {
+          showToast('Sin resultados locales', 'Usa el botón "Abrir en Google Académico" para ver la búsqueda web directa.', 'info');
         }
       } else if (searchEngine === 'CROSSREF') {
         const res = await searchCrossref(searchQuery.trim(), 10);
@@ -249,7 +278,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
         if (res.length > 0) {
           showToast('Búsqueda completada', `Encontramos ${res.length} artículos científicos indexados.`, 'success');
         } else {
-          showToast('Sin resultados', 'Prueba con el buscador DOAJ (en Español) o Crossref.', 'info');
+          showToast('Sin resultados', 'Prueba con el buscador DOAJ (en Español) o Google Académico.', 'info');
         }
       }
     } catch {
@@ -377,6 +406,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                 {(
                   [
                     { id: 'DOAJ', label: '🇪🇸 DOAJ (En Español / Iberoamérica)' },
+                    { id: 'GOOGLE_SCHOLAR', label: '🎓 Google Académico (Scholar)' },
                     { id: 'CROSSREF', label: '🌐 Crossref (Tesis & DOIs)' },
                     { id: 'OPENALEX', label: '🔬 OpenAlex (250M+ Papers)' },
                     { id: 'SEMANTIC_SCHOLAR', label: '🧠 Semantic Scholar (IA)' },
@@ -399,15 +429,30 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
             </div>
 
             {/* Provider Info Banner */}
-            <div className="text-[11px] text-[#5A6275] bg-[#FAF8F5] p-2.5 rounded-xl border border-[#EBE5DF] flex items-center gap-2">
-              <Info className="w-4 h-4 text-[#8C3A32] shrink-0" />
-              <span className="leading-tight">
-                {searchEngine === 'DOAJ' && 'Directorio de 10M+ de artículos en acceso abierto con especial cobertura en español (SciELO, Redalyc, Dialnet, Latindex y revistas universitarias de Iberoamérica).'}
-                {searchEngine === 'CROSSREF' && 'Registro global con más de 150M de publicaciones académicas, actas de congresos y tesis universitarias de Perú y el mundo.'}
-                {searchEngine === 'OPENALEX' && 'Catálogo bibliográfico global abierto con 250M+ de artículos científicos y análisis de red de citaciones.'}
-                {searchEngine === 'SEMANTIC_SCHOLAR' && 'Buscador de artículos científicos impulsado por modelos de inteligencia artificial del Allen Institute.'}
-                {searchEngine === 'DOI' && 'Pega un código DOI (e.g. 10.18800/psico.202202.008) o enlace de SciELO/Dialnet para recuperar metadatos completos.'}
-              </span>
+            <div className="text-[11px] text-[#5A6275] bg-[#FAF8F5] p-2.5 rounded-xl border border-[#EBE5DF] flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+              <div className="flex items-center gap-2 min-w-0">
+                <Info className="w-4 h-4 text-[#8C3A32] shrink-0" />
+                <span className="leading-tight">
+                  {searchEngine === 'DOAJ' && 'Directorio de 10M+ de artículos en acceso abierto con especial cobertura en español (SciELO, Redalyc, Dialnet, Latindex y revistas universitarias de Iberoamérica).'}
+                  {searchEngine === 'GOOGLE_SCHOLAR' && 'Catálogo bibliográfico global de Google Académico respaldado por OpenAlex y Crossref (250M+ de artículos). Puedes abrir la búsqueda web directa o importar con 1 clic.'}
+                  {searchEngine === 'CROSSREF' && 'Registro global con más de 150M de publicaciones académicas, actas de congresos y tesis universitarias de Perú y el mundo.'}
+                  {searchEngine === 'OPENALEX' && 'Catálogo bibliográfico global abierto con 250M+ de artículos científicos y análisis de red de citaciones.'}
+                  {searchEngine === 'SEMANTIC_SCHOLAR' && 'Buscador de artículos científicos impulsado por modelos de inteligencia artificial del Allen Institute.'}
+                  {searchEngine === 'DOI' && 'Pega un código DOI (e.g. 10.18800/psico.202202.008) o enlace de SciELO/Dialnet para recuperar metadatos completos.'}
+                </span>
+              </div>
+              {searchQuery.trim() && (
+                <a
+                  href={getGoogleScholarSearchUrl(searchQuery)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#8C3A32] hover:text-[#2B2D42] bg-white px-2.5 py-1 rounded-lg border border-[#E8A598]/50 transition-colors shrink-0 shadow-2xs"
+                  title="Abrir esta búsqueda directamente en Google Académico"
+                >
+                  <span>Abrir en Google Académico</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2">
@@ -418,6 +463,8 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                       ? 'Ingresa el código DOI (e.g. 10.18800/psico.202202.008) o enlace...'
                       : searchEngine === 'DOAJ'
                       ? 'Escribe un tema de psicología en español (e.g. apego infantil, regulacion emocional)...'
+                      : searchEngine === 'GOOGLE_SCHOLAR'
+                      ? 'Buscar en Google Académico (e.g. psicopatologia infantil, terapia cognitiva)...'
                       : searchEngine === 'CROSSREF'
                       ? 'Buscar artículos, tesis o autores en el registro global Crossref...'
                       : 'Escribe el tema, título o autor (e.g. terapia cognitivo conductual beck)...'
@@ -503,17 +550,29 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                           </Button>
                         )}
 
-                        {item.url && (
+                        <div className="flex flex-col items-center sm:items-end gap-1 w-full sm:w-auto">
+                          {item.url && (
+                            <a
+                              href={item.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-[#8D99AE] hover:text-[#2B2D42] flex items-center justify-center sm:justify-end gap-1 transition-colors py-0.5"
+                            >
+                              <span>Ver artículo original</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
                           <a
-                            href={item.url}
+                            href={getGoogleScholarSearchUrl(item.title)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-[#8D99AE] hover:text-[#2B2D42] flex items-center justify-center sm:justify-end gap-1 transition-colors py-1"
+                            className="text-[11px] font-semibold text-[#8C3A32] hover:text-[#2B2D42] flex items-center justify-center sm:justify-end gap-1 transition-colors py-0.5"
+                            title="Buscar citas y versiones en Google Académico"
                           >
-                            <span>Ver artículo original</span>
-                            <ExternalLink className="w-3 h-3" />
+                            <span>Google Académico</span>
+                            <ExternalLink className="w-3 h-3 text-[#D98880]" />
                           </a>
-                        )}
+                        </div>
                       </div>
                     </div>
                   </Card>

@@ -27,7 +27,7 @@ import { auditSourceMetadata } from '../../utils/antiHallucination';
 import { formulateQuestionForTeacher, analyzeInstructionsWithAI } from '../../services/aiService';
 import { useToast } from '../common/Toast';
 import { generateId } from '../../utils/idHelper';
-import type { CitationStyle, WorkType, WorkStatus, ParaCategory, TaskPriority, SourceType, Author, UserProfile, Source } from '../../types';
+import type { CitationStyle, WorkType, WorkStatus, ParaCategory, TaskPriority, SourceType, Author, UserProfile, Source, VerificationProvider } from '../../types';
 
 export type CaptureTab = 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task';
 
@@ -353,7 +353,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       const rawDoi = sourceDoiOrSearch.trim();
       const extractedDoi = extractDOI(rawDoi);
       let verifiedStatus: 'VERIFIED' | 'PARTIALLY_VERIFIED' | 'UNVERIFIED' = 'PARTIALLY_VERIFIED';
-      let verifiedProvider: 'CROSSREF' | 'OPENALEX' | 'SEMANTIC_SCHOLAR' | 'MANUAL' | 'DOI_ORG' | 'DOAJ' = 'MANUAL';
+      let verifiedProvider: VerificationProvider = 'MANUAL';
       let finalTitle = sourceTitle.trim();
       let finalAuthors = authors.length > 0 ? authors : [{ firstName: '', lastName: 'Autor' }];
       let finalYear = parsedYear;

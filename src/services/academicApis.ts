@@ -13,7 +13,14 @@ export interface AcademicSearchResult {
   url?: string;
   abstract?: string;
   citationCount?: number;
-  provider: 'OPENALEX' | 'CROSSREF' | 'SEMANTIC_SCHOLAR' | 'DOI_ORG' | 'DOAJ';
+  provider: 'OPENALEX' | 'CROSSREF' | 'SEMANTIC_SCHOLAR' | 'DOI_ORG' | 'DOAJ' | 'GOOGLE_SCHOLAR';
+}
+
+/**
+ * Generates a direct search URL for Google Académico / Google Scholar.
+ */
+export function getGoogleScholarSearchUrl(query: string): string {
+  return `https://scholar.google.com/scholar?q=${encodeURIComponent(query.trim())}&hl=es`;
 }
 
 /**

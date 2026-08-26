@@ -46,7 +46,8 @@ export type VerificationProvider =
   | 'SEMANTIC_SCHOLAR' 
   | 'MANUAL' 
   | 'DOI_ORG'
-  | 'DOAJ';
+  | 'DOAJ'
+  | 'GOOGLE_SCHOLAR';
 
 export type FidelityStatus = 
   | 'PENDING_REVIEW' 
