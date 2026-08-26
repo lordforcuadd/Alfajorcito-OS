@@ -131,13 +131,25 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
     return () => clearTimeout(timer);
   }, [draftText, hasUnsavedDraft, workId]);
 
-  // Keyboard shortcut Ctrl+S (Scoped to draft editor tab)
+  // Keyboard shortcuts Ctrl+S (save), Ctrl+B (bold), Ctrl+I (italic)
   useEffect(() => {
     if (activeTab !== 'draft') return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         handleSaveDraft();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        const textarea = document.getElementById('work-draft-textarea');
+        if (document.activeElement === textarea) {
+          e.preventDefault();
+          applyDraftFormatting('bold');
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i') {
+        const textarea = document.getElementById('work-draft-textarea');
+        if (document.activeElement === textarea) {
+          e.preventDefault();
+          applyDraftFormatting('italic');
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -217,58 +229,137 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
     }
   };
 
-  // Insert formatting into draft textarea at cursor
-  const insertDraftFormatting = (prefix: string, suffix = '', placeholder = '') => {
+  // Smart Formatting for Draft Textarea (Bold, Italic, Headings, Lists, Blockquotes, APA Tables)
+  const applyDraftFormatting = (type: 'bold' | 'italic' | 'h2' | 'h3' | 'bullet' | 'number' | 'quote' | 'table') => {
     const textarea = document.getElementById('work-draft-textarea') as HTMLTextAreaElement | null;
-    if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const selected = draftText.substring(start, end);
-      const textToWrap = selected || placeholder;
-      const newText = draftText.substring(0, start) + prefix + textToWrap + suffix + draftText.substring(end);
-      setDraftText(newText);
-      setHasUnsavedDraft(true);
-      setTimeout(() => {
-        textarea.focus();
-        textarea.setSelectionRange(
-          start + prefix.length,
-          start + prefix.length + textToWrap.length
-        );
-      }, 0);
-    } else {
-      setDraftText((prev) => prev + (prev.endsWith('\n') || !prev ? '' : '\n') + prefix + placeholder + suffix);
-      setHasUnsavedDraft(true);
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const current = draftText;
+    const selected = current.substring(start, end);
+
+    let replacement = '';
+    let newCursorStart = start;
+    let newCursorEnd = end;
+
+    switch (type) {
+      case 'bold': {
+        if (selected.startsWith('**') && selected.endsWith('**') && selected.length >= 4) {
+          replacement = selected.slice(2, -2);
+          newCursorStart = start;
+          newCursorEnd = start + replacement.length;
+        } else {
+          const text = selected || 'Texto en negrita';
+          replacement = `**${text}**`;
+          newCursorStart = start + 2;
+          newCursorEnd = start + 2 + text.length;
+        }
+        break;
+      }
+      case 'italic': {
+        if (selected.startsWith('*') && selected.endsWith('*') && selected.length >= 2 && !selected.startsWith('**')) {
+          replacement = selected.slice(1, -1);
+          newCursorStart = start;
+          newCursorEnd = start + replacement.length;
+        } else {
+          const text = selected || 'Texto en cursiva';
+          replacement = `*${text}*`;
+          newCursorStart = start + 1;
+          newCursorEnd = start + 1 + text.length;
+        }
+        break;
+      }
+      case 'h2': {
+        const text = selected.replace(/^#+\s*/, '') || 'Título de Sección';
+        const prefix = start > 0 && !current.substring(0, start).endsWith('\n\n') ? (current.substring(0, start).endsWith('\n') ? '\n' : '\n\n') : '';
+        const suffix = !current.substring(end).startsWith('\n') ? '\n' : '';
+        replacement = `${prefix}## ${text}${suffix}`;
+        newCursorStart = start + prefix.length + 3;
+        newCursorEnd = newCursorStart + text.length;
+        break;
+      }
+      case 'h3': {
+        const text = selected.replace(/^#+\s*/, '') || 'Subtítulo';
+        const prefix = start > 0 && !current.substring(0, start).endsWith('\n\n') ? (current.substring(0, start).endsWith('\n') ? '\n' : '\n\n') : '';
+        const suffix = !current.substring(end).startsWith('\n') ? '\n' : '';
+        replacement = `${prefix}### ${text}${suffix}`;
+        newCursorStart = start + prefix.length + 4;
+        newCursorEnd = newCursorStart + text.length;
+        break;
+      }
+      case 'bullet': {
+        if (selected.trim()) {
+          const lines = selected.split('\n');
+          const allBulleted = lines.every((l) => l.trim().startsWith('- '));
+          if (allBulleted) {
+            replacement = lines.map((l) => l.replace(/^(\s*)-\s+/, '$1')).join('\n');
+          } else {
+            replacement = lines.map((l) => {
+              const clean = l.replace(/^(\s*)(?:-|\d+\.)\s+/, '$1');
+              return `- ${clean}`;
+            }).join('\n');
+          }
+          newCursorStart = start;
+          newCursorEnd = start + replacement.length;
+        } else {
+          const prefix = start > 0 && !current.substring(0, start).endsWith('\n') ? '\n' : '';
+          replacement = `${prefix}- Elemento de lista\n`;
+          newCursorStart = start + prefix.length + 2;
+          newCursorEnd = newCursorStart + 17;
+        }
+        break;
+      }
+      case 'number': {
+        if (selected.trim()) {
+          const lines = selected.split('\n');
+          const allNumbered = lines.every((l) => /^\s*\d+\.\s+/.test(l));
+          if (allNumbered) {
+            replacement = lines.map((l) => l.replace(/^(\s*)\d+\.\s+/, '$1')).join('\n');
+          } else {
+            replacement = lines.map((l, i) => {
+              const clean = l.replace(/^(\s*)(?:-|\d+\.)\s+/, '$1');
+              return `${i + 1}. ${clean}`;
+            }).join('\n');
+          }
+          newCursorStart = start;
+          newCursorEnd = start + replacement.length;
+        } else {
+          const prefix = start > 0 && !current.substring(0, start).endsWith('\n') ? '\n' : '';
+          replacement = `${prefix}1. Primer punto\n`;
+          newCursorStart = start + prefix.length + 3;
+          newCursorEnd = newCursorStart + 12;
+        }
+        break;
+      }
+      case 'quote': {
+        const text = selected.replace(/^>\s*"?|"?$/g, '').trim() || 'Texto citado textualmente con más de 40 palabras...';
+        const prefix = start > 0 && !current.substring(0, start).endsWith('\n\n') ? (current.substring(0, start).endsWith('\n') ? '\n' : '\n\n') : '';
+        const suffix = !current.substring(end).startsWith('\n') ? '\n\n' : '\n';
+        replacement = `${prefix}> "${text}" (Autor, 2024, p. 15)${suffix}`;
+        newCursorStart = start + prefix.length + 3;
+        newCursorEnd = newCursorStart + text.length;
+        break;
+      }
+      case 'table': {
+        const prefix = start > 0 && !current.substring(0, start).endsWith('\n\n') ? (current.substring(0, start).endsWith('\n') ? '\n' : '\n\n') : '';
+        const tableContent = `| Variable | N | Media (M) | Desviación (DE) |\n| :--- | :---: | :---: | :---: |\n| Variable A | 100 | 25.4 | 3.8 |\n| Variable B | 100 | 18.2 | 2.5 |\n\n*Nota.* Datos descriptivos de la muestra.`;
+        const suffix = !current.substring(end).startsWith('\n') ? '\n\n' : '';
+        replacement = `${prefix}${tableContent}${suffix}`;
+        newCursorStart = start + prefix.length;
+        newCursorEnd = start + replacement.length;
+        break;
+      }
     }
-  };
 
-  // Insert Full APA 7 Cover Page
-  const handleInsertCoverPage = () => {
-    const student = userProfile?.name || 'Estudiante';
-    const institution = userProfile?.institution || 'Universidad de San Martín de Porres (USMP)';
-    const faculty = userProfile?.faculty || 'Facultad de Ciencias de la Comunicación, Turismo y Psicología';
-    const courseName = course?.name || 'Asignatura';
-    const teacher = course?.teacherName || 'Docente';
-    const dateStr = new Date().toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric' });
-
-    const cover = `# ${work.title}\n\n**Estudiante:** ${student}  \n**Institución:** ${institution}  \n**Facultad:** ${faculty}  \n**Asignatura:** ${courseName}  \n**Docente:** ${teacher}  \n**Fecha:** ${dateStr}  \n\n---\n\n`;
-    setDraftText((prev) => cover + prev.replace(/^#\s+[^\n]+\n\n?/, ''));
+    const updatedText = current.substring(0, start) + replacement + current.substring(end);
+    setDraftText(updatedText);
     setHasUnsavedDraft(true);
-    showToast('Portada insertada', 'Encabezado y portada formal APA 7 añadidos al borrador.', 'success');
-  };
 
-  // Insert Full Formatted References into Draft
-  const handleInsertAllReferencesIntoDraft = () => {
-    if (workSources.length === 0) {
-      showToast('Sin fuentes', 'No hay fuentes vinculadas a este trabajo todavía.', 'info');
-      return;
-    }
-    const refsSection = `\n\n## Referencias\n\n` + workSources
-      .map((s) => formatFullReference(s, work.citationStyle))
-      .sort()
-      .join('\n\n');
-    setDraftText((prev) => prev.trim() + refsSection + '\n');
-    setHasUnsavedDraft(true);
-    showToast('Referencias insertadas', 'Lista de referencias añadida al final del borrador.', 'success');
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursorStart, newCursorEnd);
+    }, 0);
   };
 
   return (
@@ -1198,10 +1289,10 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                   {/* Negrita */}
                   <button
                     type="button"
-                    onClick={() => insertDraftFormatting('**', '**', 'Texto en Negrita')}
-                    className="p-1.5 sm:px-2 sm:py-1 bg-white hover:bg-[#FDF2F0] rounded-lg text-xs font-bold text-[#2B2D42] hover:text-[#8C3A32] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
+                    onClick={() => applyDraftFormatting('bold')}
+                    className="p-1.5 sm:px-2.5 sm:py-1 bg-white hover:bg-[#FDF2F0] rounded-lg text-xs font-bold text-[#2B2D42] hover:text-[#8C3A32] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1.5 transition-colors"
                     title="Negrita (Ctrl + B)"
-                    aria-label="Insertar texto en negrita"
+                    aria-label="Insertar o alternar texto en negrita"
                   >
                     <Bold className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Negrita</span>
@@ -1210,10 +1301,10 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                   {/* Cursiva */}
                   <button
                     type="button"
-                    onClick={() => insertDraftFormatting('*', '*', 'Texto en Cursiva')}
-                    className="p-1.5 sm:px-2 sm:py-1 bg-white hover:bg-[#FDF2F0] rounded-lg text-xs font-bold text-[#2B2D42] hover:text-[#8C3A32] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
+                    onClick={() => applyDraftFormatting('italic')}
+                    className="p-1.5 sm:px-2.5 sm:py-1 bg-white hover:bg-[#FDF2F0] rounded-lg text-xs font-bold text-[#2B2D42] hover:text-[#8C3A32] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1.5 transition-colors"
                     title="Cursiva (Ctrl + I)"
-                    aria-label="Insertar texto en cursiva"
+                    aria-label="Insertar o alternar texto en cursiva"
                   >
                     <Italic className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Cursiva</span>
@@ -1222,34 +1313,34 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                   {/* Título Nivel 2 */}
                   <button
                     type="button"
-                    onClick={() => insertDraftFormatting('\n## ', '\n', 'Título de Sección')}
-                    className="p-1.5 sm:px-2 sm:py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
-                    title="Título Principal / Nivel 2"
+                    onClick={() => applyDraftFormatting('h2')}
+                    className="p-1.5 sm:px-2.5 sm:py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1.5 transition-colors"
+                    title="Título de Sección (Nivel 2)"
                     aria-label="Insertar título de sección"
                   >
-                    <Heading2 className="w-3.5 h-3.5" />
+                    <Heading2 className="w-3.5 h-3.5 text-[#8C3A32]" />
                     <span className="hidden sm:inline">Título</span>
                   </button>
 
                   {/* Subtítulo Nivel 3 */}
                   <button
                     type="button"
-                    onClick={() => insertDraftFormatting('\n### ', '\n', 'Subtítulo')}
-                    className="p-1.5 sm:px-2 sm:py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
-                    title="Subtítulo / Nivel 3"
+                    onClick={() => applyDraftFormatting('h3')}
+                    className="p-1.5 sm:px-2.5 sm:py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1.5 transition-colors"
+                    title="Subtítulo (Nivel 3)"
                     aria-label="Insertar subtítulo"
                   >
-                    <Heading3 className="w-3.5 h-3.5" />
+                    <Heading3 className="w-3.5 h-3.5 text-[#8C3A32]" />
                     <span className="hidden sm:inline">Subtítulo</span>
                   </button>
 
                   {/* Lista con viñetas */}
                   <button
                     type="button"
-                    onClick={() => insertDraftFormatting('\n- ', '', 'Elemento de lista')}
-                    className="p-1.5 sm:px-2 sm:py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
-                    title="Lista con Viñetas"
-                    aria-label="Insertar lista con viñetas"
+                    onClick={() => applyDraftFormatting('bullet')}
+                    className="p-1.5 sm:px-2.5 sm:py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1.5 transition-colors"
+                    title="Lista con Viñetas (Aplica a todas las líneas seleccionadas)"
+                    aria-label="Insertar o alternar lista con viñetas"
                   >
                     <List className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Viñeta</span>
@@ -1258,10 +1349,10 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                   {/* Lista numerada */}
                   <button
                     type="button"
-                    onClick={() => insertDraftFormatting('\n1. ', '', 'Primer punto')}
-                    className="p-1.5 sm:px-2 sm:py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
-                    title="Lista Numerada"
-                    aria-label="Insertar lista numerada"
+                    onClick={() => applyDraftFormatting('number')}
+                    className="p-1.5 sm:px-2.5 sm:py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1.5 transition-colors"
+                    title="Lista Numerada 1, 2, 3... (Aplica a todas las líneas seleccionadas)"
+                    aria-label="Insertar o alternar lista numerada"
                   >
                     <ListOrdered className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Numerada</span>
@@ -1270,9 +1361,9 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                   {/* Cita en Bloque (+40 palabras APA) */}
                   <button
                     type="button"
-                    onClick={() => insertDraftFormatting('\n> "', '" (Autor, 2024, p. 15)\n', 'Texto citado en bloque con más de 40 palabras...')}
-                    className="p-1.5 sm:px-2 sm:py-1 bg-white hover:bg-[#FDF2F0] rounded-lg text-xs font-bold text-[#8C3A32] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
-                    title="Cita en Bloque APA 7 (+40 palabras)"
+                    onClick={() => applyDraftFormatting('quote')}
+                    className="p-1.5 sm:px-2.5 sm:py-1 bg-white hover:bg-[#FDF2F0] rounded-lg text-xs font-bold text-[#8C3A32] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1.5 transition-colors"
+                    title="Cita Textual en Bloque APA 7 (+40 palabras)"
                     aria-label="Insertar cita en bloque"
                   >
                     <Quote className="w-3.5 h-3.5 text-[#D98880]" />
@@ -1282,42 +1373,14 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                   {/* Tabla APA 7 */}
                   <button
                     type="button"
-                    onClick={() => insertDraftFormatting('\n| Variable | N | Media (M) | Desviación (DE) |\n| :--- | :---: | :---: | :---: |\n| Variable A | 100 | 25.4 | 3.8 |\n| Variable B | 100 | 18.2 | 2.5 |\n\n*Nota.* Datos obtenidos de la muestra.\n', '', '')}
-                    className="p-1.5 sm:px-2 sm:py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
-                    title="Tabla Estándar APA 7"
+                    onClick={() => applyDraftFormatting('table')}
+                    className="p-1.5 sm:px-2.5 sm:py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1.5 transition-colors"
+                    title="Insertar Tabla con formato estándar APA 7"
                     aria-label="Insertar tabla APA 7"
                   >
                     <TableIcon className="w-3.5 h-3.5 text-[#80CBC4]" />
                     <span className="hidden sm:inline">Tabla APA</span>
                   </button>
-
-                  <div className="h-4 w-px bg-[#EBE5DF] shrink-0 mx-0.5" />
-
-                  {/* Plantilla Portada APA */}
-                  <button
-                    type="button"
-                    onClick={handleInsertCoverPage}
-                    className="px-2 py-1 bg-white hover:bg-[#FDF2F0] rounded-lg text-xs font-bold text-[#8C3A32] border border-[#E8A598]/50 shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
-                    title="Insertar Portada Estándar APA 7"
-                    aria-label="Insertar portada APA 7"
-                  >
-                    <FileText className="w-3.5 h-3.5 text-[#D98880]" />
-                    <span>+ Portada APA</span>
-                  </button>
-
-                  {/* Insertar Referencias al Borrador */}
-                  {workSources.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={handleInsertAllReferencesIntoDraft}
-                      className="px-2 py-1 bg-white hover:bg-emerald-50 rounded-lg text-xs font-bold text-emerald-800 border border-emerald-200 shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
-                      title="Añadir sección de referencias al final del documento"
-                      aria-label="Insertar referencias al borrador"
-                    >
-                      <BookMarked className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>+ Referencias</span>
-                    </button>
-                  )}
                 </div>
 
                 <TextArea
@@ -1329,7 +1392,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                     setHasUnsavedDraft(true);
                   }}
                   className="font-serif leading-relaxed text-sm"
-                  placeholder="Comienza a redactar tu ensayo o trabajo aquí. Usa la barra superior de herramientas para negritas, citas, tablas o portada APA..."
+                  placeholder="Comienza a redactar tu ensayo o trabajo aquí. Usa la barra superior de herramientas para negritas, subtítulos, listas, citas en bloque o tablas APA..."
                 />
               </div>
 
