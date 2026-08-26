@@ -1,19 +1,20 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { ToastProvider, useToast } from './components/common/Toast';
 import { AppShell, type NavTab } from './components/layout/AppShell';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { DashboardView } from './modules/dashboard/DashboardView';
 import { QuickCaptureModal, type CaptureTab } from './components/modals/QuickCaptureModal';
 import { initializeDatabaseSeed, db } from './db';
+import { lazyWithRetry } from './utils/lazyRetry';
 
-// Code-split dynamic views for true on-demand lazy loading
-const WorksView = lazy(() => import('./modules/works/WorksView').then((m) => ({ default: m.WorksView })));
-const CurriculumView = lazy(() => import('./modules/curriculum/CurriculumView').then((m) => ({ default: m.CurriculumView })));
-const ResearchView = lazy(() => import('./modules/research/ResearchView').then((m) => ({ default: m.ResearchView })));
-const PipelineView = lazy(() => import('./modules/citations/PipelineView').then((m) => ({ default: m.PipelineView })));
-const BrainView = lazy(() => import('./modules/notes/BrainView').then((m) => ({ default: m.BrainView })));
-const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then((m) => ({ default: m.SettingsModal })));
-const CommandPalette = lazy(() => import('./components/modals/CommandPalette').then((m) => ({ default: m.CommandPalette })));
+// Code-split dynamic views with auto-retry on deployment updates
+const WorksView = lazyWithRetry(() => import('./modules/works/WorksView').then((m) => ({ default: m.WorksView })), 'WorksView');
+const CurriculumView = lazyWithRetry(() => import('./modules/curriculum/CurriculumView').then((m) => ({ default: m.CurriculumView })), 'CurriculumView');
+const ResearchView = lazyWithRetry(() => import('./modules/research/ResearchView').then((m) => ({ default: m.ResearchView })), 'ResearchView');
+const PipelineView = lazyWithRetry(() => import('./modules/citations/PipelineView').then((m) => ({ default: m.PipelineView })), 'PipelineView');
+const BrainView = lazyWithRetry(() => import('./modules/notes/BrainView').then((m) => ({ default: m.BrainView })), 'BrainView');
+const SettingsModal = lazyWithRetry(() => import('./components/modals/SettingsModal').then((m) => ({ default: m.SettingsModal })), 'SettingsModal');
+const CommandPalette = lazyWithRetry(() => import('./components/modals/CommandPalette').then((m) => ({ default: m.CommandPalette })), 'CommandPalette');
 
 const ViewLoadingFallback = () => (
   <div className="flex items-center justify-center py-20 text-center animate-fade-in">

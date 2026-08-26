@@ -32,6 +32,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
+      const isChunkError =
+        this.state.error?.message?.includes('dynamically imported module') ||
+        this.state.error?.message?.includes('Failed to fetch') ||
+        this.state.error?.message?.includes('Loading chunk');
+
       return (
         <div className="p-6 max-w-lg mx-auto my-12 animate-fade-in">
           <Card variant="elevated" className="text-center space-y-4 p-6 border-rose-200 bg-white">
@@ -40,21 +45,36 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
             <div>
               <h3 className="font-extrabold text-base text-[#2B2D42]">
-                {this.props.fallbackTitle || 'Hubo un detalle al cargar esta sección'}
+                {isChunkError
+                  ? 'Nueva versión de Alfajorcito OS disponible'
+                  : this.props.fallbackTitle || 'Hubo un detalle al cargar esta sección'}
               </h3>
               <p className="text-xs text-[#5A6275] mt-1 leading-relaxed">
-                {this.state.error?.message || 'Ocurrió un error inesperado al renderizar.'}
+                {isChunkError
+                  ? 'Se ha actualizado la aplicación en el servidor. Haz clic en recargar para cargar los componentes más recientes.'
+                  : this.state.error?.message || 'Ocurrió un error inesperado al renderizar.'}
               </p>
             </div>
-            <div className="pt-2 flex justify-center">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={this.handleReset}
-                icon={<RefreshCw className="w-3.5 h-3.5" />}
-              >
-                Reintentar
-              </Button>
+            <div className="pt-2 flex justify-center gap-2">
+              {isChunkError ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => window.location.reload()}
+                  icon={<RefreshCw className="w-3.5 h-3.5" />}
+                >
+                  Actualizar y Recargar
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={this.handleReset}
+                  icon={<RefreshCw className="w-3.5 h-3.5" />}
+                >
+                  Reintentar
+                </Button>
+              )}
             </div>
           </Card>
         </div>
