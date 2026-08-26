@@ -20,6 +20,7 @@ import { useToast } from '../common/Toast';
 import { triggerCelebrationConfetti } from '../../utils/confettiHelper';
 import { dissociateWorkIdFromSources, WORK_DELETION_CONSEQUENCES } from '../../utils/academicWorkUtils';
 import { generateId } from '../../utils/idHelper';
+import { analyzeInstructionsWithAI } from '../../services/aiService';
 import type { Work, WorkType, WorkStatus, CitationStyle, Course, UserProfile } from '../../types';
 
 export interface WorkModalProps {
@@ -119,6 +120,14 @@ export const WorkModal: React.FC<WorkModalProps> = ({
 
       if (workToEdit) {
         // Update existing work
+        let updatedAnalysis = workToEdit.instructionAnalysis;
+        if (rawInstructions.trim() && rawInstructions.trim() !== (workToEdit.rawInstructions || '')) {
+          try {
+            updatedAnalysis = await analyzeInstructionsWithAI(rawInstructions.trim());
+          } catch {
+            // Keep existing or fallback
+          }
+        }
         await db.works.update(workToEdit.id, {
           title: title.trim(),
           courseId,
@@ -129,6 +138,7 @@ export const WorkModal: React.FC<WorkModalProps> = ({
           minRequiredSources: Number(minRequiredSources) || 4,
           maxSourceAgeYears: Number(maxSourceAgeYears) || 5,
           rawInstructions: rawInstructions.trim(),
+          instructionAnalysis: updatedAnalysis,
           googleDocUrl: googleDocUrl.trim() || undefined,
           canvaUrl: canvaUrl.trim() || undefined,
           updatedAt: now
@@ -142,6 +152,14 @@ export const WorkModal: React.FC<WorkModalProps> = ({
         showToast('Trabajo actualizado', `"${title}" ha sido guardado exitosamente.`, 'success');
       } else {
         // Create new work
+        let analysis = undefined;
+        if (rawInstructions.trim()) {
+          try {
+            analysis = await analyzeInstructionsWithAI(rawInstructions.trim());
+          } catch {
+            // Offline fallback is handled inside analyzeInstructionsWithAI
+          }
+        }
         const newWorkId = generateId('work');
         await db.works.add({
           id: newWorkId,
@@ -154,6 +172,7 @@ export const WorkModal: React.FC<WorkModalProps> = ({
           minRequiredSources: Number(minRequiredSources) || 4,
           maxSourceAgeYears: Number(maxSourceAgeYears) || 5,
           rawInstructions: rawInstructions.trim(),
+          instructionAnalysis: analysis,
           googleDocUrl: googleDocUrl.trim() || undefined,
           canvaUrl: canvaUrl.trim() || undefined,
           isArchived: false,

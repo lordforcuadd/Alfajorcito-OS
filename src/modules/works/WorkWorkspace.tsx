@@ -99,6 +99,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
   const [inquiryTeacherAnswers, setInquiryTeacherAnswers] = useState<Record<string, string>>({});
   const [newInquiryStatus, setNewInquiryStatus] = useState<'DRAFT' | 'SENT' | 'ANSWERED'>('DRAFT');
   const [isFormulating, setIsFormulating] = useState(false);
+  const [isAnalyzingConsigna, setIsAnalyzingConsigna] = useState(false);
   const [copiedInquiryId, setCopiedInquiryId] = useState<string | null>(null);
 
   // Google Docs & Canva link modal state
@@ -532,12 +533,22 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                   <Button
                     variant="secondary"
                     size="sm"
+                    isLoading={isAnalyzingConsigna}
                     icon={<Sparkles className="w-3.5 h-3.5 text-[#8C3A32]" />}
                     onClick={async () => {
-                      if (work.rawInstructions) {
+                      if (!work.rawInstructions) {
+                        showToast('Sin consigna', 'Ingresa las consignas oficiales antes de analizar con IA.', 'warning');
+                        return;
+                      }
+                      setIsAnalyzingConsigna(true);
+                      try {
                         const analysis = await analyzeInstructionsWithAI(work.rawInstructions);
                         await db.works.update(workId, { instructionAnalysis: analysis, updatedAt: Date.now() });
                         showToast('Análisis completado', 'Requisitos explícitos e inferencias actualizadas con IA.', 'success');
+                      } catch {
+                        showToast('Error', 'No se pudo analizar la consigna.', 'error');
+                      } finally {
+                        setIsAnalyzingConsigna(false);
                       }
                     }}
                   >
@@ -752,6 +763,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                     <Button
                       variant="primary"
                       size="sm"
+                      isLoading={isFormulating}
                       icon={<Sparkles className="w-3.5 h-3.5" />}
                       onClick={async () => {
                         if (!newInquiryTopic.trim()) {
@@ -762,25 +774,32 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                           showToast('Duda requerida', 'Por favor describe tu duda para el profesor.', 'warning');
                           return;
                         }
-                        const formal = await formulateQuestionForTeacher(
-                          newInquiryDoubt.trim(),
-                          course?.name || 'Materia',
-                          course?.teacherName
-                        );
-                        await db.inquiries.add({
-                          id: generateId('inq'),
-                          workId,
-                          courseId: work.courseId,
-                          topic: newInquiryTopic.trim(),
-                          rawQuestion: newInquiryDoubt.trim(),
-                          formalQuestion: formal,
-                          status: 'DRAFT',
-                          createdAt: Date.now(),
-                          updatedAt: Date.now()
-                        });
-                        setNewInquiryTopic('');
-                        setNewInquiryDoubt('');
-                        showToast('Consulta guardada', 'Registrada y formulada formalmente con IA.', 'success');
+                        setIsFormulating(true);
+                        try {
+                          const formal = await formulateQuestionForTeacher(
+                            newInquiryDoubt.trim(),
+                            course?.name || 'Materia',
+                            course?.teacherName
+                          );
+                          await db.inquiries.add({
+                            id: generateId('inq'),
+                            workId,
+                            courseId: work.courseId,
+                            topic: newInquiryTopic.trim(),
+                            rawQuestion: newInquiryDoubt.trim(),
+                            formalQuestion: formal,
+                            status: 'DRAFT',
+                            createdAt: Date.now(),
+                            updatedAt: Date.now()
+                          });
+                          setNewInquiryTopic('');
+                          setNewInquiryDoubt('');
+                          showToast('Consulta guardada', 'Registrada y formulada formalmente con IA.', 'success');
+                        } catch {
+                          showToast('Error', 'No se pudo formular la consulta con IA.', 'error');
+                        } finally {
+                          setIsFormulating(false);
+                        }
                       }}
                     >
                       Guardar y Formular con IA
