@@ -520,10 +520,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           <Select
             label="Proveedor de Inteligencia Artificial"
             value={aiProvider}
-            onChange={(e) => setAiProvider(e.target.value as AISettings['provider'])}
+            onChange={(e) => {
+              const newProv = e.target.value as AISettings['provider'];
+              setAiProvider(newProv);
+              if (newProv === 'gemini' && (!aiModel || aiModel.includes('gpt') || aiModel.includes('llama'))) {
+                setAiModel('gemini-2.5-flash');
+              } else if (newProv === 'openai' && (!aiModel || aiModel.includes('gemini') || aiModel.includes('llama'))) {
+                setAiModel('gpt-4o-mini');
+              } else if (newProv === 'openrouter' && (!aiModel || aiModel.includes('gemini') || aiModel.includes('gpt'))) {
+                setAiModel('meta-llama/llama-3.3-70b-instruct');
+              } else if (newProv === 'ollama' && (!aiModel || aiModel.includes('gemini') || aiModel.includes('gpt'))) {
+                setAiModel('llama3');
+              }
+            }}
           >
             <option value="offline_heuristics">Heurístico Offline Integrado (Sin API Key / 100% Privado)</option>
-            <option value="gemini">Google Gemini (Gemini 1.5 Flash / Pro)</option>
+            <option value="gemini">Google Gemini (Gemini 2.5 Flash / 1.5 Flash)</option>
             <option value="openai">OpenAI (GPT-4o-mini / GPT-4o)</option>
             <option value="openrouter">OpenRouter (Llama 3.3, DeepSeek R1, Claude)</option>
             <option value="ollama">Ollama Local (http://localhost:11434)</option>
@@ -550,12 +562,90 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           )}
 
           {aiProvider !== 'offline_heuristics' && (
-            <Input
-              label="Nombre del Modelo"
-              placeholder="e.g. gemini-2.0-flash, gemini-1.5-flash, gpt-4o-mini"
-              value={aiModel}
-              onChange={(e) => setAiModel(e.target.value)}
-            />
+            <div className="space-y-1.5">
+              <Input
+                label="Nombre del Modelo (Decidido por el Usuario)"
+                placeholder={
+                  aiProvider === 'gemini'
+                    ? 'e.g. gemini-2.5-flash, gemini-1.5-flash'
+                    : aiProvider === 'openai'
+                    ? 'e.g. gpt-4o-mini, gpt-4o'
+                    : aiProvider === 'openrouter'
+                    ? 'e.g. meta-llama/llama-3.3-70b-instruct'
+                    : 'e.g. llama3'
+                }
+                value={aiModel}
+                onChange={(e) => setAiModel(e.target.value)}
+              />
+              {/* Quick Model Selector Pills */}
+              <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                <span className="text-[10px] text-[#8D99AE] font-bold uppercase">Sugerencias:</span>
+                {aiProvider === 'gemini' &&
+                  ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setAiModel(m)}
+                      className={`text-[11px] px-2 py-0.5 rounded-lg font-mono font-bold transition-all cursor-pointer border ${
+                        aiModel === m
+                          ? 'bg-[#FDF2F0] text-[#8C3A32] border-[#E8A598]'
+                          : 'bg-[#F5F1EB] text-[#5A6275] border-[#EBE5DF] hover:bg-white'
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                {aiProvider === 'openai' &&
+                  ['gpt-4o-mini', 'gpt-4o', 'o3-mini'].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setAiModel(m)}
+                      className={`text-[11px] px-2 py-0.5 rounded-lg font-mono font-bold transition-all cursor-pointer border ${
+                        aiModel === m
+                          ? 'bg-[#FDF2F0] text-[#8C3A32] border-[#E8A598]'
+                          : 'bg-[#F5F1EB] text-[#5A6275] border-[#EBE5DF] hover:bg-white'
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                {aiProvider === 'openrouter' &&
+                  [
+                    'meta-llama/llama-3.3-70b-instruct',
+                    'deepseek/deepseek-r1',
+                    'anthropic/claude-3.5-sonnet'
+                  ].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setAiModel(m)}
+                      className={`text-[11px] px-2 py-0.5 rounded-lg font-mono font-bold transition-all cursor-pointer border ${
+                        aiModel === m
+                          ? 'bg-[#FDF2F0] text-[#8C3A32] border-[#E8A598]'
+                          : 'bg-[#F5F1EB] text-[#5A6275] border-[#EBE5DF] hover:bg-white'
+                      }`}
+                    >
+                      {m.split('/')[1] || m}
+                    </button>
+                  ))}
+                {aiProvider === 'ollama' &&
+                  ['llama3', 'mistral', 'qwen2.5:7b', 'phi3'].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setAiModel(m)}
+                      className={`text-[11px] px-2 py-0.5 rounded-lg font-mono font-bold transition-all cursor-pointer border ${
+                        aiModel === m
+                          ? 'bg-[#FDF2F0] text-[#8C3A32] border-[#E8A598]'
+                          : 'bg-[#F5F1EB] text-[#5A6275] border-[#EBE5DF] hover:bg-white'
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+              </div>
+            </div>
           )}
 
           {testResult && (

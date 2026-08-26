@@ -24,7 +24,15 @@ import {
   Edit3,
   Layout,
   BookMarked,
-  Check
+  Check,
+  Bold,
+  Italic,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  Quote,
+  Table as TableIcon
 } from 'lucide-react';
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';
@@ -203,10 +211,63 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
     if (newStatus === 'ENTREGADO') {
       triggerCelebrationConfetti();
       window.dispatchEvent(new CustomEvent('work-delivered', { detail: { title: work.title } }));
-      showToast('¡Felicitaciones!', 'Trabajo marcado como ENTREGADO.', 'success');
     } else {
       showToast('Estado actualizado', `El trabajo cambió a "${WORK_STATUS_META[newStatus]?.label || newStatus}".`, 'success');
     }
+  };
+
+  // Insert formatting into draft textarea at cursor
+  const insertDraftFormatting = (prefix: string, suffix = '', placeholder = '') => {
+    const textarea = document.getElementById('work-draft-textarea') as HTMLTextAreaElement | null;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selected = draftText.substring(start, end);
+      const textToWrap = selected || placeholder;
+      const newText = draftText.substring(0, start) + prefix + textToWrap + suffix + draftText.substring(end);
+      setDraftText(newText);
+      setHasUnsavedDraft(true);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(
+          start + prefix.length,
+          start + prefix.length + textToWrap.length
+        );
+      }, 0);
+    } else {
+      setDraftText((prev) => prev + (prev.endsWith('\n') || !prev ? '' : '\n') + prefix + placeholder + suffix);
+      setHasUnsavedDraft(true);
+    }
+  };
+
+  // Insert Full APA 7 Cover Page
+  const handleInsertCoverPage = () => {
+    const student = userProfile?.name || 'Estudiante';
+    const institution = userProfile?.institution || 'Universidad de San Martín de Porres (USMP)';
+    const faculty = userProfile?.faculty || 'Facultad de Ciencias de la Comunicación, Turismo y Psicología';
+    const courseName = course?.name || 'Asignatura';
+    const teacher = course?.teacherName || 'Docente';
+    const dateStr = new Date().toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const cover = `# ${work.title}\n\n**Estudiante:** ${student}  \n**Institución:** ${institution}  \n**Facultad:** ${faculty}  \n**Asignatura:** ${courseName}  \n**Docente:** ${teacher}  \n**Fecha:** ${dateStr}  \n\n---\n\n`;
+    setDraftText((prev) => cover + prev.replace(/^#\s+[^\n]+\n\n?/, ''));
+    setHasUnsavedDraft(true);
+    showToast('Portada insertada', 'Encabezado y portada formal APA 7 añadidos al borrador.', 'success');
+  };
+
+  // Insert Full Formatted References into Draft
+  const handleInsertAllReferencesIntoDraft = () => {
+    if (workSources.length === 0) {
+      showToast('Sin fuentes', 'No hay fuentes vinculadas a este trabajo todavía.', 'info');
+      return;
+    }
+    const refsSection = `\n\n## Referencias\n\n` + workSources
+      .map((s) => formatFullReference(s, work.citationStyle))
+      .sort()
+      .join('\n\n');
+    setDraftText((prev) => prev.trim() + refsSection + '\n');
+    setHasUnsavedDraft(true);
+    showToast('Referencias insertadas', 'Lista de referencias añadida al final del borrador.', 'success');
   };
 
   return (
@@ -1105,16 +1166,153 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                 </div>
               )}
 
-              <TextArea
-                rows={16}
-                value={draftText}
-                onChange={(e) => {
-                  setDraftText(e.target.value);
-                  setHasUnsavedDraft(true);
-                }}
-                className="font-serif leading-relaxed text-sm"
-                placeholder="Comienza a redactar tu ensayo o trabajo aquí. Puedes insertar citas directamente desde la barra superior de fuentes..."
-              />
+              {/* Mini Word / Markdown Formatting Toolbar */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-[#5A6275]">
+                    Editor de Redacción (Formato APA 7 / Markdown)
+                  </label>
+                  <span className="text-[11px] text-[#8D99AE]">Selecciona texto para aplicar formato rápido</span>
+                </div>
+
+                <div className="flex items-center gap-1.5 p-1.5 bg-[#F5F1EB] rounded-xl border border-[#EBE5DF] overflow-x-auto tab-scroll-pc scroll-touch touch-pan-x flex-nowrap">
+                  {/* Negrita */}
+                  <button
+                    type="button"
+                    onClick={() => insertDraftFormatting('**', '**', 'Texto en Negrita')}
+                    className="p-1.5 sm:px-2 sm:py-1 bg-white hover:bg-[#FDF2F0] rounded-lg text-xs font-bold text-[#2B2D42] hover:text-[#8C3A32] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
+                    title="Negrita (Ctrl + B)"
+                    aria-label="Insertar texto en negrita"
+                  >
+                    <Bold className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Negrita</span>
+                  </button>
+
+                  {/* Cursiva */}
+                  <button
+                    type="button"
+                    onClick={() => insertDraftFormatting('*', '*', 'Texto en Cursiva')}
+                    className="p-1.5 sm:px-2 sm:py-1 bg-white hover:bg-[#FDF2F0] rounded-lg text-xs font-bold text-[#2B2D42] hover:text-[#8C3A32] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
+                    title="Cursiva (Ctrl + I)"
+                    aria-label="Insertar texto en cursiva"
+                  >
+                    <Italic className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Cursiva</span>
+                  </button>
+
+                  {/* Título Nivel 2 */}
+                  <button
+                    type="button"
+                    onClick={() => insertDraftFormatting('\n## ', '\n', 'Título de Sección')}
+                    className="p-1.5 sm:px-2 sm:py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
+                    title="Título Principal / Nivel 2"
+                    aria-label="Insertar título de sección"
+                  >
+                    <Heading2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Título</span>
+                  </button>
+
+                  {/* Subtítulo Nivel 3 */}
+                  <button
+                    type="button"
+                    onClick={() => insertDraftFormatting('\n### ', '\n', 'Subtítulo')}
+                    className="p-1.5 sm:px-2 sm:py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
+                    title="Subtítulo / Nivel 3"
+                    aria-label="Insertar subtítulo"
+                  >
+                    <Heading3 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Subtítulo</span>
+                  </button>
+
+                  {/* Lista con viñetas */}
+                  <button
+                    type="button"
+                    onClick={() => insertDraftFormatting('\n- ', '', 'Elemento de lista')}
+                    className="p-1.5 sm:px-2 sm:py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
+                    title="Lista con Viñetas"
+                    aria-label="Insertar lista con viñetas"
+                  >
+                    <List className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Viñeta</span>
+                  </button>
+
+                  {/* Lista numerada */}
+                  <button
+                    type="button"
+                    onClick={() => insertDraftFormatting('\n1. ', '', 'Primer punto')}
+                    className="p-1.5 sm:px-2 sm:py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
+                    title="Lista Numerada"
+                    aria-label="Insertar lista numerada"
+                  >
+                    <ListOrdered className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Numerada</span>
+                  </button>
+
+                  {/* Cita en Bloque (+40 palabras APA) */}
+                  <button
+                    type="button"
+                    onClick={() => insertDraftFormatting('\n> "', '" (Autor, 2024, p. 15)\n', 'Texto citado en bloque con más de 40 palabras...')}
+                    className="p-1.5 sm:px-2 sm:py-1 bg-white hover:bg-[#FDF2F0] rounded-lg text-xs font-bold text-[#8C3A32] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
+                    title="Cita en Bloque APA 7 (+40 palabras)"
+                    aria-label="Insertar cita en bloque"
+                  >
+                    <Quote className="w-3.5 h-3.5 text-[#D98880]" />
+                    <span className="hidden sm:inline">Cita en Bloque</span>
+                  </button>
+
+                  {/* Tabla APA 7 */}
+                  <button
+                    type="button"
+                    onClick={() => insertDraftFormatting('\n| Variable | N | Media (M) | Desviación (DE) |\n| :--- | :---: | :---: | :---: |\n| Variable A | 100 | 25.4 | 3.8 |\n| Variable B | 100 | 18.2 | 2.5 |\n\n*Nota.* Datos obtenidos de la muestra.\n', '', '')}
+                    className="p-1.5 sm:px-2 sm:py-1 bg-white hover:bg-[#F5F1EB] rounded-lg text-xs font-bold text-[#2B2D42] border border-[#EBE5DF] shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
+                    title="Tabla Estándar APA 7"
+                    aria-label="Insertar tabla APA 7"
+                  >
+                    <TableIcon className="w-3.5 h-3.5 text-[#80CBC4]" />
+                    <span className="hidden sm:inline">Tabla APA</span>
+                  </button>
+
+                  <div className="h-4 w-px bg-[#EBE5DF] shrink-0 mx-0.5" />
+
+                  {/* Plantilla Portada APA */}
+                  <button
+                    type="button"
+                    onClick={handleInsertCoverPage}
+                    className="px-2 py-1 bg-white hover:bg-[#FDF2F0] rounded-lg text-xs font-bold text-[#8C3A32] border border-[#E8A598]/50 shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
+                    title="Insertar Portada Estándar APA 7"
+                    aria-label="Insertar portada APA 7"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-[#D98880]" />
+                    <span>+ Portada APA</span>
+                  </button>
+
+                  {/* Insertar Referencias al Borrador */}
+                  {workSources.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleInsertAllReferencesIntoDraft}
+                      className="px-2 py-1 bg-white hover:bg-emerald-50 rounded-lg text-xs font-bold text-emerald-800 border border-emerald-200 shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
+                      title="Añadir sección de referencias al final del documento"
+                      aria-label="Insertar referencias al borrador"
+                    >
+                      <BookMarked className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>+ Referencias</span>
+                    </button>
+                  )}
+                </div>
+
+                <TextArea
+                  id="work-draft-textarea"
+                  rows={16}
+                  value={draftText}
+                  onChange={(e) => {
+                    setDraftText(e.target.value);
+                    setHasUnsavedDraft(true);
+                  }}
+                  className="font-serif leading-relaxed text-sm"
+                  placeholder="Comienza a redactar tu ensayo o trabajo aquí. Usa la barra superior de herramientas para negritas, citas, tablas o portada APA..."
+                />
+              </div>
 
               {/* Live Canonical References Section (French Indentation) */}
               {workSources.length > 0 && (

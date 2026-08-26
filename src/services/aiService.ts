@@ -99,26 +99,43 @@ export async function analyzeInstructionsWithAI(
 
   if (effectiveSettings?.apiKey && effectiveSettings.provider !== 'offline_heuristics') {
     try {
-      const prompt = `Eres un asistente experto en metodología de investigación y rúbricas universitarias (Psicología USMP / APA 7).
-Analiza las siguientes indicaciones dadas por el docente para un trabajo académico:
+      const prompt = `Eres un docente universitario y tutor experto en metodología de investigación para la carrera de Psicología (USMP / Normas APA 7).
+Un estudiante te entrega las siguientes indicaciones o consigna en texto plano/informal para su trabajo académico:
 
-Consigna del docente:
+Consigna del estudiante / docente:
 """
 ${instructionsText}
 """
 
-Extrae y estructura la información en formato JSON EXACTO con las siguientes claves:
+TAREA:
+1. Transcribe, interpreta y mejora la consigna: extrae los objetivos de aprendizaje, ejes temáticos y requisitos formales con lenguaje riguroso y académico.
+2. Si la consigna contiene faltas de ortografía o es informal, redacta los requisitos oficiales de forma impecable y clara.
+3. Propón inferencias metodológicas profundas (teorías psicológicas aplicables, autores clave, estructura recomendada con Introducción, Ejes de Desarrollo y Conclusiones).
+4. Detecta posibles dudas o ambigüedades clave para consultar al docente.
+
+Devuelve EXACTAMENTE un objeto JSON con esta estructura:
 {
-  "explicitRequirements": ["Lista de requisitos formales explícitos y oficiales que el docente exige (e.g. extensión, estilo, fuentes)"],
-  "aiInferences": ["Sugerencias metodológicas, estructura recomendada y consideraciones de rigor académico"],
-  "deliverableFormat": "Documento académico (PDF/Word)",
+  "explicitRequirements": [
+    "Requisito formal 1 (e.g. Redacción con palabras propias y paráfrasis estricta para evitar plagio)",
+    "Requisito formal 2 (e.g. Análisis del desarrollo psicológico infantil y su interacción con el entorno)",
+    "Requisito formal 3 (e.g. Estrategias de intervención y acompañamiento de los padres/cuidadores)"
+  ],
+  "aiInferences": [
+    "Estructura recomendada basada en APA 7: Introducción con justificación del tema, Marco conceptual (Teoría Ecológica / Estilos Parentales), Desarrollo analítico y Conclusiones",
+    "Marco teórico sugerido: Integrar enfoques contemporáneos de psicología del desarrollo infantil y modelos de parentalidad positiva",
+    "Rigor metodológico: Respaldar cada afirmación con fuentes empíricas indexadas en SciELO, Scopus o Redalyc de los últimos 5 años"
+  ],
+  "deliverableFormat": "Ensayo Académico / Monografía (PDF o Google Docs en formato APA 7)",
   "wordCountTarget": 1500,
   "citationStyleExpected": "APA_7",
   "maxSourceAgeYears": 5,
-  "detectedQuestionsForTeacher": ["1 o 2 preguntas clave para consultar al docente si hay ambigüedad"]
+  "detectedQuestionsForTeacher": [
+    "¿Existe una extensión mínima o máxima de palabras / páginas especificada para la entrega?",
+    "¿Se requiere un número mínimo de fuentes académicas indexadas?"
+  ]
 }
 
-Devuelve ÚNICAMENTE el objeto JSON sin bloques de texto adicionales.`;
+Responde ÚNICAMENTE con el objeto JSON sin bloques de código ni texto adicional.`;
 
       const res = await callLLM(prompt, effectiveSettings);
       if (res && res.text) {
@@ -126,13 +143,19 @@ Devuelve ÚNICAMENTE el objeto JSON sin bloques de texto adicionales.`;
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
           return {
-            explicitRequirements: parsed.explicitRequirements || [],
-            aiInferences: parsed.aiInferences || [],
+            explicitRequirements: Array.isArray(parsed.explicitRequirements) && parsed.explicitRequirements.length > 0
+              ? parsed.explicitRequirements
+              : ['Redacción con palabras propias (evitar plagio)', 'Abordar la temática central solicitada'],
+            aiInferences: Array.isArray(parsed.aiInferences) && parsed.aiInferences.length > 0
+              ? parsed.aiInferences
+              : ['Estructurar el trabajo con Introducción, Desarrollo conceptual y Conclusiones'],
             deliverableFormat: parsed.deliverableFormat || 'Documento académico (PDF/Word)',
             wordCountTarget: typeof parsed.wordCountTarget === 'number' ? parsed.wordCountTarget : undefined,
             citationStyleExpected: parsed.citationStyleExpected || 'APA_7',
             maxSourceAgeYears: typeof parsed.maxSourceAgeYears === 'number' ? parsed.maxSourceAgeYears : 5,
-            detectedQuestionsForTeacher: parsed.detectedQuestionsForTeacher || []
+            detectedQuestionsForTeacher: Array.isArray(parsed.detectedQuestionsForTeacher)
+              ? parsed.detectedQuestionsForTeacher
+              : []
           };
         }
       }
@@ -204,23 +227,42 @@ export function analyzeInstructionsOffline(instructionsText: string): Instructio
     deliverableFormat = 'Enlace a Google Docs con permisos de edición';
   }
 
-  // Fallback explicit lines
+  // Fallback explicit lines with smart clause splitting
   if (explicitRequirements.length === 0) {
-    lines.slice(0, 4).forEach((line) => {
-      if (line.length > 10 && line.length < 150) {
-        explicitRequirements.push(line);
+    if (lines.length > 1) {
+      lines.slice(0, 5).forEach((line) => {
+        if (line.length > 5 && line.length < 200) {
+          explicitRequirements.push(line);
+        }
+      });
+    } else if (instructionsText.trim()) {
+      // Split single-line run-on consignas by connectors (y como, y que, además, también, sobre)
+      const clauses = instructionsText
+        .split(/(?:,|\.|\by como\b|\by que\b|\badem[aá]s\b|\btambi[eé]n\b)/i)
+        .map((c) => c.trim())
+        .filter((c) => c.length > 8);
+
+      if (clauses.length > 0) {
+        clauses.slice(0, 5).forEach((c) => {
+          const capitalized = c.charAt(0).toUpperCase() + c.slice(1);
+          explicitRequirements.push(capitalized);
+        });
+      } else {
+        explicitRequirements.push(instructionsText.trim());
       }
-    });
+    }
   }
 
   // Intelligent Inferences
-  aiInferences.push('Recomendado: estructurar esquema con Introducción, Desarrollo argumentativo con fuentes indexadas, y Conclusión reflexiva.');
-  aiInferences.push('Verificar que cada cita parentética en el texto coincida exactamente con la lista de referencias final.');
+  aiInferences.push('Estructura recomendada basada en APA 7: Introducción (delimitación del tema), Desarrollo temático sustentado y Conclusiones.');
+  aiInferences.push('Rigor académico: Utilizar terminología psicológica formal y evitar afirmaciones categóricas sin respaldo empírico.');
+  aiInferences.push('Consideración metodológica: Asegurar la integración de teoría psicológica contemporánea respaldada por evidencia científica.');
 
   if (instructionsText.toLowerCase().includes('ensayo') || instructionsText.toLowerCase().includes('crítico')) {
-    aiInferences.push('Se sugiere incluir una sección explícita de contraargumentación para robustecer la tesis central.');
+    aiInferences.push('Se sugiere incluir una sección explícita de discusión o contraargumentación para robustecer la postura crítica.');
   }
 
+  detectedQuestions.push('¿Existe un número mínimo o máximo de páginas o fuentes obligatorias especificado por la cátedra?');
   detectedQuestions.push('¿Se permite incluir fuentes de contexto histórico que superen el límite de antigüedad si se justifican en el marco teórico?');
 
   return {
@@ -496,7 +538,9 @@ async function callGemini(
   requestedModel?: string,
   temperature = 0.2
 ): Promise<{ text: string; modelUsed: string } | null> {
-  const cacheKey = `${key}:${requestedModel}`;
+  const cleanModel = (requestedModel || '').trim().replace(/^models\//, '');
+  const targetModel = cleanModel || 'gemini-2.5-flash';
+  const cacheKey = `${key}:${targetModel}`;
 
   // 1. Try cached verified model first (instant, 0 errors!)
   const cachedModel = verifiedGeminiModelCache.get(cacheKey);
@@ -513,13 +557,13 @@ async function callGemini(
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { temperature }
         }),
-        signal: AbortSignal.timeout(8000)
+        signal: AbortSignal.timeout(10000)
       });
       if (res.ok) {
         const data = await res.json();
         return {
           text: data.candidates?.[0]?.content?.parts?.[0]?.text || '',
-          modelUsed: `${cachedModel} (v1beta)`
+          modelUsed: `${cachedModel} (Gemini API)`
         };
       }
     } catch {
@@ -527,41 +571,18 @@ async function callGemini(
     }
   }
 
-  // 2. Discover exact models available for this API Key
-  const discovered = await discoverSupportedGeminiModels(key);
-
-  // 3. Build candidate list
-  const candidateList: string[] = [];
-  const model = (requestedModel || '').trim().replace(/^models\//, '');
-  if (model && (discovered.length === 0 || discovered.includes(model))) {
-    candidateList.push(model);
-  }
-
-  const preferredOrder = [
+  // 2. Build candidate list: User targetModel ALWAYS FIRST, then official stable fallbacks
+  const candidateList = [
+    targetModel,
     'gemini-2.5-flash',
-    'gemini-2.5-flash-lite',
-    'gemini-2.5-pro',
     'gemini-1.5-flash',
+    'gemini-2.0-flash',
     'gemini-1.5-pro'
-  ];
-
-  for (const pref of preferredOrder) {
-    if (discovered.includes(pref) && !candidateList.includes(pref)) {
-      candidateList.push(pref);
-    }
-  }
-
-  if (candidateList.length === 0) {
-    candidateList.push(
-      model || 'gemini-2.5-flash',
-      'gemini-2.5-flash-lite',
-      'gemini-1.5-flash'
-    );
-  }
+  ].filter((m, idx, arr) => arr.indexOf(m) === idx);
 
   let lastError: Error | null = null;
 
-  // 4. Try candidates in order
+  // 3. Try candidates in order
   for (const model of candidateList) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -575,7 +596,7 @@ async function callGemini(
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { temperature }
         }),
-        signal: AbortSignal.timeout(8000)
+        signal: AbortSignal.timeout(10000)
       });
 
       if (res.ok) {
@@ -583,7 +604,7 @@ async function callGemini(
         verifiedGeminiModelCache.set(cacheKey, model);
         return {
           text: data.candidates?.[0]?.content?.parts?.[0]?.text || '',
-          modelUsed: `${model} (v1beta)`
+          modelUsed: `${model} (Gemini API)`
         };
       }
 
@@ -597,11 +618,11 @@ async function callGemini(
       }
 
       if (parsedErrMsg.includes('API_KEY_INVALID') || parsedErrMsg.includes('API key not valid')) {
-        throw new Error(parsedErrMsg);
+        throw new Error('API key de Gemini no válida o deshabilitada.');
       }
       lastError = new Error(parsedErrMsg || `HTTP ${res.status}: ${res.statusText}`);
     } catch (e) {
-      if (e instanceof Error && (e.message.includes('API_KEY_INVALID') || e.message.includes('API key not valid'))) {
+      if (e instanceof Error && (e.message.includes('API_KEY_INVALID') || e.message.includes('API key de Gemini'))) {
         throw e;
       }
       lastError = e instanceof Error ? e : new Error(String(e));
