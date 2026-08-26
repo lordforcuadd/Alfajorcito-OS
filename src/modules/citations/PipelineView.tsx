@@ -32,6 +32,7 @@ import {
   formatInTextNarrative,
   copyRichReference
 } from '../../utils/citationEngine';
+import { copyText } from '../../utils/clipboardHelper';
 import type { CitationStyle, Source, Idea, Paraphrase, Work } from '../../types';
 
 export const PipelineView: React.FC = () => {
@@ -142,16 +143,21 @@ export const PipelineView: React.FC = () => {
 
   // Copy Citation to clipboard with temporary feedback icon
   const handleCopyCitation = async (text: string, label: string, key: string, htmlText?: string) => {
+    let ok = false;
     if (htmlText) {
-      await copyRichReference(text, htmlText);
+      ok = await copyRichReference(text, htmlText);
     } else {
-      await navigator.clipboard.writeText(text);
+      ok = await copyText(text);
     }
-    setCopiedKey(key);
-    showToast('Copiado', `${label} listo para pegar en tu documento.`, 'success');
-    setTimeout(() => {
-      setCopiedKey((prev) => (prev === key ? null : prev));
-    }, 2000);
+    if (ok) {
+      setCopiedKey(key);
+      showToast('Copiado', `${label} listo para pegar en tu documento.`, 'success');
+      setTimeout(() => {
+        setCopiedKey((prev) => (prev === key ? null : prev));
+      }, 2000);
+    } else {
+      showToast('Error', 'No se pudo copiar al portapapeles.', 'error');
+    }
   };
 
   // Filtered paraphrases

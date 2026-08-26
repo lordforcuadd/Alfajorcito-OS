@@ -172,15 +172,14 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
   };
 
   // Copy Google Docs Rich Text
-  const handleCopyGoogleDocsHtml = () => {
+  const handleCopyGoogleDocsHtml = async () => {
     const html = generateGoogleDocsRichHTML(work, workSources, userProfile, course?.name, course?.teacherName);
-    const blobHtml = new Blob([html], { type: 'text/html' });
-    const blobText = new Blob([draftText], { type: 'text/plain' });
-
-    const data = [new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })];
-    navigator.clipboard.write(data).then(() => {
+    const ok = await copyRichReference(draftText, html);
+    if (ok) {
       showToast('Copiado para Google Docs', 'Pega directamente en tu documento manteniendo portada APA 7 y sangría francesa.', 'success');
-    });
+    } else {
+      showToast('Error', 'No se pudo copiar al portapapeles.', 'error');
+    }
   };
 
   // Download .ics Calendar File

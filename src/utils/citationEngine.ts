@@ -1,4 +1,5 @@
 import type { Source, CitationStyle, Author } from '../types';
+import { copyText } from './clipboardHelper';
 
 export function formatAuthorNamesAPA(authors: Author[]): string {
   if (!authors || authors.length === 0) return 'Autor Desconocido';
@@ -411,18 +412,18 @@ export function formatFullReferenceHTML(source: Source, style: CitationStyle = '
   }
 }
 
-export async function copyRichReference(plainText: string, htmlText: string): Promise<void> {
+export async function copyRichReference(plainText: string, htmlText: string): Promise<boolean> {
   try {
-    if (typeof ClipboardItem !== 'undefined' && navigator.clipboard && navigator.clipboard.write) {
+    if (typeof ClipboardItem !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.write === 'function') {
       const blobHtml = new Blob([htmlText], { type: 'text/html' });
       const blobText = new Blob([plainText], { type: 'text/plain' });
       await navigator.clipboard.write([new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })]);
-      return;
+      return true;
     }
   } catch {
-    // Fallback to standard clipboard
+    // Fallback to robust plain text copy via copyText
   }
-  await navigator.clipboard.writeText(plainText);
+  return await copyText(plainText);
 }
 
 /**

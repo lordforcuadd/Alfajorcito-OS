@@ -19,6 +19,7 @@ import { Modal } from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
 import { FormattedNoteContent } from './WikiLinkRenderer';
 import { queryGraphAssistant } from '../../services/aiService';
+import { copyText } from '../../utils/clipboardHelper';
 import { db } from '../../db';
 import type { Note, Concept, Course, Work, Source, UserProfile } from '../../types';
 
@@ -118,12 +119,10 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
   }, [messages, isLoading]);
 
   const handleCopyMessage = async (msgId: string, text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
+    const ok = await copyText(text);
+    if (ok) {
       setCopiedId(msgId);
       setTimeout(() => setCopiedId(null), 2000);
-    } catch {
-      // ignore
     }
   };
 
