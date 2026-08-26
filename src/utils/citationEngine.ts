@@ -417,9 +417,9 @@ export { copyRichReference } from './clipboardHelper';
 /**
  * Generates clean, standard BibTeX output with full type mapping,
  * ASCII-sanitized, collision-resistant citeKeys (author + year + title keyword),
- * and non-empty conditional fields.
+ * and non-empty conditional fields. Supports existingKeys for strict mathematical uniqueness in batches.
  */
-export function generateBibTeX(source: Source): string {
+export function generateBibTeX(source: Source, existingKeys?: Set<string>): string {
   // Sanitize citeKey: Latin letters, numbers, no accents or spaces
   const primaryAuthor = (source.authors?.[0]?.lastName || 'source')
     .normalize('NFD')
@@ -438,7 +438,17 @@ export function generateBibTeX(source: Source): string {
     .filter((w) => w.length > 1 && !stopwords.has(w));
 
   const titleKeyword = titleWords[0] || '';
-  const citeKey = `${primaryAuthor || 'source'}${source.year || 'nodate'}${titleKeyword ? `${titleKeyword}` : ''}`;
+  const baseKey = `${primaryAuthor || 'source'}${source.year || 'nodate'}${titleKeyword ? `${titleKeyword}` : ''}`;
+
+  let citeKey = baseKey;
+  if (existingKeys) {
+    let suffixCode = 98; // 'b'
+    while (existingKeys.has(citeKey)) {
+      citeKey = `${baseKey}${String.fromCharCode(suffixCode)}`;
+      suffixCode++;
+    }
+    existingKeys.add(citeKey);
+  }
 
   const authorsStr = (source.authors || [])
     .map((a) => `${a.lastName}, ${a.firstName}`)
@@ -467,21 +477,41 @@ export function generateBibTeX(source: Source): string {
     if (source.volume) fields.push(`  volume = {${source.volume}}`);
     if (source.issue) fields.push(`  number = {${source.issue}}`);
     if (source.pages) fields.push(`  pages = {${source.pages}}`);
+    if (source.doi) fields.push(`  doi = {${source.doi}}`);
+    if (source.url && !source.doi) fields.push(`  url = {${source.url}}`);
   } else if (entryType === 'book') {
     if (source.publication) fields.push(`  publisher = {${source.publication}}`);
-  } else if (entryType === 'incollection' || entryType === 'inproceedings') {
+    if (source.doi) fields.push(`  doi = {${source.doi}}`);
+    if (source.url && !source.doi) fields.push(`  url = {${source.url}}`);
+  } else if (entryType === 'incollection') {
     if (source.publication) fields.push(`  booktitle = {${source.publication}}`);
     if (source.pages) fields.push(`  pages = {${source.pages}}`);
+    if (source.doi) fields.push(`  doi = {${source.doi}}`);
+  } else if (entryType === 'inproceedings') {
+    if (source.publication) fields.push(`  booktitle = {${source.publication}}`);
+    if (source.doi) fields.push(`  doi = {${source.doi}}`);
   } else if (entryType === 'phdthesis') {
     if (source.publication) fields.push(`  school = {${source.publication}}`);
+    if (source.doi) fields.push(`  doi = {${source.doi}}`);
+    if (source.url && !source.doi) fields.push(`  url = {${source.url}}`);
   } else if (entryType === 'techreport') {
     if (source.publication) fields.push(`  institution = {${source.publication}}`);
-  } else if (entryType === 'misc') {
-    if (source.publication || source.url) fields.push(`  howpublished = {${source.url || source.publication}}`);
+    if (source.doi) fields.push(`  doi = {${source.doi}}`);
+    if (source.url && !source.doi) fields.push(`  url = {${source.url}}`);
+  } else {
+    // misc
+    if (source.publication) fields.push(`  howpublished = {${source.publication}}`);
+    if (source.url) fields.push(`  url = {${source.url}}`);
   }
 
-  if (source.doi) fields.push(`  doi = {${source.doi}}`);
-  if (source.url && !fields.some((f) => f.includes('howpublished'))) fields.push(`  url = {${source.url}}`);
-
   return `@${entryType}{${citeKey},\n${fields.join(',\n')}\n}`;
+}
+
+/**
+ * Exports an entire collection of sources to a unified BibTeX string,
+ * guaranteeing 100% mathematical uniqueness across all citeKeys.
+ */
+export function generateBibTeXCollection(sources: Source[]): string {
+  const existingKeys = new Set<string>();
+  return sources.map((s) => generateBibTeX(s, existingKeys)).join('\n\n');
 }

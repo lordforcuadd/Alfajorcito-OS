@@ -5,7 +5,8 @@ import {
   formatInTextParenthetical,
   formatInTextNarrative,
   formatAuthorNamesAPA,
-  generateBibTeX
+  generateBibTeX,
+  generateBibTeXCollection
 } from '../utils/citationEngine';
 import type { Source } from '../types';
 
@@ -296,5 +297,41 @@ describe('Citation Engine Extended Suite — Strict Academic APA 7 & Multi-style
     expect(bibB).toContain('@article{garcia2023ansiedad,');
     // Ensure distinct citeKeys
     expect(bibA.match(/@article\{([^,]+),/)?.[1]).not.toBe(bibB.match(/@article\{([^,]+),/)?.[1]);
+  });
+
+  it('guarantees 100% strict uniqueness in generateBibTeXCollection via incremental suffixes when author, year and keyword match', () => {
+    const paper1: Source = {
+      id: 's1',
+      workIds: [],
+      title: 'Ansiedad ante los exámenes en universitarios',
+      authors: [{ firstName: 'Carlos', lastName: 'García' }],
+      year: 2023,
+      type: 'JOURNAL_ARTICLE',
+      publication: 'Revista A',
+      accessedAt: Date.now(),
+      verificationStatus: 'VERIFIED',
+      verificationProvider: 'CROSSREF',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    const paper2: Source = {
+      id: 's2',
+      workIds: [],
+      title: 'Ansiedad generalizada y estrés académico',
+      authors: [{ firstName: 'Carlos', lastName: 'García' }],
+      year: 2023,
+      type: 'JOURNAL_ARTICLE',
+      publication: 'Revista B',
+      accessedAt: Date.now(),
+      verificationStatus: 'VERIFIED',
+      verificationProvider: 'CROSSREF',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    const collection = generateBibTeXCollection([paper1, paper2]);
+    expect(collection).toContain('@article{garcia2023ansiedad,');
+    expect(collection).toContain('@article{garcia2023ansiedadb,');
   });
 });
