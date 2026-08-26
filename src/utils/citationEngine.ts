@@ -412,19 +412,7 @@ export function formatFullReferenceHTML(source: Source, style: CitationStyle = '
   }
 }
 
-export async function copyRichReference(plainText: string, htmlText: string): Promise<boolean> {
-  try {
-    if (typeof ClipboardItem !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.write === 'function') {
-      const blobHtml = new Blob([htmlText], { type: 'text/html' });
-      const blobText = new Blob([plainText], { type: 'text/plain' });
-      await navigator.clipboard.write([new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })]);
-      return true;
-    }
-  } catch {
-    // Fallback to robust plain text copy via copyText
-  }
-  return await copyText(plainText);
-}
+export { copyRichReference } from './clipboardHelper';
 
 /**
  * Generates clean, standard BibTeX output with full type mapping,

@@ -20,6 +20,7 @@ import { Button } from '../../components/common/Button';
 import { FormattedNoteContent } from './WikiLinkRenderer';
 import { queryGraphAssistant } from '../../services/aiService';
 import { copyText } from '../../utils/clipboardHelper';
+import { useToast } from '../../components/common/Toast';
 import { db } from '../../db';
 import type { Note, Concept, Course, Work, Source, UserProfile } from '../../types';
 
@@ -65,6 +66,7 @@ export const GraphAIChatModal: React.FC<GraphAIChatModalProps> = ({
   const thesisTitle = userProfile?.thesisTitle || '';
   const institution = userProfile?.institution || 'Universidad';
 
+  const { showToast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -122,7 +124,10 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
     const ok = await copyText(text);
     if (ok) {
       setCopiedId(msgId);
+      showToast('Copiado', 'Mensaje copiado al portapapeles.', 'success');
       setTimeout(() => setCopiedId(null), 2000);
+    } else {
+      showToast('Error', 'No se pudo copiar al portapapeles.', 'error');
     }
   };
 
