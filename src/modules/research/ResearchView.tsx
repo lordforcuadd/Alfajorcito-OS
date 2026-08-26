@@ -734,9 +734,13 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     const cite = formatInTextParenthetical(inspectedSource, modalStyle, undefined, sourceRefNum);
-                    navigator.clipboard.writeText(cite);
+                    const ok = await copyText(cite);
+                    if (!ok) {
+                      showToast('Error', 'No se pudo copiar al portapapeles.', 'error');
+                      return;
+                    }
                     setModalCopiedKey('modal-parenthetical');
                     showToast('Cita copiada', 'Cita parentética lista para pegar.', 'success');
                     setTimeout(() => setModalCopiedKey(null), 2000);
@@ -768,9 +772,13 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     const cite = formatInTextNarrative(inspectedSource, modalStyle, sourceRefNum);
-                    navigator.clipboard.writeText(cite);
+                    const ok = await copyText(cite);
+                    if (!ok) {
+                      showToast('Error', 'No se pudo copiar al portapapeles.', 'error');
+                      return;
+                    }
                     setModalCopiedKey('modal-narrative');
                     showToast('Cita copiada', 'Cita narrativa lista para pegar.', 'success');
                     setTimeout(() => setModalCopiedKey(null), 2000);
@@ -798,9 +806,13 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       const bib = generateBibTeX(inspectedSource);
-                      navigator.clipboard.writeText(bib);
+                      const ok = await copyText(bib);
+                      if (!ok) {
+                        showToast('Error', 'No se pudo copiar al portapapeles.', 'error');
+                        return;
+                      }
                       setModalCopiedKey('modal-bibtex');
                       showToast('BibTeX copiado', 'Entrada BibTeX lista para LaTeX / Zotero.', 'success');
                       setTimeout(() => setModalCopiedKey(null), 2000);
