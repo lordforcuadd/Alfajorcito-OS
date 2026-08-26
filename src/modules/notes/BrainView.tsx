@@ -371,7 +371,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
 
       {/* Note Viewer & Editor Modal with Interactive Wiki-Links */}
       <NoteViewerModal
-        note={editingNote}
+        note={notes.find((n) => n.id === editingNote?.id) || editingNote}
         isOpen={!!editingNote}
         onClose={() => {
           setEditingNote(null);

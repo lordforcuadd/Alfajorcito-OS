@@ -49,6 +49,9 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
   const { showToast } = useToast();
   const [mode, setMode] = useState<'view' | 'edit'>('view');
 
+  // Resolve the active live note from live notes collection or fallback to prop
+  const currentNote = note ? (notes.find((n) => n.id === note.id) || note) : null;
+
   // Edit fields
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
@@ -58,23 +61,29 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
   const [editTags, setEditTags] = useState('');
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
-  // Sync state when note opens
+  // Sync state when note opens or when currentNote updates
   useEffect(() => {
-    if (note) {
-      setEditTitle(note.title);
-      setEditContent(note.content);
-      setEditCategory(note.paraCategory);
-      setEditCourseId(note.courseId || '');
-      setEditWorkId(note.workId || '');
-      setEditTags(note.tags.join(', '));
-      setMode('view');
+    if (currentNote) {
+      setEditTitle(currentNote.title);
+      setEditContent(currentNote.content);
+      setEditCategory(currentNote.paraCategory);
+      setEditCourseId(currentNote.courseId || '');
+      setEditWorkId(currentNote.workId || '');
+      setEditTags((currentNote.tags || []).join(', '));
       setIsConfirmDeleteOpen(false);
     }
-  }, [note]);
+  }, [currentNote?.id, currentNote?.updatedAt]);
+
+  // Reset to view mode on open/close
+  useEffect(() => {
+    if (isOpen) {
+      setMode('view');
+    }
+  }, [isOpen, note?.id]);
 
   // Keyboard shortcut Ctrl+S (Must be declared before any conditional return)
   useEffect(() => {
-    if (!isOpen || mode !== 'edit' || !note) return;
+    if (!isOpen || mode !== 'edit' || !currentNote) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
@@ -83,21 +92,21 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, mode, note, editTitle, editContent, editCategory, editCourseId, editTags]);
+  }, [isOpen, mode, currentNote, editTitle, editContent, editCategory, editCourseId, editWorkId, editTags]);
 
-  if (!note) return null;
+  if (!currentNote) return null;
 
-  const currentCourse = courses.find((c) => c.id === note.courseId);
-  const currentWork = works.find((w) => w.id === note.workId);
+  const currentCourse = courses.find((c) => c.id === currentNote.courseId);
+  const currentWork = works.find((w) => w.id === currentNote.workId);
 
   // Find incoming backlinks (notes that mention this note's title in their content)
-  const noteTitleLower = note.title.toLowerCase();
+  const noteTitleLower = currentNote.title.toLowerCase();
   const backlinks = notes.filter(
     (n) =>
-      n.id !== note.id &&
+      n.id !== currentNote.id &&
       (n.content.toLowerCase().includes(`[[${noteTitleLower}]]`) ||
-        n.content.toLowerCase().includes(`[[${note.slug}]]`) ||
-        (n.backlinks || []).includes(note.id))
+        n.content.toLowerCase().includes(`[[${currentNote.slug}]]`) ||
+        (n.backlinks || []).includes(currentNote.id))
   );
 
   // Handle Save
@@ -113,7 +122,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)+/g, '') || note.slug;
+      .replace(/(^-|-$)+/g, '') || currentNote.slug;
 
     const parsedTags = editTags
       .split(',')
@@ -132,14 +141,20 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
       updatedAt: Date.now()
     };
 
-    await db.notes.update(note.id, updatedData);
+    const updatedNote: Note = {
+      ...currentNote,
+      ...updatedData
+    };
+
+    await db.notes.update(currentNote.id, updatedData);
+    onSelectNote(updatedNote);
     showToast('Nota guardada', 'Cambios sincronizados en el Segundo Cerebro.', 'success');
     setMode('view');
   };
 
   // Handle Delete
   const handleDelete = async () => {
-    await db.notes.delete(note.id);
+    await db.notes.delete(currentNote.id);
     showToast('Nota eliminada', 'La nota ha sido retirada de tu Segundo Cerebro.', 'info');
     setIsConfirmDeleteOpen(false);
     onClose();
@@ -154,7 +169,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={mode === 'view' ? note.title : 'Editar Nota'}
+      title={mode === 'view' ? currentNote.title : 'Editar Nota'}
       subtitle={
         currentCourse
           ? `${currentCourse.name} • ${currentCourse.period}`
@@ -166,19 +181,19 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
         {/* Mode Switcher & Category Ribbon */}
         <div className="flex items-center justify-between gap-2 border-b border-[#EBE5DF] pb-3 flex-wrap">
           <div className="flex items-center gap-1.5">
-            {note.paraCategory === 'PROJECT' ? (
+            {currentNote.paraCategory === 'PROJECT' ? (
               <span className="text-[11px] font-extrabold uppercase tracking-wider bg-[#F3E5F5] text-[#6A1B9A] border border-[#CE93D8]/50 px-2.5 py-1 rounded-xl">
                 Proyecto / Trabajo
               </span>
-            ) : note.paraCategory === 'AREA' ? (
+            ) : currentNote.paraCategory === 'AREA' ? (
               <span className="text-[11px] font-extrabold uppercase tracking-wider bg-[#E3F2FD] text-[#1565C0] border border-[#90CAF9]/50 px-2.5 py-1 rounded-xl">
                 Materia
               </span>
-            ) : note.paraCategory === 'RESOURCE' ? (
+            ) : currentNote.paraCategory === 'RESOURCE' ? (
               <span className="text-[11px] font-extrabold uppercase tracking-wider bg-[#E0F2F1] text-[#00695C] border border-[#80CBC4]/50 px-2.5 py-1 rounded-xl">
                 Recurso de Estudio
               </span>
-            ) : note.paraCategory === 'ARCHIVE' ? (
+            ) : currentNote.paraCategory === 'ARCHIVE' ? (
               <span className="text-[11px] font-extrabold uppercase tracking-wider bg-[#F5F1EB] text-[#5A6275] border border-[#EBE5DF] px-2.5 py-1 rounded-xl">
                 Archivada
               </span>
@@ -230,7 +245,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
             {/* Formatted Content with Interactive Wiki-Links */}
             <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#EBE5DF] shadow-2xs min-h-[160px]">
               <FormattedNoteContent
-                content={note.content}
+                content={currentNote.content}
                 notes={notes}
                 concepts={concepts}
                 courses={courses}
@@ -248,10 +263,10 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
             </div>
 
             {/* Tags Ribbon */}
-            {note.tags && note.tags.length > 0 && (
+            {currentNote.tags && currentNote.tags.length > 0 && (
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-xs text-[#8D99AE] font-semibold">Etiquetas:</span>
-                {note.tags.map((t, idx) => (
+                {currentNote.tags.map((t, idx) => (
                   <span
                     key={idx}
                     className="text-xs bg-[#F5F1EB] text-[#5A6275] px-2.5 py-0.5 rounded-lg font-medium border border-[#EBE5DF]"
@@ -461,7 +476,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
           isOpen={isConfirmDeleteOpen}
           onClose={() => setIsConfirmDeleteOpen(false)}
           title="¿Eliminar esta Nota?"
-          subtitle={`Se eliminará "${note.title}" de tu Segundo Cerebro`}
+          subtitle={`Se eliminará "${currentNote.title}" de tu Segundo Cerebro`}
           maxWidth="sm"
         >
           <div className="space-y-4">
