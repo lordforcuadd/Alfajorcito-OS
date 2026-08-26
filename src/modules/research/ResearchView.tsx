@@ -130,6 +130,78 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
     return computeReferenceNumber(sources, inspectedSource.workIds?.[0], inspectedSource.id);
   }, [inspectedSource, sources]);
 
+  // Unified Quote & Paraphrase Saver (with optional AI Fidelity Audit)
+  const handleSaveQuoteAndParaphrase = async ({ auditWithAi }: { auditWithAi: boolean }) => {
+    if (!inspectedSource) return;
+    if (!newQuote.trim() || !newParaphraseText.trim()) {
+      showToast('Campos requeridos', 'Ingresa la cita original y tu paráfrasis.', 'warning');
+      return;
+    }
+
+    setIsSavingQuote(true);
+    try {
+      const now = Date.now();
+      const ideaId = `idea-${crypto.randomUUID()}`;
+      const assignedWorkId =
+        inspectedSource.workIds?.[0] || (libraryWorkFilter !== 'ALL' ? libraryWorkFilter : undefined);
+
+      let status: 'PENDING_REVIEW' | 'CONFIRMED_FAITHFUL' | 'NEEDS_ADJUSTMENT' = 'PENDING_REVIEW';
+      let feedback: string | undefined = undefined;
+
+      if (auditWithAi) {
+        const auditRes = await checkParaphraseFidelity(newQuote.trim(), newParaphraseText.trim());
+        status = auditRes.status;
+        feedback = auditRes.feedback;
+      }
+
+      await db.ideas.add({
+        id: ideaId,
+        sourceId: inspectedSource.id,
+        workId: assignedWorkId,
+        rawQuote: newQuote.trim(),
+        pageOrLocation: newPageLoc.trim(),
+        extractedCoreIdea: newCoreIdea.trim() || 'Idea extraída',
+        tags: [],
+        createdAt: now,
+        updatedAt: now
+      });
+
+      await db.paraphrases.add({
+        id: `para-${crypto.randomUUID()}`,
+        ideaId,
+        sourceId: inspectedSource.id,
+        workId: assignedWorkId,
+        ownInterpretation: newCoreIdea.trim(),
+        finalParaphrase: newParaphraseText.trim(),
+        fidelityReviewStatus: status,
+        fidelityWarningMessage: feedback,
+        createdAt: now,
+        updatedAt: now
+      });
+
+      if (auditWithAi && feedback) {
+        showToast(
+          status === 'CONFIRMED_FAITHFUL' ? '¡Paráfrasis Fiel y Guardada!' : 'Guardado con Sugerencias',
+          feedback,
+          status === 'CONFIRMED_FAITHFUL' ? 'success' : 'warning',
+          10000
+        );
+      } else {
+        showToast('Cita guardada', 'Idea y paráfrasis conectadas con éxito.', 'success');
+      }
+
+      setNewQuote('');
+      setNewPageLoc('');
+      setNewCoreIdea('');
+      setNewParaphraseText('');
+      setInspectedSource(null);
+    } catch {
+      showToast('Error', 'No se pudo guardar la cita o procesar la auditoría.', 'error');
+    } finally {
+      setIsSavingQuote(false);
+    }
+  };
+
   // Execute Academic Search
   const handleExecuteSearch = async () => {
     if (!searchQuery.trim()) {
@@ -1014,54 +1086,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                   size="md"
                   className="w-full sm:w-auto font-bold"
                   isLoading={isSavingQuote}
-                  onClick={async () => {
-                    if (!newQuote.trim() || !newParaphraseText.trim()) {
-                      showToast('Campos requeridos', 'Ingresa la cita original y tu paráfrasis.', 'warning');
-                      return;
-                    }
-
-                    setIsSavingQuote(true);
-                    try {
-                      const now = Date.now();
-                      const ideaId = `idea-${crypto.randomUUID()}`;
-                      const assignedWorkId = inspectedSource.workIds?.[0] || (libraryWorkFilter !== 'ALL' ? libraryWorkFilter : undefined);
-
-                      await db.ideas.add({
-                        id: ideaId,
-                        sourceId: inspectedSource.id,
-                        workId: assignedWorkId,
-                        rawQuote: newQuote.trim(),
-                        pageOrLocation: newPageLoc.trim(),
-                        extractedCoreIdea: newCoreIdea.trim() || 'Idea extraída',
-                        tags: [],
-                        createdAt: now,
-                        updatedAt: now
-                      });
-
-                      await db.paraphrases.add({
-                        id: `para-${crypto.randomUUID()}`,
-                        ideaId,
-                        sourceId: inspectedSource.id,
-                        workId: assignedWorkId,
-                        ownInterpretation: newCoreIdea.trim(),
-                        finalParaphrase: newParaphraseText.trim(),
-                        fidelityReviewStatus: 'PENDING_REVIEW',
-                        createdAt: now,
-                        updatedAt: now
-                      });
-
-                      setNewQuote('');
-                      setNewPageLoc('');
-                      setNewCoreIdea('');
-                      setNewParaphraseText('');
-                      showToast('Cita guardada', 'Idea y paráfrasis conectadas con éxito.', 'success');
-                      setInspectedSource(null);
-                    } catch {
-                      showToast('Error', 'No se pudo guardar la cita.', 'error');
-                    } finally {
-                      setIsSavingQuote(false);
-                    }
-                  }}
+                  onClick={() => handleSaveQuoteAndParaphrase({ auditWithAi: false })}
                 >
                   Guardar Cita & Paráfrasis
                 </Button>
@@ -1071,63 +1096,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                   icon={<Sparkles className="w-4 h-4" />}
                   className="w-full sm:w-auto font-bold"
                   isLoading={isSavingQuote}
-                  onClick={async () => {
-                    if (!newQuote.trim() || !newParaphraseText.trim()) {
-                      showToast('Campos requeridos', 'Ingresa la cita original y tu paráfrasis.', 'warning');
-                      return;
-                    }
-
-                    setIsSavingQuote(true);
-                    try {
-                      const now = Date.now();
-                      const ideaId = `idea-${crypto.randomUUID()}`;
-                      const assignedWorkId = inspectedSource.workIds?.[0] || (libraryWorkFilter !== 'ALL' ? libraryWorkFilter : undefined);
-
-                      const auditRes = await checkParaphraseFidelity(newQuote.trim(), newParaphraseText.trim());
-
-                      await db.ideas.add({
-                        id: ideaId,
-                        sourceId: inspectedSource.id,
-                        workId: assignedWorkId,
-                        rawQuote: newQuote.trim(),
-                        pageOrLocation: newPageLoc.trim(),
-                        extractedCoreIdea: newCoreIdea.trim() || 'Idea extraída',
-                        tags: [],
-                        createdAt: now,
-                        updatedAt: now
-                      });
-
-                      await db.paraphrases.add({
-                        id: `para-${crypto.randomUUID()}`,
-                        ideaId,
-                        sourceId: inspectedSource.id,
-                        workId: assignedWorkId,
-                        ownInterpretation: newCoreIdea.trim(),
-                        finalParaphrase: newParaphraseText.trim(),
-                        fidelityReviewStatus: auditRes.status,
-                        fidelityWarningMessage: auditRes.feedback,
-                        createdAt: now,
-                        updatedAt: now
-                      });
-
-                      showToast(
-                        auditRes.status === 'CONFIRMED_FAITHFUL' ? '¡Paráfrasis Fiel y Guardada!' : 'Guardado con Sugerencias',
-                        auditRes.feedback,
-                        auditRes.status === 'CONFIRMED_FAITHFUL' ? 'success' : 'warning',
-                        10000
-                      );
-
-                      setNewQuote('');
-                      setNewPageLoc('');
-                      setNewCoreIdea('');
-                      setNewParaphraseText('');
-                      setInspectedSource(null);
-                    } catch {
-                      showToast('Error', 'No se pudo completar la auditoría con IA.', 'error');
-                    } finally {
-                      setIsSavingQuote(false);
-                    }
-                  }}
+                  onClick={() => handleSaveQuoteAndParaphrase({ auditWithAi: true })}
                 >
                   Guardar y Auditar con IA
                 </Button>
