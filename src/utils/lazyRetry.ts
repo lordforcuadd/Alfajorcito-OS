@@ -27,7 +27,8 @@ export function lazyWithRetry<T extends ComponentType<any>>(
         error?.message?.includes('Failed to fetch dynamically imported module') ||
         error?.message?.includes('dynamically imported module') ||
         error?.message?.includes('Loading chunk') ||
-        error?.name === 'TypeError';
+        error?.message?.includes('Failed to fetch') ||
+        error?.message?.includes('error loading dynamically imported module');
 
       if (isChunkError && !alreadyRetried && typeof window !== 'undefined') {
         window.sessionStorage.setItem(key, 'true');
