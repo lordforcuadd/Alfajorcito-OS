@@ -125,7 +125,7 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
     if (ok) {
       setCopiedId(msgId);
       showToast('Copiado', 'Mensaje copiado al portapapeles.', 'success');
-      setTimeout(() => setCopiedId(null), 2000);
+      setTimeout(() => setCopiedId((prev) => (prev === msgId ? null : prev)), 2000);
     } else {
       showToast('Error', 'No se pudo copiar al portapapeles.', 'error');
     }

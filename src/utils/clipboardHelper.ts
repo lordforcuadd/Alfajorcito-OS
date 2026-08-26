@@ -4,7 +4,7 @@
  * or when the async Clipboard API is blocked by browser policies.
  */
 export async function copyText(text: string): Promise<boolean> {
-  if (!text) return false;
+  if (!text || !text.trim()) return false;
 
   // 1. Try modern async Clipboard API if available
   if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {

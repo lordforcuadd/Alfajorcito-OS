@@ -743,7 +743,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                     }
                     setModalCopiedKey('modal-parenthetical');
                     showToast('Cita copiada', 'Cita parentética lista para pegar.', 'success');
-                    setTimeout(() => setModalCopiedKey(null), 2000);
+                    setTimeout(() => setModalCopiedKey((prev) => (prev === 'modal-parenthetical' ? null : prev)), 2000);
                   }}
                   className="p-2.5 rounded-xl text-[#5A6275] hover:text-[#8C3A32] hover:bg-[#F5F1EB] transition-colors cursor-pointer shrink-0 border border-[#EBE5DF]"
                   title="Copiar cita parentética"
@@ -781,7 +781,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                     }
                     setModalCopiedKey('modal-narrative');
                     showToast('Cita copiada', 'Cita narrativa lista para pegar.', 'success');
-                    setTimeout(() => setModalCopiedKey(null), 2000);
+                    setTimeout(() => setModalCopiedKey((prev) => (prev === 'modal-narrative' ? null : prev)), 2000);
                   }}
                   className="p-2.5 rounded-xl text-[#5A6275] hover:text-[#8C3A32] hover:bg-[#F5F1EB] transition-colors cursor-pointer shrink-0 border border-[#EBE5DF]"
                   title="Copiar cita narrativa"
@@ -815,7 +815,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                       }
                       setModalCopiedKey('modal-bibtex');
                       showToast('BibTeX copiado', 'Entrada BibTeX lista para LaTeX / Zotero.', 'success');
-                      setTimeout(() => setModalCopiedKey(null), 2000);
+                      setTimeout(() => setModalCopiedKey((prev) => (prev === 'modal-bibtex' ? null : prev)), 2000);
                     }}
                     className="px-2.5 py-1 rounded-xl bg-white hover:bg-[#F5F1EB] border border-[#EBE5DF] text-[11px] font-bold text-[#5A6275] flex items-center gap-1 transition-all cursor-pointer shadow-2xs shrink-0"
                     title="Copiar BibTeX"
@@ -838,7 +838,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                       if (ok) {
                         setModalCopiedKey('modal-ref');
                         showToast('Referencia copiada', `Copiada en formato ${modalStyle} con cursivas.`, 'success');
-                        setTimeout(() => setModalCopiedKey(null), 2000);
+                        setTimeout(() => setModalCopiedKey((prev) => (prev === 'modal-ref' ? null : prev)), 2000);
                       } else {
                         showToast('Error', 'No se pudo copiar al portapapeles.', 'error');
                       }
