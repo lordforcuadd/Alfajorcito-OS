@@ -179,4 +179,29 @@ describe('clipboardHelper & copyRichReference Unit Tests', () => {
     expect(writeMock).toHaveBeenCalled();
     expect(writeTextMock).toHaveBeenCalledWith(plain);
   });
+
+  it('7. copyRichReference gracefully degrades to writeText without calling write when ClipboardItem is undefined', async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    const writeMock = vi.fn();
+
+    Object.defineProperty(globalThis, 'ClipboardItem', {
+      value: undefined,
+      configurable: true,
+      writable: true
+    });
+
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { clipboard: { write: writeMock, writeText: writeTextMock } },
+      configurable: true,
+      writable: true
+    });
+
+    const plain = 'Delgado, C. (2024). Neuropsicología.';
+    const html = '<p><i>Neuropsicología</i></p>';
+
+    const result = await copyRichReference(plain, html);
+    expect(result).toBe(true);
+    expect(writeMock).not.toHaveBeenCalled();
+    expect(writeTextMock).toHaveBeenCalledWith(plain);
+  });
 });

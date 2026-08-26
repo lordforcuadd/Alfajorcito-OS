@@ -834,10 +834,14 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                     onClick={async () => {
                       const ref = formatFullReference(inspectedSource, modalStyle);
                       const refHtml = `<p style="padding-left:1.5rem;text-indent:-1.5rem;">${formatFullReferenceHTML(inspectedSource, modalStyle)}</p>`;
-                      await copyRichReference(ref, refHtml);
-                      setModalCopiedKey('modal-ref');
-                      showToast('Referencia copiada', `Copiada en formato ${modalStyle} con cursivas.`, 'success');
-                      setTimeout(() => setModalCopiedKey(null), 2000);
+                      const ok = await copyRichReference(ref, refHtml);
+                      if (ok) {
+                        setModalCopiedKey('modal-ref');
+                        showToast('Referencia copiada', `Copiada en formato ${modalStyle} con cursivas.`, 'success');
+                        setTimeout(() => setModalCopiedKey(null), 2000);
+                      } else {
+                        showToast('Error', 'No se pudo copiar al portapapeles.', 'error');
+                      }
                     }}
                     className="px-3 py-1 rounded-xl bg-white hover:bg-[#F5F1EB] border border-[#E8A598]/60 text-[11px] font-bold text-[#8C3A32] flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs shrink-0"
                     title="Copiar referencia con cursiva"

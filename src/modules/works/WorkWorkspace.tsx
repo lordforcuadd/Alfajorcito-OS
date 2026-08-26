@@ -1136,8 +1136,12 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                           .map((s) => `<p style="padding-left:1.5rem;text-indent:-1.5rem;margin-bottom:8pt;">${formatFullReferenceHTML(s, work.citationStyle)}</p>`)
                           .sort()
                           .join('\n');
-                        await copyRichReference(allRefs, allRefsHtml);
-                        showToast('Referencias copiadas', 'Lista completa con formato cursiva copiada al portapapeles.', 'success');
+                        const ok = await copyRichReference(allRefs, allRefsHtml);
+                        if (ok) {
+                          showToast('Referencias copiadas', 'Lista completa con formato cursiva copiada al portapapeles.', 'success');
+                        } else {
+                          showToast('Error', 'No se pudo copiar al portapapeles.', 'error');
+                        }
                       }}
                       icon={<Copy className="w-3.5 h-3.5" />}
                       className="font-bold text-xs self-start sm:self-center"
