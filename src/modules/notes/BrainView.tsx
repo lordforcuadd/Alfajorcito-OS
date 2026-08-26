@@ -26,6 +26,7 @@ import { useToast } from '../../components/common/Toast';
 import { exportVaultZip } from '../../utils/obsidianExporter';
 import { InteractiveGraph } from './InteractiveGraph';
 import { NoteViewerModal } from './NoteViewerModal';
+import { generateId } from '../../utils/idHelper';
 import type { Note, Concept, ParaCategory, Course, Work, Source } from '../../types';
 
 export interface BrainViewProps {
@@ -96,7 +97,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
     }
     const now = Date.now();
     await db.concepts.add({
-      id: `concept-${Math.random().toString(36).substring(2, 9)}`,
+      id: generateId('concept'),
       name: newConceptName.trim(),
       description: newConceptDesc.trim() || 'Concepto clave de psicología.',
       color: '#0D9488',

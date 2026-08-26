@@ -6,6 +6,7 @@ import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { db } from '../../db';
 import { useToast } from '../common/Toast';
+import { generateId } from '../../utils/idHelper';
 import type { Course, UserProfile } from '../../types';
 
 export interface CourseModalProps {
@@ -98,7 +99,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
         showToast('Curso actualizado', `Los cambios en ${name} se guardaron.`, 'success');
       } else {
         // Create new course
-        const newCourseId = `course-${Math.random().toString(36).substring(2, 9)}`;
+        const newCourseId = generateId('course');
         await db.courses.add({
           id: newCourseId,
           name: name.trim(),

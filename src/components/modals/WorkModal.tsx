@@ -19,6 +19,7 @@ import { db } from '../../db';
 import { useToast } from '../common/Toast';
 import { triggerCelebrationConfetti } from '../../utils/confettiHelper';
 import { dissociateWorkIdFromSources, WORK_DELETION_CONSEQUENCES } from '../../utils/academicWorkUtils';
+import { generateId } from '../../utils/idHelper';
 import type { Work, WorkType, WorkStatus, CitationStyle, Course, UserProfile } from '../../types';
 
 export interface WorkModalProps {
@@ -141,7 +142,7 @@ export const WorkModal: React.FC<WorkModalProps> = ({
         showToast('Trabajo actualizado', `"${title}" ha sido guardado exitosamente.`, 'success');
       } else {
         // Create new work
-        const newWorkId = `work-${crypto.randomUUID()}`;
+        const newWorkId = generateId('work');
         await db.works.add({
           id: newWorkId,
           courseId,

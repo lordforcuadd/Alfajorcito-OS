@@ -49,6 +49,7 @@ import {
 } from '../../utils/citationEngine';
 import { checkParaphraseFidelity } from '../../services/aiService';
 import { copyText } from '../../utils/clipboardHelper';
+import { generateId } from '../../utils/idHelper';
 import type { Source, VerificationStatus, Idea, Paraphrase, Work, Author, CitationStyle, SourceType } from '../../types';
 
 export function computeReferenceNumber(
@@ -141,7 +142,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
     setIsSavingQuote(true);
     try {
       const now = Date.now();
-      const ideaId = `idea-${crypto.randomUUID()}`;
+      const ideaId = generateId('idea');
       const assignedWorkId =
         inspectedSource.workIds?.[0] || (libraryWorkFilter !== 'ALL' ? libraryWorkFilter : undefined);
 
@@ -167,7 +168,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
       });
 
       await db.paraphrases.add({
-        id: `para-${crypto.randomUUID()}`,
+        id: generateId('para'),
         ideaId,
         sourceId: inspectedSource.id,
         workId: assignedWorkId,
@@ -262,7 +263,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
   const handleImportResult = async (item: AcademicSearchResult) => {
     const audit = auditSourceMetadata(item);
     const newSource: Source = {
-      id: `src-${crypto.randomUUID()}`,
+      id: generateId('src'),
       workIds: [],
       title: item.title,
       authors: item.authors,

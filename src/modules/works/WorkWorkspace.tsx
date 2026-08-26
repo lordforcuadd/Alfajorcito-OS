@@ -46,6 +46,7 @@ import {
 import { generateGoogleDocsRichHTML, generateGoogleCalendarUrl, generateICSFile } from '../../utils/googleExporter';
 import { formulateQuestionForTeacher, analyzeInstructionsWithAI } from '../../services/aiService';
 import { copyText } from '../../utils/clipboardHelper';
+import { generateId } from '../../utils/idHelper';
 import type { Work, Course, Source, Task, InquiryToTeacher, Citation, Paraphrase, Idea, UserProfile, TaskPriority, WorkStatus } from '../../types';
 
 export interface WorkWorkspaceProps {
@@ -174,7 +175,8 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
   // Copy Google Docs Rich Text
   const handleCopyGoogleDocsHtml = async () => {
     const html = generateGoogleDocsRichHTML(work, workSources, userProfile, course?.name, course?.teacherName);
-    const ok = await copyRichReference(draftText, html);
+    const plainFallback = draftText.trim() || `${work.title}\n${course?.name || ''}\n${userProfile?.name || 'Estudiante'}`;
+    const ok = await copyRichReference(plainFallback, html);
     if (ok) {
       showToast('Copiado para Google Docs', 'Pega directamente en tu documento manteniendo portada APA 7 y sangría francesa.', 'success');
     } else {
@@ -547,7 +549,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                     onKeyDown={async (e) => {
                       if (e.key === 'Enter' && newTaskTitle.trim()) {
                         await db.tasks.add({
-                          id: `task-${Math.random().toString(36).substring(2, 9)}`,
+                          id: generateId('task'),
                           workId,
                           courseId: work.courseId,
                           title: newTaskTitle.trim(),
@@ -579,7 +581,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                   onClick={async () => {
                     if (!newTaskTitle.trim()) return;
                     await db.tasks.add({
-                      id: `task-${Math.random().toString(36).substring(2, 9)}`,
+                      id: generateId('task'),
                       workId,
                       courseId: work.courseId,
                       title: newTaskTitle.trim(),
@@ -705,7 +707,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                           course?.teacherName
                         );
                         await db.inquiries.add({
-                          id: `inq-${Math.random().toString(36).substring(2, 9)}`,
+                          id: generateId('inq'),
                           workId,
                           courseId: work.courseId,
                           topic: newInquiryTopic.trim(),

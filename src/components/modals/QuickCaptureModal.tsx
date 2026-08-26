@@ -26,6 +26,7 @@ import { resolveDOI, extractDOI } from '../../services/academicApis';
 import { auditSourceMetadata } from '../../utils/antiHallucination';
 import { formulateQuestionForTeacher, analyzeInstructionsWithAI } from '../../services/aiService';
 import { useToast } from '../common/Toast';
+import { generateId } from '../../utils/idHelper';
 import type { CitationStyle, WorkType, WorkStatus, ParaCategory, TaskPriority, SourceType, Author, UserProfile, Source } from '../../types';
 
 export type CaptureTab = 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task';
@@ -204,7 +205,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         .filter(Boolean);
 
       await db.notes.add({
-        id: `note-${crypto.randomUUID()}`,
+        id: generateId('note'),
         slug,
         title: noteTitle.trim(),
         content: noteContent.trim(),
@@ -253,7 +254,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       const deadlineMs = workDeadline ? new Date(workDeadline).getTime() : now + 86400000 * 7;
       const analysis = await analyzeInstructionsWithAI(workInstructions.trim());
 
-      const newWorkId = `work-${crypto.randomUUID()}`;
+      const newWorkId = generateId('work');
       await db.works.add({
         id: newWorkId,
         courseId: workCourseId,
@@ -298,7 +299,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
     try {
       const now = Date.now();
       await db.courses.add({
-        id: `course-${crypto.randomUUID()}`,
+        id: generateId('course'),
         name: courseName.trim(),
         code: courseCode.trim() || undefined,
         period: coursePeriod.trim() || '2026-II',
@@ -395,7 +396,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       }
 
       await db.sources.add({
-        id: `src-${crypto.randomUUID()}`,
+        id: generateId('src'),
         workIds: sourceWorkId ? [sourceWorkId] : [],
         title: finalTitle,
         authors: finalAuthors,
@@ -452,7 +453,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
     try {
       const now = Date.now();
       await db.inquiries.add({
-        id: `inq-${crypto.randomUUID()}`,
+        id: generateId('inq'),
         courseId: inquiryCourseId,
         workId: inquiryWorkId || '',
         topic: inquiryTopic.trim(),
@@ -492,7 +493,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       const linkedWork = works.find((w) => w.id === taskWorkId);
 
       await db.tasks.add({
-        id: `task-${crypto.randomUUID()}`,
+        id: generateId('task'),
         title: taskTitle.trim(),
         dueDate: dueMs && !isNaN(dueMs) ? dueMs : undefined,
         priority: taskPriority,

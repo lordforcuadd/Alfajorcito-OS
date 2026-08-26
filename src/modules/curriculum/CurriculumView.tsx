@@ -26,6 +26,7 @@ import { CourseModal } from '../../components/modals/CourseModal';
 import { USMP_PSYCHOLOGY_CURRICULUM } from '../../services/usmpCurriculum';
 import { db } from '../../db';
 import { useToast } from '../../components/common/Toast';
+import { generateId } from '../../utils/idHelper';
 import type { CurriculumCourse, Course, Work, UserProfile } from '../../types';
 import { DEFAULT_ACADEMIC_PERIOD } from '../../types';
 
@@ -117,7 +118,7 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
       const colors = ['#D98880', '#B39DDB', '#80CBC4', '#FFCC80', '#90CAF9'];
       const assignedColor = colors[Math.floor(Math.random() * colors.length)];
       await db.courses.add({
-        id: `course-${crypto.randomUUID()}`,
+        id: generateId('course'),
         code: curriculumCourse.code,
         name: curriculumCourse.name,
         period: `${DEFAULT_ACADEMIC_PERIOD} (${curriculumCourse.cycle}vo Ciclo)`,
@@ -453,7 +454,7 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
                     if (existing) {
                       courseId = existing.id;
                     } else {
-                      const newCourseId = `course-${crypto.randomUUID()}`;
+                      const newCourseId = generateId('course');
                       await db.courses.add({
                         id: newCourseId,
                         code: inspectedCourse.code,
