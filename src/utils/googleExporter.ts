@@ -22,6 +22,95 @@ export function formatLocalFloatingDateTime(date: Date): string {
   return `${y}${m}${d}T${hh}${mm}${ss}`;
 }
 
+function inlineMarkdown(text: string): string {
+  if (!text) return '';
+  return escapeHtml(text)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+}
+
+function convertMarkdownToRichHtml(markdown: string): string {
+  if (!markdown || !markdown.trim()) return '';
+
+  const blocks = markdown.split(/\n\s*\n/);
+  const htmlBlocks: string[] = [];
+
+  for (const block of blocks) {
+    const trimmed = block.trim();
+    if (!trimmed) continue;
+
+    // Headings
+    if (trimmed.startsWith('### ')) {
+      const text = inlineMarkdown(trimmed.replace(/^###\s+/, ''));
+      htmlBlocks.push(`<h3 style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; font-weight: bold; font-style: italic; margin-top: 14pt; margin-bottom: 6pt; line-height: 2.0;">${text}</h3>`);
+      continue;
+    }
+    if (trimmed.startsWith('## ')) {
+      const text = inlineMarkdown(trimmed.replace(/^##\s+/, ''));
+      htmlBlocks.push(`<h2 style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; font-weight: bold; margin-top: 18pt; margin-bottom: 8pt; line-height: 2.0;">${text}</h2>`);
+      continue;
+    }
+    if (trimmed.startsWith('# ')) {
+      const text = inlineMarkdown(trimmed.replace(/^#\s+/, ''));
+      htmlBlocks.push(`<h1 style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; font-weight: bold; text-align: center; margin-top: 18pt; margin-bottom: 12pt; line-height: 2.0;">${text}</h1>`);
+      continue;
+    }
+
+    // Blockquote (APA 7 Block Quotation +40 words)
+    if (trimmed.startsWith('>')) {
+      const text = inlineMarkdown(trimmed.replace(/^>\s*"?|"?$/gm, ''));
+      htmlBlocks.push(`<div style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 2.0; margin-left: 36pt; margin-right: 36pt; margin-top: 12pt; margin-bottom: 12pt;">${text}</div>`);
+      continue;
+    }
+
+    // Markdown Table (APA 7 format: horizontal borders on header top/bottom and table bottom)
+    if (trimmed.includes('|') && trimmed.includes('\n')) {
+      const lines = trimmed.split('\n').filter(l => l.trim().startsWith('|'));
+      if (lines.length >= 2) {
+        const rows = lines.filter(l => !/^\s*\|?\s*:?-+:?\s*\|/.test(l));
+        let tableHtml = '<table style="font-family: \'Times New Roman\', Times, serif; font-size: 11pt; line-height: 1.5; border-collapse: collapse; width: 100%; margin-top: 14pt; margin-bottom: 14pt; border-top: 1.5pt solid #000; border-bottom: 1.5pt solid #000;">\n';
+        rows.forEach((row, rIdx) => {
+          const cells = row.split('|').map(c => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+          if (rIdx === 0) {
+            tableHtml += '  <tr style="border-bottom: 1pt solid #000; font-weight: bold;">\n';
+            cells.forEach(c => {
+              tableHtml += `    <th style="padding: 6pt 8pt; text-align: left;">${inlineMarkdown(c)}</th>\n`;
+            });
+            tableHtml += '  </tr>\n';
+          } else {
+            tableHtml += '  <tr>\n';
+            cells.forEach(c => {
+              tableHtml += `    <td style="padding: 5pt 8pt;">${inlineMarkdown(c)}</td>\n`;
+            });
+            tableHtml += '  </tr>\n';
+          }
+        });
+        tableHtml += '</table>';
+        htmlBlocks.push(tableHtml);
+        continue;
+      }
+    }
+
+    // Lists (bullets & numbers)
+    if (/^\s*(?:-|\*|\d+\.)\s+/.test(trimmed)) {
+      const lines = trimmed.split('\n');
+      const listItems = lines.map((line, idx) => {
+        const isNumber = /^\s*\d+\.\s+/.test(line);
+        const text = inlineMarkdown(line.replace(/^\s*(?:-|\*|\d+\.)\s+/, ''));
+        return `<p style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 2.0; margin-left: 36pt; text-indent: -18pt; margin-top: 0; margin-bottom: 0;">${isNumber ? `${idx + 1}. ` : '• '}${text}</p>`;
+      }).join('\n');
+      htmlBlocks.push(listItems);
+      continue;
+    }
+
+    // Standard APA 7 Body Paragraph
+    const text = inlineMarkdown(trimmed);
+    htmlBlocks.push(`<p style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 2.0; text-indent: 36pt; margin-top: 0; margin-bottom: 0;">${text}</p>`);
+  }
+
+  return htmlBlocks.join('\n');
+}
+
 export function generateGoogleDocsRichHTML(
   work: Work,
   sources: Source[],
@@ -29,49 +118,65 @@ export function generateGoogleDocsRichHTML(
   courseName?: string,
   teacherName?: string
 ): string {
-  const referencesHtml = sources.map(s => {
-    const ref = formatFullReferenceHTML(s, work.citationStyle);
-    return `<p style="margin-left: 36pt; text-indent: -36pt; margin-bottom: 8pt; line-height: 2.0; font-family: 'Times New Roman', Georgia, serif; font-size: 12pt;">${ref}</p>`;
-  }).join('\n');
+  const referencesHtml = sources.length > 0
+    ? sources.map(s => {
+        const ref = formatFullReferenceHTML(s, work.citationStyle);
+        return `<p style="margin-left: 36pt; text-indent: -36pt; margin-bottom: 12pt; line-height: 2.0; font-family: 'Times New Roman', Times, serif; font-size: 12pt;">${ref}</p>`;
+      }).join('\n')
+    : '';
 
-  // APA 7 Official Cover Page Header (Dynamic from UserProfile)
-  const institutionName = escapeHtml(profile?.institution || 'Institución Universitaria');
-  const facultyName = escapeHtml(profile?.faculty || 'Facultad Académica');
+  // APA 7 Official Cover Page Header (Page 1)
+  const institutionName = escapeHtml(profile?.institution || 'Universidad de San Martín de Porres (USMP)');
+  const facultyName = escapeHtml(profile?.faculty || 'Facultad de Ciencias de la Comunicación, Turismo y Psicología');
   const studentName = escapeHtml(profile?.name || 'Estudiante');
-  const cycleInfo = escapeHtml(String(profile?.currentCycle || 'Ciclo Académico'));
   const safeWorkTitle = escapeHtml(work.title);
   const safeCourseName = escapeHtml(courseName || 'Asignatura');
   const safeTeacherName = teacherName ? escapeHtml(teacherName) : '';
+  const formattedDate = new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' });
 
   const coverPageHtml = `
-    <div style="text-align: center; margin-bottom: 48pt; font-family: 'Times New Roman', Georgia, serif;">
-      <h1 style="font-size: 16pt; font-weight: bold; margin-bottom: 12pt;">${safeWorkTitle}</h1>
-      <p style="font-size: 12pt; margin: 4pt 0;"><strong>${studentName}</strong></p>
-      <p style="font-size: 12pt; margin: 4pt 0;">${facultyName}</p>
-      <p style="font-size: 12pt; margin: 4pt 0;">${institutionName}</p>
-      <p style="font-size: 12pt; margin: 4pt 0;">${safeCourseName} (${cycleInfo})</p>
-      ${safeTeacherName ? `<p style="font-size: 12pt; margin: 4pt 0;">Docente: ${safeTeacherName}</p>` : ''}
-      <p style="font-size: 12pt; margin: 4pt 0;">${new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+    <div style="page-break-after: always; text-align: center; font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 2.0; padding-top: 72pt; padding-bottom: 72pt;">
+      <p style="font-size: 12pt; font-weight: bold; margin-bottom: 36pt; line-height: 2.0;">${safeWorkTitle}</p>
+      <p style="margin: 0; line-height: 2.0;">${studentName}</p>
+      <p style="margin: 0; line-height: 2.0;">${facultyName}</p>
+      <p style="margin: 0; line-height: 2.0;">${institutionName}</p>
+      <p style="margin: 0; line-height: 2.0;">${safeCourseName}</p>
+      ${safeTeacherName ? `<p style="margin: 0; line-height: 2.0;">Docente: ${safeTeacherName}</p>` : ''}
+      <p style="margin: 0; line-height: 2.0;">${formattedDate}</p>
     </div>
-    <hr style="border: none; border-top: 1px solid #ccc; margin: 24pt 0;" />
-  `;
+  `.trim();
 
-  const draftHtml = (work.draftContent || '')
-    .split('\n\n')
-    .map(para => {
-      const trimmed = para.trim();
-      if (trimmed.startsWith('# ')) {
-        return `<h1 style="font-family: 'Times New Roman', Georgia, serif; font-size: 16pt; font-weight: bold; margin-top: 18pt; margin-bottom: 12pt; text-align: center;">${escapeHtml(trimmed.replace('# ', ''))}</h1>`;
-      }
-      if (trimmed.startsWith('## ')) {
-        return `<h2 style="font-family: 'Times New Roman', Georgia, serif; font-size: 14pt; font-weight: bold; margin-top: 14pt; margin-bottom: 8pt;">${escapeHtml(trimmed.replace('## ', ''))}</h2>`;
-      }
-      if (trimmed.startsWith('### ')) {
-        return `<h3 style="font-family: 'Times New Roman', Georgia, serif; font-size: 12pt; font-weight: bold; font-style: italic; margin-top: 10pt; margin-bottom: 6pt;">${escapeHtml(trimmed.replace('### ', ''))}</h3>`;
-      }
-      return `<p style="font-family: 'Times New Roman', Georgia, serif; font-size: 12pt; line-height: 2.0; text-indent: 36pt; margin-bottom: 0pt;">${escapeHtml(trimmed)}</p>`;
-    })
-    .join('\n');
+  // Process draft content (Page 2+)
+  let rawDraft = (work.draftContent || '').trim();
+  // Strip duplicate leading title if present
+  if (rawDraft.startsWith('# ')) {
+    const firstLineEnd = rawDraft.indexOf('\n');
+    const firstLineText = firstLineEnd === -1 ? rawDraft.slice(2).trim() : rawDraft.slice(2, firstLineEnd).trim();
+    if (firstLineText.toLowerCase() === work.title.toLowerCase()) {
+      rawDraft = firstLineEnd === -1 ? '' : rawDraft.slice(firstLineEnd).trim();
+    }
+  }
+
+  const hasBodyContent = rawDraft.length > 0;
+  let bodyHtml = '';
+
+  if (hasBodyContent) {
+    const titleHeader = `<p style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; font-weight: bold; text-align: center; margin-bottom: 18pt; line-height: 2.0;">${safeWorkTitle}</p>`;
+    const convertedDraft = convertMarkdownToRichHtml(rawDraft);
+    bodyHtml = `\n    ${titleHeader}\n    ${convertedDraft}\n`;
+  }
+
+  // References Section (Page 3+ or after body)
+  let refsSectionHtml = '';
+  if (sources.length > 0) {
+    const pageBreakStyle = hasBodyContent ? 'page-break-before: always;' : '';
+    refsSectionHtml = `
+    <div style="${pageBreakStyle} font-family: 'Times New Roman', Times, serif;">
+      <p style="font-size: 12pt; font-weight: bold; text-align: center; margin-top: 24pt; margin-bottom: 18pt; line-height: 2.0;">Referencias</p>
+      ${referencesHtml}
+    </div>
+    `.trim();
+  }
 
   return `
 <!DOCTYPE html>
@@ -80,12 +185,10 @@ export function generateGoogleDocsRichHTML(
 <meta charset="utf-8">
 <title>${safeWorkTitle}</title>
 </head>
-<body style="font-family: 'Times New Roman', Georgia, serif; color: #000000; padding: 20px;">
+<body style="font-family: 'Times New Roman', Times, serif; color: #000000; margin: 0; padding: 0;">
   ${coverPageHtml}
-  ${draftHtml}
-
-  <h2 style="font-family: 'Times New Roman', Georgia, serif; font-size: 14pt; font-weight: bold; margin-top: 24pt; margin-bottom: 12pt; text-align: center;">Referencias</h2>
-  ${referencesHtml}
+  ${bodyHtml}
+  ${refsSectionHtml}
 </body>
 </html>
   `.trim();

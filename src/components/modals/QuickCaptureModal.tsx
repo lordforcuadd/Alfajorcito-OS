@@ -267,7 +267,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         instructionAnalysis: analysis,
         googleDocUrl: workGoogleDocUrl.trim() || undefined,
         canvaUrl: workCanvaUrl.trim() || undefined,
-        draftContent: `# ${workTitle.trim()}\n\n## 1. Introducción\n`,
+        draftContent: '',
         createdAt: now,
         updatedAt: now,
         isArchived: false

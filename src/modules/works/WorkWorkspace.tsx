@@ -195,7 +195,8 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
 
   // Copy Google Docs Rich Text
   const handleCopyGoogleDocsHtml = async () => {
-    const html = generateGoogleDocsRichHTML(work, workSources, userProfile, course?.name, course?.teacherName);
+    const workToExport = { ...work, draftContent: draftText };
+    const html = generateGoogleDocsRichHTML(workToExport, workSources, userProfile, course?.name, course?.teacherName);
     const plainFallback = draftText.trim() || `${work.title}\n${course?.name || ''}\n${userProfile?.name || 'Estudiante'}`;
     const ok = await copyRichReference(plainFallback, html);
     if (ok) {
