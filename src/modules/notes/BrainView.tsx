@@ -403,6 +403,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
               placeholder="e.g. Regulación Emocional, Autoeficacia, TCC, Burnout..."
               value={newConceptName}
               onChange={(e) => setNewConceptName(e.target.value)}
+              autoFocus
             />
             <TextArea
               label="Definición o Marco Teórico"

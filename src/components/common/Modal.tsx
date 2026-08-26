@@ -25,12 +25,14 @@ export const Modal: React.FC<ModalProps> = ({
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousActiveElementRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Manage Focus Trap & Keyboard Navigation
+  // Manage Focus Trap & Keyboard Navigation (Only runs on open/close transitions)
   useEffect(() => {
     if (!isOpen) return;
 
@@ -38,9 +40,24 @@ export const Modal: React.FC<ModalProps> = ({
     previousActiveElementRef.current = document.activeElement as HTMLElement | null;
     document.body.style.overflow = 'hidden';
 
-    // Focus first focusable element or dialog container
+    // Focus first appropriate element (preferring inputs/textareas over the close button)
     const timer = setTimeout(() => {
       if (dialogRef.current) {
+        // If user already focused something inside the dialog, do not steal focus
+        if (dialogRef.current.contains(document.activeElement)) {
+          return;
+        }
+
+        // 1. Prefer autofocus elements or first input/textarea/select in modal body
+        const formControls = dialogRef.current.querySelectorAll<HTMLElement>(
+          '[data-autofocus], input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])'
+        );
+        if (formControls.length > 0) {
+          formControls[0].focus();
+          return;
+        }
+
+        // 2. Fallback to any focusable element
         const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         );
@@ -55,7 +72,7 @@ export const Modal: React.FC<ModalProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -95,7 +112,7 @@ export const Modal: React.FC<ModalProps> = ({
         previousActiveElementRef.current.focus();
       }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen || !mounted) return null;
 
