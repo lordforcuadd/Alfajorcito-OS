@@ -4,7 +4,8 @@ import {
   formatFullReferenceHTML,
   formatInTextParenthetical,
   formatInTextNarrative,
-  formatAuthorNamesAPA
+  formatAuthorNamesAPA,
+  generateBibTeX
 } from '../utils/citationEngine';
 import type { Source } from '../types';
 
@@ -255,5 +256,45 @@ describe('Citation Engine Extended Suite — Strict Academic APA 7 & Multi-style
 
     const chicagoNotesRef = formatFullReference(chapterSource, 'CHICAGO_NOTES');
     expect(chicagoNotesRef).toContain('Hayes, Steven. "Terapia de Aceptación y Compromiso en Contextos Académicos." Avances en Terapias Contextuales (2021), 120-145.');
+  });
+
+  it('generates collision-resistant BibTeX citeKeys for multiple works by the same author in the same year', () => {
+    const paperA: Source = {
+      id: 'src-garcia-1',
+      workIds: [],
+      title: 'Regulación emocional y rendimiento académico',
+      authors: [{ firstName: 'Carlos', lastName: 'García' }],
+      year: 2023,
+      type: 'JOURNAL_ARTICLE',
+      publication: 'Revista de Psicología',
+      accessedAt: Date.now(),
+      verificationStatus: 'VERIFIED',
+      verificationProvider: 'CROSSREF',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    const paperB: Source = {
+      id: 'src-garcia-2',
+      workIds: [],
+      title: 'Ansiedad ante los exámenes y autoeficacia percibida',
+      authors: [{ firstName: 'Carlos', lastName: 'García' }],
+      year: 2023,
+      type: 'JOURNAL_ARTICLE',
+      publication: 'Revista de Psicología',
+      accessedAt: Date.now(),
+      verificationStatus: 'VERIFIED',
+      verificationProvider: 'CROSSREF',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    const bibA = generateBibTeX(paperA);
+    const bibB = generateBibTeX(paperB);
+
+    expect(bibA).toContain('@article{garcia2023regulacion,');
+    expect(bibB).toContain('@article{garcia2023ansiedad,');
+    // Ensure distinct citeKeys
+    expect(bibA.match(/@article\{([^,]+),/)?.[1]).not.toBe(bibB.match(/@article\{([^,]+),/)?.[1]);
   });
 });

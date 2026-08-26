@@ -416,16 +416,29 @@ export { copyRichReference } from './clipboardHelper';
 
 /**
  * Generates clean, standard BibTeX output with full type mapping,
- * ASCII-sanitized citeKeys, and non-empty conditional fields.
+ * ASCII-sanitized, collision-resistant citeKeys (author + year + title keyword),
+ * and non-empty conditional fields.
  */
 export function generateBibTeX(source: Source): string {
   // Sanitize citeKey: Latin letters, numbers, no accents or spaces
   const primaryAuthor = (source.authors?.[0]?.lastName || 'source')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9]/g, '');
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase();
 
-  const citeKey = `${primaryAuthor.toLowerCase()}${source.year || 'nodate'}`;
+  // Extract first significant title word (ignoring common short articles / prepositions)
+  const stopwords = new Set(['el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'del', 'a', 'an', 'the', 'on', 'in', 'and', 'y', 'en', 'para', 'por']);
+  const titleWords = (source.title || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9\s]/g, '')
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 1 && !stopwords.has(w));
+
+  const titleKeyword = titleWords[0] || '';
+  const citeKey = `${primaryAuthor || 'source'}${source.year || 'nodate'}${titleKeyword ? `${titleKeyword}` : ''}`;
 
   const authorsStr = (source.authors || [])
     .map((a) => `${a.lastName}, ${a.firstName}`)

@@ -65,7 +65,7 @@ describe('Citation Engine Suite', () => {
 
   it('generates valid BibTeX entries', () => {
     const bib = generateBibTeX(sampleArticle);
-    expect(bib).toContain('@article{williamson2023,');
+    expect(bib).toContain('@article{williamson2023governing,');
     expect(bib).toContain('author = {Williamson, Ben and Eynon, Rebecca}');
     expect(bib).toContain('doi = {10.1111/bjet.13328}');
   });

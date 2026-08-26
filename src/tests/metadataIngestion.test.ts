@@ -63,7 +63,7 @@ describe('Metadata Ingestion & Integrity Test Suite (F-01 to F-20)', () => {
       };
 
       const bib = generateBibTeX(sourceBook);
-      expect(bib).toContain('@book{merinosoto2022,');
+      expect(bib).toContain('@book{merinosoto2022psicometria,');
       expect(bib).toContain('title = {Psicometría Aplicada}');
       expect(bib).toContain('author = {Merino-Soto, César}');
       expect(bib).toContain('year = {2022}');
@@ -89,7 +89,7 @@ describe('Metadata Ingestion & Integrity Test Suite (F-01 to F-20)', () => {
       };
 
       const bib = generateBibTeX(thesis);
-      expect(bib).toContain('@phdthesis{gomez2024,');
+      expect(bib).toContain('@phdthesis{gomez2024regulacion,');
       expect(bib).toContain('school = {Universidad de San Martín de Porres}');
     });
   });

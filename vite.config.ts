@@ -55,12 +55,6 @@ export default defineConfig({
             }
             if (id.includes('dexie')) return 'vendor-db';
             if (id.includes('lucide-react')) return 'vendor-icons';
-            if (
-              id.includes('clsx') ||
-              id.includes('tailwind-merge')
-            ) {
-              return 'vendor-utils';
-            }
           }
 
           // Modular Feature Chunks
