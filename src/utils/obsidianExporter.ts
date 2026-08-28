@@ -1,5 +1,6 @@
 import type { Note, Source, Work, Course, Concept } from '../types';
 import { formatFullReference } from './citationEngine';
+import { formatLocalDateForInput } from './dateHelper';
 
 export function sanitizeSlug(title: string): string {
   return (
@@ -37,8 +38,8 @@ export function generateNoteMarkdown(
     sources.length > 0 ? `sources:\n${sources.map(s => `  - "[[${s}]]"`).join('\n')}` : null,
     concepts.length > 0 ? `concepts:\n${concepts.map(c => `  - "[[${c}]]"`).join('\n')}` : null,
     note.tags.length > 0 ? `tags:\n${note.tags.map(t => `  - "${t.replace(/^#+/, '')}"`).join('\n')}` : null,
-    `created: "${new Date(note.createdAt).toISOString().split('T')[0]}"`,
-    `updated: "${new Date(note.updatedAt).toISOString().split('T')[0]}"`,
+    `created: "${formatLocalDateForInput(note.createdAt)}"`,
+    `updated: "${formatLocalDateForInput(note.updatedAt)}"`,
     '---',
     ''
   ].filter(line => line !== null).join('\n');
@@ -59,7 +60,7 @@ year: ${source.year || 'null'}
 doi: "${source.doi || ''}"
 url: "${source.url || ''}"
 verification_status: "${source.verificationStatus}"
-created: "${new Date(source.createdAt).toISOString().split('T')[0]}"
+created: "${formatLocalDateForInput(source.createdAt)}"
 ---
 
 # ${source.title}
@@ -131,7 +132,7 @@ id: "${w.id}"
 title: "${w.title}"
 type: "${w.type}"
 status: "${w.status}"
-deadline: "${new Date(w.deadline).toISOString().split('T')[0]}"
+deadline: "${formatLocalDateForInput(w.deadline)}"
 course: "[[${courseName}]]"
 citation_style: "${w.citationStyle}"
 ---

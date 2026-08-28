@@ -22,6 +22,7 @@ import { dissociateWorkIdFromSources, WORK_DELETION_CONSEQUENCES } from '../../u
 import { generateId } from '../../utils/idHelper';
 import { analyzeInstructionsWithAI } from '../../services/aiService';
 import { formatLocalDateForInput, parseDeadlineTimestamp } from '../../utils/dateHelper';
+import { sanitizeSafeUrl } from '../../utils/urlHelper';
 import type { Work, WorkType, WorkStatus, CitationStyle, Course, UserProfile } from '../../types';
 
 export interface WorkModalProps {
@@ -141,8 +142,8 @@ export const WorkModal: React.FC<WorkModalProps> = ({
           maxSourceAgeYears: parsedMaxAge,
           rawInstructions: rawInstructions.trim(),
           instructionAnalysis: updatedAnalysis,
-          googleDocUrl: googleDocUrl.trim() || undefined,
-          canvaUrl: canvaUrl.trim() || undefined,
+          googleDocUrl: sanitizeSafeUrl(googleDocUrl),
+          canvaUrl: sanitizeSafeUrl(canvaUrl),
           updatedAt: now
         });
 
@@ -175,8 +176,8 @@ export const WorkModal: React.FC<WorkModalProps> = ({
           maxSourceAgeYears: parsedMaxAge,
           rawInstructions: rawInstructions.trim(),
           instructionAnalysis: analysis,
-          googleDocUrl: googleDocUrl.trim() || undefined,
-          canvaUrl: canvaUrl.trim() || undefined,
+          googleDocUrl: sanitizeSafeUrl(googleDocUrl),
+          canvaUrl: sanitizeSafeUrl(canvaUrl),
           isArchived: false,
           createdAt: now,
           updatedAt: now

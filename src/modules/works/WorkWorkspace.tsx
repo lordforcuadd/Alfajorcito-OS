@@ -56,6 +56,7 @@ import { formulateQuestionForTeacher, analyzeInstructionsWithAI } from '../../se
 import { copyText } from '../../utils/clipboardHelper';
 import { generateId } from '../../utils/idHelper';
 import { computeDraftFormatting, type DraftFormattingType } from '../../utils/draftFormattingEngine';
+import { sanitizeSafeUrl, isSafeHttpUrl } from '../../utils/urlHelper';
 import type { Work, Course, Source, Task, InquiryToTeacher, Citation, Paraphrase, Idea, UserProfile, TaskPriority, WorkStatus } from '../../types';
 
 export interface WorkWorkspaceProps {
@@ -454,7 +455,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {work.googleDocUrl ? (
+                      {work.googleDocUrl && isSafeHttpUrl(work.googleDocUrl) ? (
                         <a
                           href={work.googleDocUrl}
                           target="_blank"
@@ -492,7 +493,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {work.canvaUrl ? (
+                      {work.canvaUrl && isSafeHttpUrl(work.canvaUrl) ? (
                         <a
                           href={work.canvaUrl}
                           target="_blank"
@@ -1506,8 +1507,8 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                 variant="primary"
                 onClick={async () => {
                   await db.works.update(workId, {
-                    googleDocUrl: editGoogleDocUrl.trim() || undefined,
-                    canvaUrl: editCanvaUrl.trim() || undefined,
+                    googleDocUrl: sanitizeSafeUrl(editGoogleDocUrl),
+                    canvaUrl: sanitizeSafeUrl(editCanvaUrl),
                     updatedAt: Date.now()
                   });
                   showToast('Enlaces actualizados', 'Google Docs y Canva vinculados al trabajo.', 'success');

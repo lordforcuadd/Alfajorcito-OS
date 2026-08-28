@@ -106,4 +106,19 @@ describe('Exporters Suite', () => {
     expect(ics).toContain('SUMMARY:[ENTREGA] Tesis\\, Proyecto 1\\; Parte A & B');
     expect(ics).toContain('DESCRIPTION:Curso: Psicología\\, Clínica\\nEstilo: APA_7');
   });
+
+  it('guarantees timezone-safe local date formatting in Obsidian frontmatter (no UTC drift)', () => {
+    // Construct local timestamp at 23:59:59 on 2026-08-28 (which in UTC-5 is 04:59:59 on 2026-08-29)
+    const localLateNight = new Date(2026, 7, 28, 23, 59, 59, 999).getTime();
+    const testNote: Note = {
+      ...sampleNote,
+      createdAt: localLateNight,
+      updatedAt: localLateNight
+    };
+
+    const md = generateNoteMarkdown(testNote, new Map(), new Map(), new Map(), new Map());
+    expect(md).toContain('created: "2026-08-28"');
+    expect(md).toContain('updated: "2026-08-28"');
+    expect(md).not.toContain('created: "2026-08-29"');
+  });
 });

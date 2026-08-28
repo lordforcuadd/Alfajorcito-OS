@@ -51,6 +51,7 @@ import {
 import { checkParaphraseFidelity } from '../../services/aiService';
 import { copyText } from '../../utils/clipboardHelper';
 import { generateId } from '../../utils/idHelper';
+import { isSafeHttpUrl } from '../../utils/urlHelper';
 import type { Source, VerificationStatus, Idea, Paraphrase, Work, Author, CitationStyle, SourceType } from '../../types';
 
 export function normalizeTitleKey(t?: string): string {
@@ -565,7 +566,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                         )}
 
                         <div className="flex flex-col items-center sm:items-end gap-1 w-full sm:w-auto">
-                          {item.url && (
+                          {item.url && isSafeHttpUrl(item.url) && (
                             <a
                               href={item.url}
                               target="_blank"
@@ -989,7 +990,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                     >
                       {inspectedSource.doi}
                     </a>
-                  ) : inspectedSource.url ? (
+                  ) : (inspectedSource.url && isSafeHttpUrl(inspectedSource.url)) ? (
                     <a
                       href={inspectedSource.url}
                       target="_blank"

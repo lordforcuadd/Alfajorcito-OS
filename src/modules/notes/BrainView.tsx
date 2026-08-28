@@ -27,6 +27,7 @@ import { exportVaultZip } from '../../utils/obsidianExporter';
 import { InteractiveGraph } from './InteractiveGraph';
 import { NoteViewerModal } from './NoteViewerModal';
 import { generateId } from '../../utils/idHelper';
+import { formatLocalDateForInput } from '../../utils/dateHelper';
 import type { Note, Concept, ParaCategory, Course, Work, Source } from '../../types';
 
 export interface BrainViewProps {
@@ -78,7 +79,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Alfajorcito_Notas_Obsidian_${new Date().toISOString().split('T')[0]}.zip`;
+      a.download = `Alfajorcito_Notas_Obsidian_${formatLocalDateForInput(new Date())}.zip`;
       a.click();
       URL.revokeObjectURL(url);
       showToast('Notas exportadas', 'Archivo .zip listo para abrir en Obsidian con tus notas conectadas.', 'success');
