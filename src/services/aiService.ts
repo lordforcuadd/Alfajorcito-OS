@@ -813,16 +813,20 @@ HISTORIAL DE CONVERSACIÓN PREVIO:
 ${recentHistory || '(Inicio de conversación)'}
 
 ══════════════════════════════════════════
-PERSONALIDAD Y TONO HUMANO:
+PERSONALIDAD Y TONO HUMANO (ESPAÑOL PERUANO):
 ══════════════════════════════════════════
-1. Habla como un compañero de clase cercano que conoce a ${studentName}, NO como un bot ni un libro de texto.
-   - Tono cálido, natural y coloquial, en español. Usa tuteo y contracciones normales ("estás", "te ayudo", "vamos a ver").
-   - NUNCA uses lenguaje técnico, jerga de matemáticas ni terminología de "inteligencia artificial". Explica todo con palabras simples, como se lo contarías a un amigo.
-   - En lugar de decir "los artefactos del grafo de conocimiento", di "tus notas y trabajos". Evita palabras como "árbitrario", "heurística", "token", "índice", "sintetizar", "entidad".
+1. Habla como una compañera de clase PERUANA cercana que conoce bien a ${studentName}, NO como un bot ni un libro de texto.
+   - Español PERUANO: siempre "tú" (NUNCA "vos", NUNCA voseo argentino "tenés/querés", NUNCA "che" ni "boludo"). 
+   - Palabras naturales peruanas que puedes usar con moderación: "pues", "de una", "ahi nomás", "chévere", "en serio", "obvio", "igual te sirve".
+   - NUNCA uses lenguaje técnico ni palabras de IA ("heurística", "token", "índice", "sintetizar", "entidad", "grafo de conocimiento", "árbitrario"). Di "tus notas", "tus apuntes", "tus trabajos".
+   - Cero frases de robot ("Estoy aquí para ayudarte con tus necesidades académicas"). Cero servilismo ("¡Qué excelente pregunta!").
 2. RESPUESTAS CORTAS Y DIRECTAS (¡CLAVE!):
    - Responde en 2-4 frases breves por defecto. Si la pregunta es simple, una o dos frases bastan.
    - Usa viñetas SOLO si ${studentName} pide una lista, compara opciones o el tema realmente lo requiere. NUNCA abras con un párrafo largo de introducción.
    - Ve directo a lo que preguntó. No repitas su pregunta de vuelta.
+   - Ejemplos del tono correcto (solo ilustran el estilo, no son datos reales):
+     * "¿Qué tengo pendiente?" → "Tienes la exposición de Estadística el viernes y te falta cerrar el marco teórico de tu tesis. ¿Empezamos por algo?"
+     * "Explícame la ansiedad" → "En tus apuntes hay una nota buena de eso. En corto: es la tensión que genera el estudio y se maneja con técnicas de regulación emocional. ¿La abrimos?"
 
 ══════════════════════════════════════════
 ADAPTACIÓN AL PERFIL (PIENSA EN QUIÉN ES ÉL/ELLA):
@@ -831,6 +835,19 @@ ADAPTACIÓN AL PERFIL (PIENSA EN QUIÉN ES ÉL/ELLA):
    - Es estudiante de ${faculty ? `la ${faculty}` : 'su facultad'}, ${specialty ? `en ${specialty}` : ''}${cycle ? `, cursando ${cycle}` : ''}.
    - Si su proyecto de tesis aparece (${thesisTitle ? `"${thesisTitle}"` : ''}), relaciónalo cuando sea pertinente.
    - Cuando menciones algo del grafo, deja claro QUÉ ES y de QUÉ CURSO viene: "en tu curso [[Estadística]]", "el concepto [[Regulación Emocional]]", "tu trabajo [[Tesis]]", "la nota [[Regulación Emocional y Ansiedad]]".
+
+══════════════════════════════════════════
+OBEDECE LA INTENCIÓN EXACTA DEL PEDIDO:
+══════════════════════════════════════════
+A. PEDIDOS DE LISTADO ("dime todas mis notas", "todos mis conceptos", "mis trabajos", "mis cursos"):
+   - Lista TODO lo que aparezca en la lista correspondiente del grafo, SIN omitir ninguno, SIN resumir, SIN comentar uno por uno.
+   - NO mezcles categorías: si pide notas, SOLO notas; si pide conceptos, SOLO conceptos. Nada de material extra.
+   - Formato: una viñeta por ítem con su [[enlace]]. Sin párrafo introductorio largo y sin consejos al final (máximo una pregunta breve de seguimiento).
+   - Si pregunta cuántos tiene ("cuántas notas tengo"), responde PRIMERO el número exacto y después, solo si aclara algo, un desglose mínimo.
+B. PEDIDOS DE ACCIÓN ("resúmeme X", "explícame Y", "ayúdame a redactar Z"):
+   - Ejecuta la acción de inmediato usando sus notas reales como base. No des vueltas ni preguntes permiso.
+C. PREGUNTAS DE ESTADO ("qué tengo pendiente", "cómo voy"):
+   - Cruza los trabajos, estados y fechas reales del grafo. Concreta y breve.
 
 ══════════════════════════════════════════
 REGLAS ESTRICTAS DE RESPUESTA (ANTI-ALUCINACIÓN & CLARIDAD):
@@ -850,7 +867,10 @@ REGLAS ESTRICTAS DE RESPUESTA (ANTI-ALUCINACIÓN & CLARIDAD):
 NUEVO MENSAJE DE ${studentName.toUpperCase()}:
 "${userQuery}"`;
 
-      const response = await callLLM(prompt, settings);
+      // Conversational temperature: warmer than the analytical default (0.2) so the
+      // assistant sounds human and natural. Respects a user-configured higher value.
+      const chatSettings = { ...settings, temperature: Math.max(settings.temperature ?? 0.2, 0.7) };
+      const response = await callLLM(prompt, chatSettings);
       if (response && response.text.trim()) {
         return {
           answer: response.text.trim(),
@@ -866,6 +886,65 @@ NUEVO MENSAJE DE ${studentName.toUpperCase()}:
   }
 
   // 2. Offline Heuristic Semantic Synthesizer
+
+  // Intent handling: explicit full-listing / counting requests ("todas mis notas",
+  // "todos mis conceptos", "cuántas notas tengo") list ONLY the requested category,
+  // in full, without mixing others. Search-style requests keep the keyword filter.
+  const listIntent = /\b(todas|todos|cuantas|cuántas|cuantos|cuántos)\b/i.test(userQuery);
+  const wantsNotes = /\bnotas?\b/i.test(userQuery);
+  const wantsConcepts = /\bconceptos?\b/i.test(userQuery);
+  const wantsCourses = /\b(cursos?|asignaturas?|materias?|clases?)\b/i.test(userQuery);
+  const wantsWorks = /\b(trabajos?|entregables?|tesis|tareas?)\b/i.test(userQuery);
+
+  if (listIntent && (wantsNotes || wantsConcepts || wantsCourses || wantsWorks)) {
+    const sections: string[] = [];
+    let totalCount = 0;
+    const isCountOnly = /^\s*(cuantas|cuántas|cuantos|cuántos)\b/i.test(userQuery);
+    const wantedLabels = [
+      wantsNotes ? 'notas' : '',
+      wantsConcepts ? 'conceptos' : '',
+      wantsCourses ? 'cursos' : '',
+      wantsWorks ? 'trabajos' : ''
+    ].filter(Boolean).join(', ');
+
+    if (wantsNotes && activeNotes.length > 0) {
+      totalCount += activeNotes.length;
+      if (!isCountOnly) {
+        sections.push(`**Notas (${activeNotes.length}):**\n${activeNotes.map((n) => `- [[${n.title}]]`).join('\n')}`);
+      }
+    }
+    if (wantsConcepts && activeConcepts.length > 0) {
+      totalCount += activeConcepts.length;
+      if (!isCountOnly) {
+        sections.push(`**Conceptos (${activeConcepts.length}):**\n${activeConcepts.map((c) => `- [[${c.name}]]`).join('\n')}`);
+      }
+    }
+    if (wantsCourses && activeCourses.length > 0) {
+      totalCount += activeCourses.length;
+      if (!isCountOnly) {
+        sections.push(`**Cursos (${activeCourses.length}):**\n${activeCourses.map((c) => `- [[${c.name}]]`).join('\n')}`);
+      }
+    }
+    if (wantsWorks && activeWorks.length > 0) {
+      totalCount += activeWorks.length;
+      if (!isCountOnly) {
+        sections.push(`**Trabajos (${activeWorks.length}):**\n${activeWorks.map((w) => `- [[${w.title}]]`).join('\n')}`);
+      }
+    }
+
+    return {
+      answer: totalCount > 0
+        ? (isCountOnly
+          ? `Tienes ${totalCount} en total (${wantedLabels}).`
+          : `Aquí está todo, pues:\n\n${sections.join('\n\n')}`)
+        : `Aún no tienes ${wantedLabels || 'nada'} registrado, pues.`,
+      modelUsed: 'Heurística Local Offline',
+      matchedConcepts,
+      matchedNotes,
+      isOfflineHeuristic: true
+    };
+  }
+
   const relevantNotes = activeNotes.filter((n) => {
     const q = queryLower.trim();
     if (!q) return true;
@@ -885,9 +964,9 @@ NUEVO MENSAJE DE ${studentName.toUpperCase()}:
   let heuristicAnswer = '';
 
   if (relevantConcepts.length > 0 || relevantNotes.length > 0) {
-    heuristicAnswer += `### 🧠 Síntesis de tu Grafo de Conocimiento\n\n`;
+    heuristicAnswer += `En tus apuntes encontré esto, pues:\n\n`;
     if (relevantConcepts.length > 0) {
-      heuristicAnswer += `**Conceptos Teóricos Relacionados:**\n`;
+      heuristicAnswer += `**Conceptos:**\n`;
       relevantConcepts.forEach((c) => {
         heuristicAnswer += `- **[[${c.name}]]**: ${c.description}\n`;
       });
@@ -895,7 +974,7 @@ NUEVO MENSAJE DE ${studentName.toUpperCase()}:
     }
 
     if (relevantNotes.length > 0) {
-      heuristicAnswer += `**Notas y Apuntes Conectados:**\n`;
+      heuristicAnswer += `**Notas:**\n`;
       relevantNotes.slice(0, 4).forEach((n) => {
         const course = activeCourses.find((c) => c.id === n.courseId);
         const snippet = n.content.replace(/[#*`_]/g, '').slice(0, 140).trim();
@@ -904,9 +983,9 @@ NUEVO MENSAJE DE ${studentName.toUpperCase()}:
       heuristicAnswer += `\n`;
     }
 
-    heuristicAnswer += `💡 *Tip: Puedes hacer clic en cualquiera de los enlaces [[entre corchetes]] para abrir directamente la nota o inspeccionar el nodo en el grafo.*`;
+    heuristicAnswer += `💡 *Tócale a cualquiera de los [[enlaces]] y se abre de una.*`;
   } else {
-    heuristicAnswer = `### 🔍 Exploración del Grafo\n\nNo encontré una coincidencia exacta para "${userQuery}" en las notas o conceptos actuales.\n\n**Sugerencias:**\n- Revisa si el término está redactado con otra palabra clave (ej. *Regulación Emocional*, *Tesis*, *TCC*, *Psicometría*).\n- Puedes crear un nuevo concepto haciendo clic en **"Nuevo Concepto"** en la parte superior.`;
+    heuristicAnswer = `Mmm, no encontré nada con "${userQuery}" en tus notas, pues.\n\n**Prueba así:**\n- Quizá está con otra palabra (ej. *Regulación Emocional*, *Tesis*, *TCC*, *Psicometría*).\n- O crea un concepto nuevo con el botón **"Nuevo Concepto"** de arriba.`;
   }
 
   return {
