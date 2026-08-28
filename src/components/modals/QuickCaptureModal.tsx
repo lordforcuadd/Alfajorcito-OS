@@ -27,6 +27,7 @@ import { auditSourceMetadata } from '../../utils/antiHallucination';
 import { formulateQuestionForTeacher, analyzeInstructionsWithAI } from '../../services/aiService';
 import { useToast } from '../common/Toast';
 import { generateId } from '../../utils/idHelper';
+import { parseDeadlineTimestamp } from '../../utils/dateHelper';
 import type { CitationStyle, WorkType, WorkStatus, ParaCategory, TaskPriority, SourceType, Author, UserProfile, Source, VerificationProvider } from '../../types';
 
 export type CaptureTab = 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task';
@@ -251,7 +252,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
     setIsSubmitting(true);
     try {
       const now = Date.now();
-      const deadlineMs = workDeadline ? new Date(workDeadline).getTime() : now + 86400000 * 7;
+      const deadlineMs = parseDeadlineTimestamp(workDeadline);
       const analysis = await analyzeInstructionsWithAI(workInstructions.trim());
 
       const newWorkId = generateId('work');
@@ -261,7 +262,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         title: workTitle.trim(),
         type: workType,
         status: workStatus,
-        deadline: isNaN(deadlineMs) ? now + 86400000 * 7 : deadlineMs,
+        deadline: deadlineMs,
         citationStyle: workCitationStyle,
         rawInstructions: workInstructions.trim(),
         instructionAnalysis: analysis,
@@ -489,13 +490,13 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
     setIsSubmitting(true);
     try {
       const now = Date.now();
-      const dueMs = taskDueDate ? new Date(taskDueDate).getTime() : undefined;
+      const dueMs = taskDueDate ? parseDeadlineTimestamp(taskDueDate) : undefined;
       const linkedWork = works.find((w) => w.id === taskWorkId);
 
       await db.tasks.add({
         id: generateId('task'),
         title: taskTitle.trim(),
-        dueDate: dueMs && !isNaN(dueMs) ? dueMs : undefined,
+        dueDate: dueMs,
         priority: taskPriority,
         workId: taskWorkId || undefined,
         courseId: linkedWork?.courseId || undefined,

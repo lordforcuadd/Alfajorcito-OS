@@ -21,6 +21,7 @@ import { triggerCelebrationConfetti } from '../../utils/confettiHelper';
 import { dissociateWorkIdFromSources, WORK_DELETION_CONSEQUENCES } from '../../utils/academicWorkUtils';
 import { generateId } from '../../utils/idHelper';
 import { analyzeInstructionsWithAI } from '../../services/aiService';
+import { formatLocalDateForInput, parseDeadlineTimestamp } from '../../utils/dateHelper';
 import type { Work, WorkType, WorkStatus, CitationStyle, Course, UserProfile } from '../../types';
 
 export interface WorkModalProps {
@@ -51,8 +52,8 @@ export const WorkModal: React.FC<WorkModalProps> = ({
   const [status, setStatus] = useState<WorkStatus>('INVESTIGACION');
   const [deadlineStr, setDeadlineStr] = useState('');
   const [citationStyle, setCitationStyle] = useState<CitationStyle>('APA_7');
-  const [minRequiredSources, setMinRequiredSources] = useState(4);
-  const [maxSourceAgeYears, setMaxSourceAgeYears] = useState(5);
+  const [minRequiredSources, setMinRequiredSources] = useState<number | string>(4);
+  const [maxSourceAgeYears, setMaxSourceAgeYears] = useState<number | string>(5);
   const [rawInstructions, setRawInstructions] = useState('');
   const [googleDocUrl, setGoogleDocUrl] = useState('');
   const [canvaUrl, setCanvaUrl] = useState('');
@@ -61,6 +62,8 @@ export const WorkModal: React.FC<WorkModalProps> = ({
 
   // Initialize or reset form when modal opens or workToEdit changes
   useEffect(() => {
+    if (!isOpen) return;
+
     if (workToEdit) {
       setTitle(workToEdit.title || '');
       setCourseId(workToEdit.courseId || '');
@@ -68,9 +71,7 @@ export const WorkModal: React.FC<WorkModalProps> = ({
       setStatus(workToEdit.status || 'INVESTIGACION');
 
       // Format date for HTML date input: YYYY-MM-DD
-      const d = new Date(workToEdit.deadline || Date.now() + 86400000 * 7);
-      const isoDate = d.toISOString().split('T')[0];
-      setDeadlineStr(isoDate);
+      setDeadlineStr(formatLocalDateForInput(workToEdit.deadline));
 
       setCitationStyle(workToEdit.citationStyle || userProfile?.defaultCitationStyle || 'APA_7');
       setMinRequiredSources(workToEdit.minRequiredSources ?? 4);
@@ -85,8 +86,7 @@ export const WorkModal: React.FC<WorkModalProps> = ({
       setStatus('INVESTIGACION');
 
       // Default deadline: 7 days in the future
-      const defaultDate = new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0];
-      setDeadlineStr(defaultDate);
+      setDeadlineStr(formatLocalDateForInput(Date.now() + 86400000 * 7));
 
       setCitationStyle(userProfile?.defaultCitationStyle || 'APA_7');
       setMinRequiredSources(4);
@@ -116,7 +116,7 @@ export const WorkModal: React.FC<WorkModalProps> = ({
     setIsSubmitting(true);
     try {
       const now = Date.now();
-      const deadlineTimestamp = new Date(`${deadlineStr}T23:59:59`).getTime();
+      const deadlineTimestamp = parseDeadlineTimestamp(deadlineStr);
 
       if (workToEdit) {
         // Update existing work
@@ -186,7 +186,7 @@ export const WorkModal: React.FC<WorkModalProps> = ({
       onClose();
     } catch (err) {
       console.error('Error saving work:', err);
-      showToast('Error', 'No se pudo guardar el trabajo en la base de datos.', 'warning');
+      showToast('Error', 'No se pudo guardar el trabajo en la base de datos.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -195,7 +195,6 @@ export const WorkModal: React.FC<WorkModalProps> = ({
   const handleDeleteWork = async () => {
     if (!workToEdit) return;
 
-    setIsSubmitting(true);
     try {
       const workIdToDelete = workToEdit.id;
 
@@ -209,7 +208,8 @@ export const WorkModal: React.FC<WorkModalProps> = ({
           db.citations,
           db.sources,
           db.ideas,
-          db.paraphrases
+          db.paraphrases,
+          db.notes
         ],
         async () => {
           // 1. Delete associated tasks
@@ -245,22 +245,24 @@ export const WorkModal: React.FC<WorkModalProps> = ({
             }
           }
 
-          // 6. Delete work record itself
+          // 6. Dissociate notes (preserve notes in Second Brain, remove orphan workId link)
+          const relatedNotes = await db.notes.where({ workId: workIdToDelete }).toArray();
+          for (const note of relatedNotes) {
+            await db.notes.update(note.id, { workId: undefined, updatedAt: Date.now() });
+          }
+
+          // 7. Delete work record itself
           await db.works.delete(workIdToDelete);
         }
       );
 
       showToast('Trabajo eliminado', `"${workToEdit.title}" y sus tareas vinculadas han sido eliminados.`, 'info');
       setIsConfirmDeleteOpen(false);
+      if (onDeleted) onDeleted();
       onClose();
-      if (onDeleted) {
-        onDeleted();
-      }
     } catch (err) {
       console.error('Error deleting work:', err);
-      showToast('Error', 'No se pudo eliminar el trabajo.', 'warning');
-    } finally {
-      setIsSubmitting(false);
+      showToast('Error', 'No se pudo eliminar el trabajo.', 'error');
     }
   };
 

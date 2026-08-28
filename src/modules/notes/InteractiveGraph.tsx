@@ -1278,7 +1278,11 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
                   <div className="space-y-1.5 text-xs bg-[#FAF8F5] p-3 rounded-2xl border border-[#E2E8F0]">
                     <p>Tipo: <strong>{workItem.type}</strong></p>
                     <p>Estado: <strong>{workItem.status}</strong></p>
-                    {workItem.deadline && <p>Entrega: <strong>{workItem.deadline}</strong></p>}
+                    {workItem.deadline && (
+                      <p>
+                        Entrega: <strong>{new Date(workItem.deadline).toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>
+                      </p>
+                    )}
                   </div>
                   {onOpenWork && (
                     <Button

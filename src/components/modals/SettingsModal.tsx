@@ -236,9 +236,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       const validCourses = validateItems<Course>(data.courses, ['name']);
       const validWorks = validateItems<Work>(data.works, ['title', 'status', 'deadline']);
       const validSources = validateItems<Source>(data.sources, ['title']);
-      const validIdeas = validateItems<Idea>(data.ideas, ['content']);
+      const validIdeas = validateItems<Idea>(data.ideas, ['extractedCoreIdea']);
       const validParaphrases = validateItems<Paraphrase>(data.paraphrases, ['finalParaphrase']);
-      const validCitations = validateItems<Citation>(data.citations, ['text']);
+      const validCitations = validateItems<Citation>(data.citations, ['fullReferenceFormatted']);
       const validNotes = validateItems<Note>(data.notes, ['title']);
       const validConcepts = validateItems<Concept>(data.concepts, ['name']);
       const validTasks = validateItems<Task>(data.tasks, ['title']);
@@ -458,11 +458,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 value={userCitationStyle}
                 onChange={(e) => setUserCitationStyle(e.target.value as CitationStyle)}
               >
-                <option value="APA_7">APA 7ma Edición (Psicología / Salud)</option>
-                <option value="MLA_9">MLA 9na Edición (Humanidades)</option>
-                <option value="VANCOUVER">Vancouver (Biomédicas)</option>
-                <option value="IEEE">IEEE (Ingenierías)</option>
-                <option value="CHICAGO">Chicago 17th Edición</option>
+                <option value="APA_7">APA 7ma Edición (Psicología / Ciencias Sociales)</option>
+                <option value="VANCOUVER">Vancouver (Ciencias Biomédicas / Salud)</option>
+                <option value="IEEE">IEEE (Ingeniería y Computación)</option>
+                <option value="CHICAGO_AUTHOR_DATE">Chicago 17th Ed. (Autor-Fecha)</option>
+                <option value="CHICAGO_NOTES">Chicago 17th Ed. (Notas y Bibliografía)</option>
               </Select>
             </div>
           </div>
