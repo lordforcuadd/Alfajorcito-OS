@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
+import React, { useState, useRef, useEffect } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 import {
   Sparkles,
   Send,
@@ -13,16 +13,23 @@ import {
   Check,
   RotateCcw,
   Lightbulb,
-  FileText
-} from 'lucide-react';
-import { Modal } from '../../components/common/Modal';
-import { Button } from '../../components/common/Button';
-import { FormattedNoteContent } from './WikiLinkRenderer';
-import { queryGraphAssistant } from '../../services/aiService';
-import { copyText } from '../../utils/clipboardHelper';
-import { useToast } from '../../components/common/Toast';
-import { db } from '../../db';
-import type { Note, Concept, Course, Work, Source, UserProfile } from '../../types';
+  FileText,
+} from "lucide-react";
+import { Modal } from "../../components/common/Modal";
+import { Button } from "../../components/common/Button";
+import { FormattedNoteContent } from "./WikiLinkRenderer";
+import { queryGraphAssistant } from "../../services/aiService";
+import { copyText } from "../../utils/clipboardHelper";
+import { useToast } from "../../components/common/Toast";
+import { db } from "../../db";
+import type {
+  Note,
+  Concept,
+  Course,
+  Work,
+  Source,
+  UserProfile,
+} from "../../types";
 
 export interface GraphAIChatModalProps {
   isOpen: boolean;
@@ -38,7 +45,7 @@ export interface GraphAIChatModalProps {
 
 interface ChatMessage {
   id: string;
-  sender: 'user' | 'ai';
+  sender: "user" | "ai";
   text: string;
   timestamp: number;
   modelUsed?: string;
@@ -53,22 +60,25 @@ export const GraphAIChatModal: React.FC<GraphAIChatModalProps> = ({
   works,
   sources = [],
   onNavigateToNote,
-  onNavigateToWork
+  onNavigateToWork,
 }) => {
   const userProfile = useLiveQuery(async () => {
-    const rec = await db.settings.get('user_profile');
+    const rec = await db.settings.get("user_profile");
     return rec?.value as UserProfile | undefined;
   });
 
-  const studentName = userProfile?.name || 'Estudiante';
-  const cycle = userProfile?.currentCycle || '';
-  const specialty = userProfile?.specialty === 'CLINICA' ? 'Psicología Clínica' : userProfile?.specialty || userProfile?.major || 'Psicología';
-  const thesisTitle = userProfile?.thesisTitle || '';
-  const institution = userProfile?.institution || 'Universidad';
+  const studentName = userProfile?.name || "Estudiante";
+  const cycle = userProfile?.currentCycle || "";
+  const specialty =
+    userProfile?.specialty === "CLINICA"
+      ? "Psicología Clínica"
+      : userProfile?.specialty || userProfile?.major || "Psicología";
+  const thesisTitle = userProfile?.thesisTitle || "";
+  const institution = userProfile?.institution || "Universidad";
 
   const { showToast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -82,58 +92,61 @@ export const GraphAIChatModal: React.FC<GraphAIChatModalProps> = ({
     };
   }, [isOpen]);
 
-  const activeNotes = notes.filter((n) => n.paraCategory !== 'ARCHIVE');
+  const activeNotes = notes.filter((n) => n.paraCategory !== "ARCHIVE");
   const activeWorks = works.filter((w) => !w.isArchived);
   const activeCourses = courses.filter((c) => !c.isArchived);
 
   // Initialize personalized welcome message
   const initWelcome = () => {
-    const specialtyText = specialty ? ` de **${specialty}**` : '';
-    const instText = institution ? ` en la ${institution}` : '';
-    const cycleText = cycle ? ` (${cycle})` : '';
-    const thesisText = thesisTitle ? ` y tu proyecto de investigación "${thesisTitle}"` : '';
+    const specialtyText = specialty ? ` de **${specialty}**` : "";
+    const instText = institution ? ` en la ${institution}` : "";
+    const cycleText = cycle ? ` (${cycle})` : "";
+    const thesisText = thesisTitle
+      ? ` y tu proyecto de investigación "${thesisTitle}"`
+      : "";
 
     return [
       {
-        id: 'welcome',
-        sender: 'ai' as const,
-        text: `¡Hola **${studentName}**! 🌟
-Estoy conectada a tu Segundo Cerebro${specialtyText}${instText}${cycleText}. 
-
-Conozco tus apuntes, asignaturas en curso, conceptos teóricos${thesisText}.
-
-Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nombre]] para que puedas abrirlo con un clic. ¿En qué te gustaría profundizar hoy?`,
+        id: "welcome",
+        sender: "ai" as const,
+        text: `¡${studentName}! 🌟 Soy tu compañera de estudio${specialtyText}${instText}${cycleText}${thesisText}. Conozco tus apuntes y tu curso, así que pregúntame con confianza lo que sea. ¿En qué te ayudo hoy?`,
         timestamp: Date.now(),
-        modelUsed: 'Alfajorcito Companion Engine'
-      }
+        modelUsed: "Alfajorcito IA",
+      },
     ];
   };
 
   useEffect(() => {
-    if (messages.length === 0 || (messages.length === 1 && messages[0].id === 'welcome')) {
+    if (
+      messages.length === 0 ||
+      (messages.length === 1 && messages[0].id === "welcome")
+    ) {
       setMessages(initWelcome());
     }
   }, [studentName, cycle, specialty, institution, thesisTitle]);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
   const handleCopyMessage = async (msgId: string, text: string) => {
     const ok = await copyText(text);
     if (ok) {
       setCopiedId(msgId);
-      showToast('Copiado', 'Mensaje copiado al portapapeles.', 'success');
-      setTimeout(() => setCopiedId((prev) => (prev === msgId ? null : prev)), 2000);
+      showToast("Copiado", "Mensaje copiado al portapapeles.", "success");
+      setTimeout(
+        () => setCopiedId((prev) => (prev === msgId ? null : prev)),
+        2000,
+      );
     } else {
-      showToast('Error', 'No se pudo copiar al portapapeles.', 'error');
+      showToast("Error", "No se pudo copiar al portapapeles.", "error");
     }
   };
 
   const handleResetChat = () => {
     setMessages(initWelcome());
-    setInputText('');
+    setInputText("");
   };
 
   const handleSendMessage = async (queryToSend?: string) => {
@@ -142,14 +155,14 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
-      sender: 'user',
+      sender: "user",
       text,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     const updatedHistory = [...messages, userMsg];
     setMessages(updatedHistory);
-    setInputText('');
+    setInputText("");
     setIsLoading(true);
 
     try {
@@ -160,17 +173,20 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
         works: activeWorks,
         sources,
         userProfile,
-        history: updatedHistory.map((m) => ({ sender: m.sender, text: m.text }))
+        history: updatedHistory.map((m) => ({
+          sender: m.sender,
+          text: m.text,
+        })),
       });
 
       if (!isMountedRef.current) return;
 
       const aiMsg: ChatMessage = {
         id: `ai-${Date.now()}`,
-        sender: 'ai',
+        sender: "ai",
         text: result.answer,
         timestamp: Date.now(),
-        modelUsed: result.modelUsed
+        modelUsed: result.modelUsed,
       };
 
       setMessages((prev) => [...prev, aiMsg]);
@@ -179,9 +195,9 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
 
       const errorMsg: ChatMessage = {
         id: `error-${Date.now()}`,
-        sender: 'ai',
+        sender: "ai",
         text: `Disculpa ${studentName}, ocurrió un inconveniente al consultar el grafo. Por favor intenta preguntarme de nuevo.`,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
@@ -233,22 +249,26 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex gap-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex gap-2 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
             >
-              {msg.sender === 'ai' && (
+              {msg.sender === "ai" && (
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#FDF2F0] border border-[#E8A598]/60 flex items-center justify-center shrink-0 shadow-xs mt-0.5 overflow-hidden p-0.5">
-                  <img src="/pusheen/anim-idle.webp" alt="Pusheen IA" className="w-full h-full object-contain filter drop-shadow-xs" />
+                  <img
+                    src="/pusheen/anim-idle.webp"
+                    alt="Pusheen IA"
+                    className="w-full h-full object-contain filter drop-shadow-xs"
+                  />
                 </div>
               )}
 
               <div
                 className={`max-w-[92%] sm:max-w-[84%] rounded-2xl p-3 sm:p-3.5 space-y-1.5 text-xs sm:text-sm leading-relaxed shadow-2xs transition-all ${
-                  msg.sender === 'user'
-                    ? 'bg-gradient-to-r from-[#E8A598] to-[#D98880] text-[#2B2D42] font-semibold rounded-tr-xs'
-                    : 'bg-white text-[#1E293B] border border-[#E2E8F0] rounded-tl-xs'
+                  msg.sender === "user"
+                    ? "bg-gradient-to-r from-[#E8A598] to-[#D98880] text-[#2B2D42] font-semibold rounded-tr-xs"
+                    : "bg-white text-[#1E293B] border border-[#E2E8F0] rounded-tl-xs"
                 }`}
               >
-                {msg.sender === 'ai' ? (
+                {msg.sender === "ai" ? (
                   <FormattedNoteContent
                     content={msg.text}
                     notes={notes}
@@ -268,13 +288,23 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
                   <p className="break-words">{msg.text}</p>
                 )}
 
-                {msg.sender === 'ai' && (
+                {msg.sender === "ai" && (
                   <div className="pt-2 mt-1 border-t border-[#F1F5F9] flex items-center justify-between text-[10px] text-[#94A3B8] gap-2">
                     <span className="truncate">
                       {msg.modelUsed ? (
-                        <>Modelo: <strong className="text-[#8C3A32]">{msg.modelUsed}</strong></>
+                        <>
+                          Modelo:{" "}
+                          <strong className="text-[#8C3A32]">
+                            {msg.modelUsed}
+                          </strong>
+                        </>
                       ) : (
-                        <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>
+                          {new Date(msg.timestamp).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
                       )}
                     </span>
                     <button
@@ -285,7 +315,9 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
                       {copiedId === msg.id ? (
                         <>
                           <Check className="w-3 h-3 text-emerald-600" />
-                          <span className="text-emerald-600 font-bold">Copiado</span>
+                          <span className="text-emerald-600 font-bold">
+                            Copiado
+                          </span>
                         </>
                       ) : (
                         <>
@@ -298,7 +330,7 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
                 )}
               </div>
 
-              {msg.sender === 'user' && (
+              {msg.sender === "user" && (
                 <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#2B2D42] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
                   <User className="w-4 h-4" />
                 </div>
@@ -309,11 +341,18 @@ Cualquier nota o concepto que mencione tendrá su enlace interactivo como [[Nomb
           {isLoading && (
             <div className="flex gap-2 justify-start animate-fade-in">
               <div className="w-9 h-9 rounded-xl bg-[#FDF2F0] border border-[#E8A598]/60 flex items-center justify-center shrink-0 p-0.5 overflow-hidden shadow-xs">
-                <img src="/pusheen/anim-laptop.webp" alt="Pusheen pensando" className="w-full h-full object-contain" />
+                <img
+                  src="/pusheen/anim-laptop.webp"
+                  alt="Pusheen pensando"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div className="bg-white border border-[#E2E8F0] rounded-2xl rounded-tl-xs p-2.5 text-xs text-[#64748B] flex items-center gap-2 shadow-2xs">
                 <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#8C3A32]" />
-                <span>Pusheen está navegando y sintetizando tu grafo en tiempo real...</span>
+                <span>
+                  Pusheen está navegando y sintetizando tu grafo en tiempo
+                  real...
+                </span>
               </div>
             </div>
           )}
