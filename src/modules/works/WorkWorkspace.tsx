@@ -144,28 +144,56 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedDraft]);
 
+  // Smart Formatting for Draft Textarea (Bold, Italic, Headings, Lists, Blockquotes, APA Tables)
+  const applyDraftFormatting = (type: DraftFormattingType) => {
+    const textarea = draftTextareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const { updatedText, newCursorStart, newCursorEnd } = computeDraftFormatting(
+      draftText,
+      start,
+      end,
+      type
+    );
+
+    setDraftText(updatedText);
+    setHasUnsavedDraft(true);
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursorStart, newCursorEnd);
+    }, 0);
+  };
+
   // Keyboard shortcuts Ctrl+S (save), Ctrl+B (bold), Ctrl+I (italic)
+  const saveDraftRef = React.useRef(handleSaveDraft);
+  saveDraftRef.current = handleSaveDraft;
+  const applyDraftFormattingRef = React.useRef(applyDraftFormatting);
+  applyDraftFormattingRef.current = applyDraftFormatting;
+
   useEffect(() => {
     if (activeTab !== 'draft') return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        handleSaveDraft();
+        saveDraftRef.current();
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
         if (document.activeElement === draftTextareaRef.current) {
           e.preventDefault();
-          applyDraftFormatting('bold');
+          applyDraftFormattingRef.current('bold');
         }
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i') {
         if (document.activeElement === draftTextareaRef.current) {
           e.preventDefault();
-          applyDraftFormatting('italic');
+          applyDraftFormattingRef.current('italic');
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [draftText, workId, activeTab]);
+  }, [activeTab]);
 
   if (!work) {
     return (
@@ -239,29 +267,6 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
     } else {
       showToast('Estado actualizado', `El trabajo cambió a "${WORK_STATUS_META[newStatus]?.label || newStatus}".`, 'success');
     }
-  };
-
-  // Smart Formatting for Draft Textarea (Bold, Italic, Headings, Lists, Blockquotes, APA Tables)
-  const applyDraftFormatting = (type: DraftFormattingType) => {
-    const textarea = draftTextareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const { updatedText, newCursorStart, newCursorEnd } = computeDraftFormatting(
-      draftText,
-      start,
-      end,
-      type
-    );
-
-    setDraftText(updatedText);
-    setHasUnsavedDraft(true);
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(newCursorStart, newCursorEnd);
-    }, 0);
   };
 
   return (

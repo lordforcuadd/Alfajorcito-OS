@@ -69,4 +69,22 @@ describe('Draft Formatting Engine Suite', () => {
     expect(tableResult.updatedText).toContain('| Variable | N | Media (M) | Desviación (DE) |');
     expect(tableResult.updatedText).toContain('*Nota.* Datos descriptivos de la muestra.');
   });
+
+  it('handles edge cases safely (empty selection, partial markers)', () => {
+    // Empty selection bold insertion
+    const emptyBold = computeDraftFormatting('', 0, 0, 'bold');
+    expect(emptyBold.updatedText).toBe('**Texto en negrita**');
+
+    // Empty selection italic insertion
+    const emptyItalic = computeDraftFormatting('', 0, 0, 'italic');
+    expect(emptyItalic.updatedText).toBe('*Texto en cursiva*');
+
+    // Bold with exact double asterisks selection (wraps instead of false toggle)
+    const doubleStar = computeDraftFormatting('**', 0, 2, 'bold');
+    expect(doubleStar.updatedText).toBe('******');
+
+    // Italic toggle over text containing multiple words with asterisks
+    const multiItalic = computeDraftFormatting('*a* y *b*', 0, 9, 'italic');
+    expect(multiItalic.updatedText).toBe('a* y *b');
+  });
 });

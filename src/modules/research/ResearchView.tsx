@@ -53,6 +53,10 @@ import { copyText } from '../../utils/clipboardHelper';
 import { generateId } from '../../utils/idHelper';
 import type { Source, VerificationStatus, Idea, Paraphrase, Work, Author, CitationStyle, SourceType } from '../../types';
 
+export function normalizeTitleKey(t?: string): string {
+  return (t || '').toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+}
+
 export function computeReferenceNumber(
   sources: Source[],
   workId?: string,
@@ -237,9 +241,6 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
         const results: AcademicSearchResult[] = [];
         const seenDoi = new Set<string>();
         const seenTitles = new Set<string>();
-
-        const normalizeTitleKey = (t: string) =>
-          (t || '').toLowerCase().replace(/[^a-z0-9]/g, '').trim();
 
         if (openAlexRes.status === 'fulfilled') {
           openAlexRes.value.forEach((r) => {
@@ -512,7 +513,10 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
             ) : (
               searchResults.map((item, idx) => {
                 const isAlreadyImported = sources.some(
-                  (s) => (s.doi && s.doi === item.doi) || s.title.toLowerCase() === item.title.toLowerCase()
+                  (s) =>
+                    (s.doi && item.doi && s.doi.toLowerCase() === item.doi.toLowerCase()) ||
+                    (normalizeTitleKey(s.title) === normalizeTitleKey(item.title) &&
+                      normalizeTitleKey(s.title).length > 5)
                 );
 
                 return (

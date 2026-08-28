@@ -117,6 +117,8 @@ export const WorkModal: React.FC<WorkModalProps> = ({
     try {
       const now = Date.now();
       const deadlineTimestamp = parseDeadlineTimestamp(deadlineStr);
+      const parsedMinSources = Math.max(1, parseInt(String(minRequiredSources), 10) || 4);
+      const parsedMaxAge = Math.max(1, parseInt(String(maxSourceAgeYears), 10) || 5);
 
       if (workToEdit) {
         // Update existing work
@@ -135,8 +137,8 @@ export const WorkModal: React.FC<WorkModalProps> = ({
           status,
           deadline: deadlineTimestamp,
           citationStyle,
-          minRequiredSources: Number(minRequiredSources) || 4,
-          maxSourceAgeYears: Number(maxSourceAgeYears) || 5,
+          minRequiredSources: parsedMinSources,
+          maxSourceAgeYears: parsedMaxAge,
           rawInstructions: rawInstructions.trim(),
           instructionAnalysis: updatedAnalysis,
           googleDocUrl: googleDocUrl.trim() || undefined,
@@ -169,8 +171,8 @@ export const WorkModal: React.FC<WorkModalProps> = ({
           status,
           deadline: deadlineTimestamp,
           citationStyle,
-          minRequiredSources: Number(minRequiredSources) || 4,
-          maxSourceAgeYears: Number(maxSourceAgeYears) || 5,
+          minRequiredSources: parsedMinSources,
+          maxSourceAgeYears: parsedMaxAge,
           rawInstructions: rawInstructions.trim(),
           instructionAnalysis: analysis,
           googleDocUrl: googleDocUrl.trim() || undefined,
