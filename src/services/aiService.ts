@@ -456,11 +456,6 @@ Devuelve ÚNICAMENTE un objeto JSON válido con este formato exacto:
   };
 }
 
-let activeGeminiModelUsed = 'gemini-1.5-flash';
-
-export function getActiveGeminiModelUsed(): string {
-  return activeGeminiModelUsed;
-}
 
 // Memory cache of verified working model per (API Key + Requested Model) combination
 const verifiedGeminiModelCache = new Map<string, string>();

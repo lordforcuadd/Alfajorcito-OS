@@ -50,41 +50,36 @@ export const AppShell: React.FC<AppShellProps> = ({
     defaultCitationStyle: 'APA_7'
   };
 
-  // Video Animation States generated with Gemini Omni
+  // Mascot Animation States (Optimized WebP)
   const pusheenAnimations = [
     {
       id: 'idle',
       title: 'Acompañante',
       webp: '/pusheen/anim-idle.webp',
-      webm: '/pusheen/anim-idle.webm',
       phrases: [`¡Vamos por ese 20, ${profile.name}! 🐾`, '¡Miau! Lista para estudiar 🍰', '¡Orgullo USMP! 🌟']
     },
     {
       id: 'laptop',
       title: 'Tesis & Redacción',
       webp: '/pusheen/anim-laptop.webp',
-      webm: '/pusheen/anim-laptop.webm',
       phrases: ['¡Redactando entregables a full! 💻', '¡Tu tesis va tomando forma! 📝', '¡Tipeando sin parar! ✨']
     },
     {
       id: 'book',
       title: 'Lectura & Fuentes',
       webp: '/pusheen/anim-book.webp',
-      webm: '/pusheen/anim-book.webm',
       phrases: ['¡Revisando literatura con rigor APA 7! 📖', '¡Analizando papers y fuentes! 🔍', '¡Segundo Cerebro en acción! 🧠']
     },
     {
       id: 'party',
       title: 'Celebración',
       webp: '/pusheen/anim-party.webp',
-      webm: '/pusheen/anim-party.webm',
       phrases: ['¡Objetivo académico cumplido! 🎉', '¡Excelente avance hoy! 🥳', '¡Tesis aprobada con 20! 🎓']
     },
     {
       id: 'sleep',
       title: 'Descanso',
       webp: '/pusheen/anim-sleep.webp',
-      webm: '/pusheen/anim-sleep.webm',
       phrases: ['¡Zzz... tomando un merecido descanso! 💤', '¡Pausa activa para despejar la mente! ☕', '¡Recargando energía! 😴']
     }
   ];

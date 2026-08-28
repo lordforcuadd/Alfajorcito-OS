@@ -19,6 +19,8 @@ export default defineConfig({
         name: 'Alfajorcito OS - Centro Académico',
         short_name: 'Alfajorcito',
         description: 'Centro de Operaciones Académicas + Investigación + Segundo Cerebro',
+        lang: 'es',
+        dir: 'ltr',
         theme_color: '#E8A598',
         background_color: '#FAF8F5',
         display: 'standalone',

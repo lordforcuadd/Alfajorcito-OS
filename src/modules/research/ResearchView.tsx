@@ -236,16 +236,26 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
         ]);
         const results: AcademicSearchResult[] = [];
         const seenDoi = new Set<string>();
+        const seenTitles = new Set<string>();
+
+        const normalizeTitleKey = (t: string) =>
+          (t || '').toLowerCase().replace(/[^a-z0-9]/g, '').trim();
 
         if (openAlexRes.status === 'fulfilled') {
           openAlexRes.value.forEach((r) => {
             if (r.doi) seenDoi.add(r.doi.toLowerCase());
+            if (r.title) seenTitles.add(normalizeTitleKey(r.title));
             results.push({ ...r, provider: 'GOOGLE_SCHOLAR' });
           });
         }
         if (crossrefRes.status === 'fulfilled') {
           crossrefRes.value.forEach((r) => {
-            if (!r.doi || !seenDoi.has(r.doi.toLowerCase())) {
+            const doiMatch = r.doi && seenDoi.has(r.doi.toLowerCase());
+            const titleKey = normalizeTitleKey(r.title);
+            const titleMatch = titleKey.length > 5 && seenTitles.has(titleKey);
+            if (!doiMatch && !titleMatch) {
+              if (r.doi) seenDoi.add(r.doi.toLowerCase());
+              if (titleKey) seenTitles.add(titleKey);
               results.push({ ...r, provider: 'GOOGLE_SCHOLAR' });
             }
           });

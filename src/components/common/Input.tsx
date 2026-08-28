@@ -9,7 +9,7 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   rightIcon?: React.ReactNode;
 }
 
-export const Input: React.FC<InputProps> = ({
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
   label,
   error,
   helperText,
@@ -18,7 +18,7 @@ export const Input: React.FC<InputProps> = ({
   className = '',
   id,
   ...props
-}) => {
+}, ref) => {
   const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
   return (
@@ -35,6 +35,7 @@ export const Input: React.FC<InputProps> = ({
           </div>
         )}
         <input
+          ref={ref}
           id={inputId}
           className={`w-full bg-white border ${
             error ? 'border-[#EF9A9A] focus:ring-[#EF9A9A]' : 'border-[#EBE5DF] focus:border-[#E8A598] focus:ring-[#E8A598]/20'
@@ -56,7 +57,8 @@ export const Input: React.FC<InputProps> = ({
       ) : null}
     </div>
   );
-};
+});
+Input.displayName = 'Input';
 
 export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
@@ -66,7 +68,7 @@ export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElemen
   children: React.ReactNode;
 }
 
-export const Select: React.FC<SelectProps> = ({
+export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(({
   label,
   error,
   helperText,
@@ -75,7 +77,7 @@ export const Select: React.FC<SelectProps> = ({
   className = '',
   id,
   ...props
-}) => {
+}, ref) => {
   const selectId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
   return (
@@ -92,6 +94,7 @@ export const Select: React.FC<SelectProps> = ({
           </div>
         )}
         <select
+          ref={ref}
           id={selectId}
           className={`w-full appearance-none bg-white border ${
             error ? 'border-[#EF9A9A] focus:ring-[#EF9A9A]' : 'border-[#EBE5DF] focus:border-[#E8A598] focus:ring-[#E8A598]/20'
@@ -113,7 +116,8 @@ export const Select: React.FC<SelectProps> = ({
       ) : null}
     </div>
   );
-};
+});
+Select.displayName = 'Select';
 
 export interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
@@ -121,7 +125,7 @@ export interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextArea
   helperText?: string;
 }
 
-export const TextArea: React.FC<TextAreaProps> = ({
+export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(({
   label,
   error,
   helperText,
@@ -129,7 +133,7 @@ export const TextArea: React.FC<TextAreaProps> = ({
   id,
   rows = 4,
   ...props
-}) => {
+}, ref) => {
   const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
   return (
@@ -140,6 +144,7 @@ export const TextArea: React.FC<TextAreaProps> = ({
         </label>
       )}
       <textarea
+        ref={ref}
         id={inputId}
         rows={rows}
         className={`w-full bg-white border ${
@@ -154,4 +159,5 @@ export const TextArea: React.FC<TextAreaProps> = ({
       ) : null}
     </div>
   );
-};
+});
+TextArea.displayName = 'TextArea';
