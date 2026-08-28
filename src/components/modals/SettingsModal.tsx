@@ -25,6 +25,7 @@ import { Input, Select, TextArea } from '../common/Input';
 import { db, initializeDatabaseSeed, clearAllDatabaseData } from '../../db';
 import { exportVaultZip } from '../../utils/obsidianExporter';
 import { testAIConnection } from '../../services/aiService';
+import { formatLocalDateForInput } from '../../utils/dateHelper';
 import { useToast } from '../common/Toast';
 import type {
   AISettings,
@@ -192,7 +193,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Alfajorcito_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `Alfajorcito_Backup_${formatLocalDateForInput(new Date())}.json`;
     a.click();
     URL.revokeObjectURL(url);
     showToast('Copia generada', 'Archivo JSON descargado exitosamente.', 'success');
@@ -308,7 +309,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Alfajorcito_Obsidian_Vault_${new Date().toISOString().split('T')[0]}.zip`;
+      a.download = `Alfajorcito_Obsidian_Vault_${formatLocalDateForInput(new Date())}.zip`;
       a.click();
       URL.revokeObjectURL(url);
       showToast('Vault generado', 'Archivo .zip listo para abrir en Obsidian.', 'success');
