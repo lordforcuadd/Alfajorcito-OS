@@ -38,6 +38,20 @@ export default defineConfig({
                 statuses: [0, 200]
               }
             }
+          },
+          {
+            urlPattern: /\/pusheen\/.*\.(webp|png)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'pusheen-animations',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
           }
         ]
       },
