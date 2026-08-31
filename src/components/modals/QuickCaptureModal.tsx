@@ -694,10 +694,11 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
               value={workCitationStyle}
               onChange={(e) => setWorkCitationStyle(e.target.value as CitationStyle)}
             >
-              <option value="APA_7">Normas APA 7ma Edición</option>
-              <option value="MLA_9">Normas MLA 9na Edición</option>
-              <option value="IEEE">Estilo IEEE</option>
-              <option value="VANCOUVER">Estilo Vancouver</option>
+              <option value="APA_7">Normas APA 7ma Edición (Psicología / Salud)</option>
+              <option value="VANCOUVER">Estilo Vancouver (Biomédicas)</option>
+              <option value="IEEE">Estilo IEEE (Ingenierías)</option>
+              <option value="CHICAGO_AUTHOR_DATE">Chicago 17th Ed. (Autor-Fecha)</option>
+              <option value="CHICAGO_NOTES">Chicago 17th Ed. (Notas y Bibliografía)</option>
             </Select>
           </div>
 

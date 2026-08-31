@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { generateId } from '../../utils/idHelper';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -40,7 +41,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const showToast = useCallback(
     (title: string, description?: string, type: ToastType = 'success', durationMs: number = 4000) => {
-      const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `toast-${Date.now()}-${Math.random()}`;
+      const id = generateId('toast');
 
       setToasts((prev) => [...prev, { id, title, description, type, duration: durationMs }]);
 

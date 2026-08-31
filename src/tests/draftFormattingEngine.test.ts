@@ -83,8 +83,20 @@ describe('Draft Formatting Engine Suite', () => {
     const doubleStar = computeDraftFormatting('**', 0, 2, 'bold');
     expect(doubleStar.updatedText).toBe('******');
 
-    // Italic toggle over text containing multiple words with asterisks
+    // Italic formatting over text containing multiple sub-phrases in italics (wraps safely without corrupting syntax)
     const multiItalic = computeDraftFormatting('*a* y *b*', 0, 9, 'italic');
-    expect(multiItalic.updatedText).toBe('a* y *b');
+    expect(multiItalic.updatedText).toBe('**a* y *b**');
+
+    // Bold formatting over multiple bold phrases (wraps safely without leaving orphan asterisks)
+    const multiBold = computeDraftFormatting('**a** y **b**', 0, 13, 'bold');
+    expect(multiBold.updatedText).toBe('****a** y **b****');
+
+    // Italic with interior bold toggles cleanly
+    const italicWithBold = computeDraftFormatting('*a **b** c*', 0, 11, 'italic');
+    expect(italicWithBold.updatedText).toBe('a **b** c');
+
+    // Bold with interior italic toggles cleanly
+    const boldWithItalic = computeDraftFormatting('**a *b* c**', 0, 11, 'bold');
+    expect(boldWithItalic.updatedText).toBe('a *b* c');
   });
 });

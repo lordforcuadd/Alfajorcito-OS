@@ -31,7 +31,13 @@ export function computeDraftFormatting(
 
   switch (type) {
     case 'bold': {
-      if (selected.startsWith('**') && selected.endsWith('**') && selected.length >= 4) {
+      const isSingleBold =
+        selected.startsWith('**') &&
+        selected.endsWith('**') &&
+        selected.length >= 4 &&
+        !selected.slice(2, -2).includes('**');
+
+      if (isSingleBold) {
         replacement = selected.slice(2, -2);
         newCursorStart = start;
         newCursorEnd = start + replacement.length;
@@ -44,7 +50,16 @@ export function computeDraftFormatting(
       break;
     }
     case 'italic': {
-      if (selected.startsWith('*') && selected.endsWith('*') && selected.length >= 2 && !selected.startsWith('**')) {
+      const interiorWithoutBold = selected.slice(1, -1).replace(/\*\*[^*]*\*\*/g, '');
+      const isSingleItalic =
+        selected.startsWith('*') &&
+        selected.endsWith('*') &&
+        selected.length >= 2 &&
+        !selected.startsWith('**') &&
+        !selected.endsWith('**') &&
+        !interiorWithoutBold.includes('*');
+
+      if (isSingleItalic) {
         replacement = selected.slice(1, -1);
         newCursorStart = start;
         newCursorEnd = start + replacement.length;
