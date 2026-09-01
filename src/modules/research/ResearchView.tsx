@@ -6,7 +6,6 @@ import {
   Plus,
   ExternalLink,
   ShieldCheck,
-  AlertCircle,
   CheckCircle2,
   Filter,
   FileText,
@@ -26,7 +25,7 @@ import { db } from '../../db';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Input, TextArea, Select } from '../../components/common/Input';
-import { Badge, VerificationBadge, CitationStyleBadge } from '../../components/common/Badge';
+import { VerificationBadge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../components/common/Toast';
 import {
@@ -127,7 +126,9 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
   const sources = useLiveQuery(() => db.sources.toArray()) || [];
   const works = useLiveQuery(() => db.works.toArray()) || [];
   const courses = useLiveQuery(() => db.courses.toArray()) || [];
-  const ideas = useLiveQuery(() => db.ideas.toArray()) || [];
+
+  const searchSeqRef = React.useRef(0);
+  const [importingKey, setImportingKey] = useState<string | null>(null);
 
   const worksMap = React.useMemo(() => new Map(works.map((w) => [w.id, w])), [works]);
   const coursesMap = React.useMemo(() => new Map(courses.map((c) => [c.id, c])), [courses]);
@@ -215,10 +216,12 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
       showToast('Término requerido', 'Ingresa una palabra clave, autor o DOI para buscar.', 'warning');
       return;
     }
+    const currentSeq = ++searchSeqRef.current;
     setIsSearching(true);
     try {
       if (searchEngine === 'DOI') {
         const res = await resolveDOI(searchQuery.trim());
+        if (currentSeq !== searchSeqRef.current) return;
         setSearchResults(res ? [res] : []);
         if (res) {
           showToast('Artículo encontrado', `Datos obtenidos de ${res.provider}`, 'success');
@@ -227,6 +230,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
         }
       } else if (searchEngine === 'DOAJ') {
         const res = await searchDOAJ(searchQuery.trim(), 10);
+        if (currentSeq !== searchSeqRef.current) return;
         setSearchResults(res);
         if (res.length > 0) {
           showToast('Búsqueda en Español lista', `Encontramos ${res.length} artículos indexados en DOAJ (Iberoamérica).`, 'success');
@@ -239,25 +243,29 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
           searchOpenAlex(searchQuery.trim(), 8),
           searchCrossref(searchQuery.trim(), 8)
         ]);
+        if (currentSeq !== searchSeqRef.current) return;
         const results: AcademicSearchResult[] = [];
         const seenDoi = new Set<string>();
         const seenTitles = new Set<string>();
 
         if (openAlexRes.status === 'fulfilled') {
           openAlexRes.value.forEach((r) => {
-            if (r.doi) seenDoi.add(r.doi.toLowerCase());
-            if (r.title) seenTitles.add(normalizeTitleKey(r.title));
+            const doi = r.doi?.toLowerCase().trim();
+            const titleKey = normalizeTitleKey(r.title);
+            if (doi) seenDoi.add(doi);
+            if (titleKey.length > 5) seenTitles.add(titleKey);
             results.push({ ...r, provider: 'GOOGLE_SCHOLAR' });
           });
         }
         if (crossrefRes.status === 'fulfilled') {
           crossrefRes.value.forEach((r) => {
-            const doiMatch = r.doi && seenDoi.has(r.doi.toLowerCase());
+            const doi = r.doi?.toLowerCase().trim();
             const titleKey = normalizeTitleKey(r.title);
+            const doiMatch = doi && seenDoi.has(doi);
             const titleMatch = titleKey.length > 5 && seenTitles.has(titleKey);
             if (!doiMatch && !titleMatch) {
-              if (r.doi) seenDoi.add(r.doi.toLowerCase());
-              if (titleKey) seenTitles.add(titleKey);
+              if (doi) seenDoi.add(doi);
+              if (titleKey.length > 5) seenTitles.add(titleKey);
               results.push({ ...r, provider: 'GOOGLE_SCHOLAR' });
             }
           });
@@ -270,6 +278,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
         }
       } else if (searchEngine === 'CROSSREF') {
         const res = await searchCrossref(searchQuery.trim(), 10);
+        if (currentSeq !== searchSeqRef.current) return;
         setSearchResults(res);
         if (res.length > 0) {
           showToast('Búsqueda en Crossref lista', `Encontramos ${res.length} registros y tesis en Crossref.`, 'success');
@@ -278,6 +287,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
         }
       } else if (searchEngine === 'OPENALEX') {
         const res = await searchOpenAlex(searchQuery.trim(), 10);
+        if (currentSeq !== searchSeqRef.current) return;
         setSearchResults(res);
         if (res.length > 0) {
           showToast('Búsqueda en OpenAlex lista', `Encontramos ${res.length} artículos en OpenAlex.`, 'success');
@@ -286,6 +296,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
         }
       } else {
         const res = await searchSemanticScholar(searchQuery.trim(), 10);
+        if (currentSeq !== searchSeqRef.current) return;
         setSearchResults(res);
         if (res.length > 0) {
           showToast('Búsqueda completada', `Encontramos ${res.length} artículos científicos indexados.`, 'success');
@@ -294,14 +305,22 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
         }
       }
     } catch {
-      showToast('Aviso de conexión', 'No se pudo conectar directamente con el servidor. Revisa tu conexión.', 'warning');
+      if (currentSeq === searchSeqRef.current) {
+        showToast('Aviso de conexión', 'No se pudo conectar directamente con el servidor. Revisa tu conexión.', 'warning');
+      }
     } finally {
-      setIsSearching(false);
+      if (currentSeq === searchSeqRef.current) {
+        setIsSearching(false);
+      }
     }
   };
 
   // Import Source from Search Result
   const handleImportResult = async (item: AcademicSearchResult) => {
+    const itemKey = item.doi || item.title;
+    if (importingKey === itemKey) return;
+    setImportingKey(itemKey);
+
     const audit = auditSourceMetadata(item);
     const newSource: Source = {
       id: generateId('src'),
@@ -329,6 +348,8 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
       showToast('Fuente guardada', 'Guardada en tu biblioteca de libros y papers.', 'success');
     } catch {
       showToast('Error', 'No se pudo guardar la fuente en la base de datos.', 'error');
+    } finally {
+      setImportingKey(null);
     }
   };
 
@@ -345,7 +366,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
       );
       const matchPub = s.publication ? s.publication.toLowerCase().includes(q) : false;
       const matchDoi = s.doi ? s.doi.toLowerCase().includes(q) : false;
-      const matchYear = String(s.year).includes(q);
+      const matchYear = /^\d{4}$/.test(q) ? String(s.year) === q : false;
       if (!matchTitle && !matchAuthor && !matchPub && !matchDoi && !matchYear) return false;
     }
     return true;
@@ -557,6 +578,8 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                           <Button
                             variant="primary"
                             size="sm"
+                            disabled={importingKey === (item.doi || item.title)}
+                            isLoading={importingKey === (item.doi || item.title)}
                             onClick={() => handleImportResult(item)}
                             icon={<Plus className="w-3.5 h-3.5 stroke-[2.5]" />}
                             className="w-full sm:w-auto font-bold"
@@ -1054,21 +1077,25 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                             ? currentIds.filter((id) => id !== work.id)
                             : [...currentIds, work.id];
 
-                          await db.sources.update(inspectedSource.id, {
-                            workIds: updatedWorkIds,
-                            updatedAt: Date.now()
-                          });
+                          try {
+                            await db.sources.update(inspectedSource.id, {
+                              workIds: updatedWorkIds,
+                              updatedAt: Date.now()
+                            });
 
-                          setInspectedSource({
-                            ...inspectedSource,
-                            workIds: updatedWorkIds
-                          });
+                            setInspectedSource({
+                              ...inspectedSource,
+                              workIds: updatedWorkIds
+                            });
 
-                          showToast(
-                            isLinked ? 'Trabajo desvinculado' : 'Trabajo vinculado',
-                            `${work.title}`,
-                            'info'
-                          );
+                            showToast(
+                              isLinked ? 'Trabajo desvinculado' : 'Trabajo vinculado',
+                              `${work.title}`,
+                              'info'
+                            );
+                          } catch {
+                            showToast('Error', 'No se pudo actualizar la vinculación en la base de datos.', 'error');
+                          }
                         }}
                         className={`p-3 rounded-xl border flex items-center justify-between gap-2 text-xs transition-all cursor-pointer select-none min-h-[44px] ${
                           isLinked
@@ -1176,6 +1203,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                   variant="secondary"
                   size="md"
                   className="w-full sm:w-auto font-bold"
+                  disabled={isSavingQuote}
                   isLoading={isSavingQuote}
                   onClick={() => handleSaveQuoteAndParaphrase({ auditWithAi: false })}
                 >
@@ -1186,6 +1214,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                   size="md"
                   icon={<Sparkles className="w-4 h-4" />}
                   className="w-full sm:w-auto font-bold"
+                  disabled={isSavingQuote}
                   isLoading={isSavingQuote}
                   onClick={() => handleSaveQuoteAndParaphrase({ auditWithAi: true })}
                 >

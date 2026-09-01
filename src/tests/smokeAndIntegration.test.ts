@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { generateGoogleCalendarUrl, generateICSFile, generateGoogleDocsRichHTML } from '../utils/googleExporter';
 import { formatFullReference, formatInTextNarrative, formatInTextParenthetical } from '../utils/citationEngine';
 import { sanitizeSlug } from '../utils/obsidianExporter';
+import { parseAcademicCycle, filterTodayTasks, filterOverdueTasks, getDeadlineUrgencyMeta } from '../utils/academicWorkUtils';
 import type { Work, Source, UserProfile } from '../types';
 
 describe('Interactive Smoke & Integration Suite', () => {
@@ -85,27 +86,20 @@ describe('Interactive Smoke & Integration Suite', () => {
   });
 
   it('correctly maps Roman numeral cycles without substring collision (IX != X, IV != V)', () => {
-    const parseCycle = (cycleStr: string) => {
-      const s = cycleStr.toUpperCase();
-      if (/\bIX\b/.test(s) || s.includes('IX') || /\b9\b|9NO|NOVENO/i.test(s)) return 9;
-      if (/\bX\b/.test(s) || s.includes('X') || /\b10\b|10MO|DECIMO|DÉCIMO/i.test(s)) return 10;
-      if (/\bVIII\b/.test(s) || s.includes('VIII') || /\b8\b|8VO|OCTAVO/i.test(s)) return 8;
-      if (/\bVII\b/.test(s) || s.includes('VII') || /\b7\b|7MO|SEPTIMO|SÉPTIMO/i.test(s)) return 7;
-      if (/\bVI\b/.test(s) || s.includes('VI') || /\b6\b|6TO|SEXTO/i.test(s)) return 6;
-      if (/\bIV\b/.test(s) || s.includes('IV') || /\b4\b|4TO|CUARTO/i.test(s)) return 4;
-      if (/\bV\b/.test(s) || s.includes('V') || /\b5\b|5TO|QUINTO/i.test(s)) return 5;
-      if (/\bIII\b/.test(s) || s.includes('III') || /\b3\b|3RO|TERCERO/i.test(s)) return 3;
-      if (/\bII\b/.test(s) || s.includes('II') || /\b2\b|2DO|SEGUNDO/i.test(s)) return 2;
-      if (/\bI\b/.test(s) || s.includes('I') || /\b1\b|1RO|PRIMER/i.test(s)) return 1;
-      return 8;
-    };
+    expect(parseAcademicCycle('IX Ciclo')).toBe(9);
+    expect(parseAcademicCycle('X Ciclo')).toBe(10);
+    expect(parseAcademicCycle('IV Ciclo')).toBe(4);
+    expect(parseAcademicCycle('V Ciclo')).toBe(5);
+    expect(parseAcademicCycle('VIII Ciclo')).toBe(8);
+    expect(parseAcademicCycle('7mo Ciclo')).toBe(7);
+    expect(parseAcademicCycle('1er Ciclo')).toBe(1);
+    expect(parseAcademicCycle('')).toBe(8);
+  });
 
-    expect(parseCycle('IX Ciclo')).toBe(9);
-    expect(parseCycle('X Ciclo')).toBe(10);
-    expect(parseCycle('IV Ciclo')).toBe(4);
-    expect(parseCycle('V Ciclo')).toBe(5);
-    expect(parseCycle('VIII Ciclo')).toBe(8);
-    expect(parseCycle('7mo Ciclo')).toBe(7);
+  it('formats deadline urgency labels with correct singular and plural grammar', () => {
+    expect(getDeadlineUrgencyMeta(1).label).toBe('1 día restante');
+    expect(getDeadlineUrgencyMeta(2).label).toBe('2 días restantes');
+    expect(getDeadlineUrgencyMeta(0).label).toBe('¡Vence hoy!');
   });
 
   it('guarantees overdue tasks are never duplicated in todayTasks and overdueTasks across full day boundaries', () => {
@@ -120,12 +114,8 @@ describe('Interactive Smoke & Integration Suite', () => {
       { id: 't4', title: 'Tarea Futura', isCompleted: false, dueDate: endOfToday + 86400000 * 3 }
     ];
 
-    const todayTasks = sampleTaskList.filter(
-      (t) => !t.isCompleted && (!t.dueDate || (t.dueDate >= startOfToday && t.dueDate <= endOfToday))
-    );
-    const overdueTasks = sampleTaskList.filter(
-      (t) => !t.isCompleted && t.dueDate && t.dueDate < startOfToday
-    );
+    const todayTasks = filterTodayTasks(sampleTaskList, startOfToday, endOfToday);
+    const overdueTasks = filterOverdueTasks(sampleTaskList, startOfToday);
 
     expect(todayTasks.map((t) => t.id)).toEqual(['t2', 't3']);
     expect(overdueTasks.map((t) => t.id)).toEqual(['t1']);

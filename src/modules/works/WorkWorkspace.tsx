@@ -19,7 +19,6 @@ import {
   Copy,
   Trash2,
   Columns,
-  Maximize2,
   Link2,
   Edit3,
   Layout,
@@ -37,7 +36,7 @@ import {
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { Badge, CitationStyleBadge, VerificationBadge, WorkStatusBadge, WORK_STATUS_META, type BadgeVariant } from '../../components/common/Badge';
+import { Badge, CitationStyleBadge, VerificationBadge, WorkStatusBadge, WORK_STATUS_META } from '../../components/common/Badge';
 import { Tabs } from '../../components/common/Tabs';
 import { Modal } from '../../components/common/Modal';
 import { WorkModal } from '../../components/modals/WorkModal';
@@ -57,6 +56,7 @@ import { copyText } from '../../utils/clipboardHelper';
 import { generateId } from '../../utils/idHelper';
 import { computeDraftFormatting, type DraftFormattingType } from '../../utils/draftFormattingEngine';
 import { sanitizeSafeUrl, isSafeHttpUrl } from '../../utils/urlHelper';
+import { calculateDaysRemaining, getDeadlineUrgencyMeta } from '../../utils/academicWorkUtils';
 import type { Work, Course, Source, Task, InquiryToTeacher, Citation, Paraphrase, Idea, UserProfile, TaskPriority, WorkStatus } from '../../types';
 
 export interface WorkWorkspaceProps {
@@ -85,7 +85,15 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
   const userProfile = userProfileRecord?.value as UserProfile | undefined;
 
   const course = courses.find((c) => c.id === work?.courseId);
-  const workSources = allSources.filter((s) => s.workIds.includes(workId));
+  const workSources = allSources.filter((s) => (s.workIds || []).includes(workId));
+
+  const sortedWorkSources = React.useMemo(() => {
+    return [...workSources].sort((a, b) => {
+      const refA = formatFullReference(a, work?.citationStyle || 'APA_7');
+      const refB = formatFullReference(b, work?.citationStyle || 'APA_7');
+      return refA.localeCompare(refB);
+    });
+  }, [workSources, work?.citationStyle]);
 
   // Local draft editing state
   const [draftText, setDraftText] = useState<string>('');
@@ -95,6 +103,26 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
   // New task input state
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskPriority, setNewTaskPriority] = useState<Task['priority']>('MEDIUM');
+
+  const handleCreateTask = async () => {
+    if (!newTaskTitle.trim() || !work) return;
+    try {
+      await db.tasks.add({
+        id: generateId('task'),
+        workId,
+        courseId: work.courseId,
+        title: newTaskTitle.trim(),
+        isCompleted: false,
+        priority: newTaskPriority,
+        category: 'ASSIGNMENT_CHECKLIST',
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      });
+      setNewTaskTitle('');
+    } catch {
+      showToast('Error', 'No se pudo guardar la tarea en la base de datos.', 'error');
+    }
+  };
 
   // New inquiry input state
   const [newInquiryTopic, setNewInquiryTopic] = useState('');
@@ -119,17 +147,25 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
 
   // Save Draft
   const handleSaveDraft = async () => {
-    await db.works.update(workId, { draftContent: draftText, updatedAt: Date.now() });
-    setHasUnsavedDraft(false);
-    showToast('Borrador guardado', 'Cambios sincronizados en la base de datos local.', 'success');
+    try {
+      await db.works.update(workId, { draftContent: draftText, updatedAt: Date.now() });
+      setHasUnsavedDraft(false);
+      showToast('Borrador guardado', 'Cambios sincronizados en la base de datos local.', 'success');
+    } catch {
+      showToast('Error', 'No se pudo guardar el borrador en la base de datos.', 'error');
+    }
   };
 
   // Auto-Save Draft (1.5s debounce)
   useEffect(() => {
     if (!hasUnsavedDraft) return;
     const timer = setTimeout(async () => {
-      await db.works.update(workId, { draftContent: draftText, updatedAt: Date.now() });
-      setHasUnsavedDraft(false);
+      try {
+        await db.works.update(workId, { draftContent: draftText, updatedAt: Date.now() });
+        setHasUnsavedDraft(false);
+      } catch {
+        // Silent retry on next debounce
+      }
     }, 1500);
     return () => clearTimeout(timer);
   }, [draftText, hasUnsavedDraft, workId]);
@@ -206,24 +242,28 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
 
   // Word count calculation
   const wordCount = draftText.trim() ? draftText.trim().split(/\s+/).length : 0;
-  const targetWordCount = work.instructionAnalysis?.wordCountTarget || 2500;
-  const wordProgressPct = Math.min(100, Math.round((wordCount / targetWordCount) * 100));
+  const targetWordCount = work.instructionAnalysis?.wordCountTarget ?? 2500;
+  const wordProgressPct = targetWordCount > 0 ? Math.min(100, Math.round((wordCount / targetWordCount) * 100)) : 100;
 
   // Assignment Delivery Celebration
   const handleMarkDelivered = async () => {
     const newStatus = work.status === 'ENTREGADO' ? 'REDACTANDO' : 'ENTREGADO';
-    await db.works.update(workId, { status: newStatus, updatedAt: Date.now() });
+    try {
+      await db.works.update(workId, { status: newStatus, updatedAt: Date.now() });
 
-    if (newStatus === 'ENTREGADO') {
-      triggerCelebrationConfetti();
-      window.dispatchEvent(new CustomEvent('work-delivered', { detail: { title: work.title } }));
-      showToast('¡Felicitaciones!', 'Trabajo marcado como ENTREGADO. El conocimiento ha sido preservado.', 'success');
+      if (newStatus === 'ENTREGADO') {
+        triggerCelebrationConfetti();
+        window.dispatchEvent(new CustomEvent('work-delivered', { detail: { title: work.title } }));
+        showToast('¡Felicitaciones!', 'Trabajo marcado como ENTREGADO. El conocimiento ha sido preservado.', 'success');
+      }
+    } catch {
+      showToast('Error', 'No se pudo actualizar el estado de entrega.', 'error');
     }
   };
 
   // Insert Citation into Draft
   const handleInsertCitation = (source: Source, type: 'parenthetical' | 'narrative') => {
-    const refNum = workSources.findIndex((ws) => ws.id === source.id) + 1;
+    const refNum = sortedWorkSources.findIndex((ws) => ws.id === source.id) + 1;
     const citeText = type === 'parenthetical'
       ? formatInTextParenthetical(source, work.citationStyle, undefined, refNum || 1)
       : formatInTextNarrative(source, work.citationStyle, refNum || 1);
@@ -261,12 +301,16 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
 
   // Update Work Status (supports all 7 academic statuses)
   const handleStatusChange = async (newStatus: WorkStatus) => {
-    await db.works.update(work.id, { status: newStatus, updatedAt: Date.now() });
-    if (newStatus === 'ENTREGADO') {
-      triggerCelebrationConfetti();
-      window.dispatchEvent(new CustomEvent('work-delivered', { detail: { title: work.title } }));
-    } else {
-      showToast('Estado actualizado', `El trabajo cambió a "${WORK_STATUS_META[newStatus]?.label || newStatus}".`, 'success');
+    try {
+      await db.works.update(work.id, { status: newStatus, updatedAt: Date.now() });
+      if (newStatus === 'ENTREGADO') {
+        triggerCelebrationConfetti();
+        window.dispatchEvent(new CustomEvent('work-delivered', { detail: { title: work.title } }));
+      } else {
+        showToast('Estado actualizado', `El trabajo cambió a "${WORK_STATUS_META[newStatus]?.label || newStatus}".`, 'success');
+      }
+    } catch {
+      showToast('Error', 'No se pudo actualizar el estado del trabajo.', 'error');
     }
   };
 
@@ -386,7 +430,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                     {new Date(work.deadline).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
                   </p>
                   <span className="text-[11px] text-[#D98880] font-semibold">
-                    {Math.ceil((work.deadline - Date.now()) / 86400000)} días restantes
+                    {getDeadlineUrgencyMeta(calculateDaysRemaining(work.deadline)).label}
                   </span>
                 </Card>
 
@@ -617,20 +661,9 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                     placeholder="Añadir nuevo entregable o tarea..."
                     value={newTaskTitle}
                     onChange={(e) => setNewTaskTitle(e.target.value)}
-                    onKeyDown={async (e) => {
-                      if (e.key === 'Enter' && newTaskTitle.trim()) {
-                        await db.tasks.add({
-                          id: generateId('task'),
-                          workId,
-                          courseId: work.courseId,
-                          title: newTaskTitle.trim(),
-                          isCompleted: false,
-                          priority: newTaskPriority,
-                          category: 'ASSIGNMENT_CHECKLIST',
-                          createdAt: Date.now(),
-                          updatedAt: Date.now()
-                        });
-                        setNewTaskTitle('');
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleCreateTask();
                       }
                     }}
                   />
@@ -649,21 +682,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                 <Button
                   variant="primary"
                   size="md"
-                  onClick={async () => {
-                    if (!newTaskTitle.trim()) return;
-                    await db.tasks.add({
-                      id: generateId('task'),
-                      workId,
-                      courseId: work.courseId,
-                      title: newTaskTitle.trim(),
-                      isCompleted: false,
-                      priority: newTaskPriority,
-                      category: 'ASSIGNMENT_CHECKLIST',
-                      createdAt: Date.now(),
-                      updatedAt: Date.now()
-                    });
-                    setNewTaskTitle('');
-                  }}
+                  onClick={handleCreateTask}
                   icon={<Plus className="w-4 h-4" />}
                   className="shrink-0"
                 >
@@ -1342,18 +1361,20 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                   </div>
 
                   <div className="space-y-2.5 pt-1">
-                    {workSources
-                      .map((s) => formatFullReference(s, work.citationStyle))
-                      .sort()
-                      .map((refText, idx) => (
+                    {sortedWorkSources.map((s, idx) => {
+                      const refText = formatFullReference(s, work.citationStyle);
+                      const isNumbered = work.citationStyle === 'VANCOUVER' || work.citationStyle === 'IEEE';
+                      return (
                         <p
-                          key={idx}
+                          key={s.id}
                           className="text-xs text-[#2B2D42] font-serif leading-relaxed break-words [overflow-wrap:anywhere]"
                           style={{ paddingLeft: '1.5rem', textIndent: '-1.5rem' }}
                         >
+                          {isNumbered ? `[${idx + 1}] ` : ''}
                           {refText}
                         </p>
-                      ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

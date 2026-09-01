@@ -62,9 +62,13 @@ export const PipelineView: React.FC = () => {
 
   const handleConfirmDelete = async () => {
     if (!paraToDelete) return;
-    await db.paraphrases.delete(paraToDelete.id);
-    showToast('Paráfrasis eliminada', 'La ficha ha sido retirada de tus citas.', 'info');
-    setParaToDelete(null);
+    try {
+      await db.paraphrases.delete(paraToDelete.id);
+      showToast('Paráfrasis eliminada', 'La ficha ha sido retirada de tus citas.', 'info');
+      setParaToDelete(null);
+    } catch {
+      showToast('Error', 'No se pudo eliminar la paráfrasis de la base de datos.', 'error');
+    }
   };
 
   const handleStartEdit = (para: Paraphrase) => {

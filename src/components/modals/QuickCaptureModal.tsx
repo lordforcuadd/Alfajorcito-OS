@@ -28,6 +28,7 @@ import { formulateQuestionForTeacher, analyzeInstructionsWithAI } from '../../se
 import { useToast } from '../common/Toast';
 import { generateId } from '../../utils/idHelper';
 import { parseDeadlineTimestamp } from '../../utils/dateHelper';
+import { sanitizeSafeUrl } from '../../utils/urlHelper';
 import type { CitationStyle, WorkType, WorkStatus, ParaCategory, TaskPriority, SourceType, Author, UserProfile, Source, VerificationProvider } from '../../types';
 
 export type CaptureTab = 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task';
@@ -266,8 +267,8 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         citationStyle: workCitationStyle,
         rawInstructions: workInstructions.trim(),
         instructionAnalysis: analysis,
-        googleDocUrl: workGoogleDocUrl.trim() || undefined,
-        canvaUrl: workCanvaUrl.trim() || undefined,
+        googleDocUrl: sanitizeSafeUrl(workGoogleDocUrl),
+        canvaUrl: sanitizeSafeUrl(workCanvaUrl),
         draftContent: '',
         createdAt: now,
         updatedAt: now,
@@ -306,7 +307,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         period: coursePeriod.trim() || '2026-II',
         teacherName: courseTeacherName.trim() || undefined,
         teacherEmail: courseTeacherEmail.trim() || undefined,
-        syllabusUrl: courseSyllabusUrl.trim() || undefined,
+        syllabusUrl: sanitizeSafeUrl(courseSyllabusUrl),
         color: courseColor,
         isArchived: false,
         createdAt: now,

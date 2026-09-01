@@ -106,6 +106,24 @@ export async function exportVaultZip(
   const archiveFolder = zip.folder('05_Archive');
   const sourcesFolder = zip.folder('06_Sources');
 
+  // Collision-prevention tracking per folder in ZIP
+  const usedFilenamesPerFolder = new Map<string, Set<string>>();
+  const getUniqueZipFileName = (folderKey: string, title: string): string => {
+    if (!usedFilenamesPerFolder.has(folderKey)) {
+      usedFilenamesPerFolder.set(folderKey, new Set<string>());
+    }
+    const usedSet = usedFilenamesPerFolder.get(folderKey)!;
+    const baseSlug = sanitizeSlug(title) || 'nota';
+    let filename = `${baseSlug}.md`;
+    let counter = 2;
+    while (usedSet.has(filename.toLowerCase())) {
+      filename = `${baseSlug}-${counter}.md`;
+      counter++;
+    }
+    usedSet.add(filename.toLowerCase());
+    return filename;
+  };
+
   // Add Courses as Area MOCs
   courses.forEach(c => {
     const courseContent = `---
@@ -121,7 +139,7 @@ teacher: "${c.teacherName || ''}"
 - **Docente**: ${c.teacherName || 'No especificado'} (${c.teacherEmail || ''})
 - **Código**: ${c.code || 'N/A'}
 `;
-    areasFolder?.file(`${sanitizeSlug(c.name)}.md`, courseContent);
+    areasFolder?.file(getUniqueZipFileName('areas', c.name), courseContent);
   });
 
   // Add Works as Project MOCs
@@ -150,39 +168,39 @@ ${w.rawInstructions || '*Sin consignas registradas.*'}
 ## Borrador
 ${w.draftContent || '*Borrador vacío.*'}
 `;
+    const folderKey = w.status === 'ARCHIVADO' ? 'archive' : 'projects';
     const targetFolder = w.status === 'ARCHIVADO' ? archiveFolder : projectsFolder;
-    targetFolder?.file(`${sanitizeSlug(w.title)}.md`, workContent);
+    targetFolder?.file(getUniqueZipFileName(folderKey, w.title), workContent);
   });
 
   // Add Sources
   sources.forEach(s => {
-    sourcesFolder?.file(`${sanitizeSlug(s.title)}.md`, generateSourceMarkdown(s));
+    sourcesFolder?.file(getUniqueZipFileName('sources', s.title), generateSourceMarkdown(s));
   });
 
   // Add Notes in their PARA location
   notes.forEach(n => {
     const md = generateNoteMarkdown(n, coursesMap, worksMap, sourcesMap, conceptsMap);
-    const fileName = `${sanitizeSlug(n.title)}.md`;
 
     switch (n.paraCategory) {
       case 'PROJECT':
-        projectsFolder?.file(fileName, md);
+        projectsFolder?.file(getUniqueZipFileName('projects', n.title), md);
         break;
       case 'AREA':
-        areasFolder?.file(fileName, md);
+        areasFolder?.file(getUniqueZipFileName('areas', n.title), md);
         break;
       case 'RESOURCE':
-        resourcesFolder?.file(fileName, md);
+        resourcesFolder?.file(getUniqueZipFileName('resources', n.title), md);
         break;
       case 'ARCHIVE':
-        archiveFolder?.file(fileName, md);
+        archiveFolder?.file(getUniqueZipFileName('archive', n.title), md);
         break;
       case 'ATOMIC':
       default:
         if (!n.courseId && !n.workId) {
-          inboxFolder?.file(fileName, md);
+          inboxFolder?.file(getUniqueZipFileName('inbox', n.title), md);
         } else {
-          atomicFolder?.file(fileName, md);
+          atomicFolder?.file(getUniqueZipFileName('atomic', n.title), md);
         }
         break;
     }

@@ -5,12 +5,8 @@ import {
   Plus,
   FolderDown,
   FileText,
-  Share2,
   Tag,
   Search,
-  ExternalLink,
-  BookOpen,
-  GraduationCap,
   Sparkles,
   Lightbulb,
   Layers,
@@ -67,7 +63,13 @@ export const BrainView: React.FC<BrainViewProps> = ({
   useEffect(() => {
     if (selectedNoteId) {
       const n = notes.find((item) => item.id === selectedNoteId);
-      if (n) setEditingNote(n);
+      if (n) {
+        setEditingNote(n);
+      } else {
+        db.notes.get(selectedNoteId).then((directNote) => {
+          if (directNote) setEditingNote(directNote);
+        }).catch(() => {});
+      }
     }
   }, [selectedNoteId, notes]);
 
@@ -84,7 +86,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
       URL.revokeObjectURL(url);
       showToast('Notas exportadas', 'Archivo .zip listo para abrir en Obsidian con tus notas conectadas.', 'success');
     } catch {
-      showToast('Error', 'No se pudo exportar el archivo.', 'error');
+      showToast('Error', 'No se pudo generar el archivo .zip.', 'error');
     } finally {
       setIsExporting(false);
     }
@@ -97,22 +99,26 @@ export const BrainView: React.FC<BrainViewProps> = ({
       return;
     }
     const now = Date.now();
-    await db.concepts.add({
-      id: generateId('concept'),
-      name: newConceptName.trim(),
-      description: newConceptDesc.trim() || 'Concepto clave de psicología.',
-      color: '#0D9488',
-      createdAt: now,
-      updatedAt: now
-    });
-    showToast(
-      'Concepto creado',
-      `"${newConceptName.trim()}" agregado al grafo. Conéctalo usando [[${newConceptName.trim()}]] en tus notas.`,
-      'success'
-    );
-    setNewConceptName('');
-    setNewConceptDesc('');
-    setIsNewConceptModalOpen(false);
+    try {
+      await db.concepts.add({
+        id: generateId('concept'),
+        name: newConceptName.trim(),
+        description: newConceptDesc.trim() || 'Concepto clave de psicología.',
+        color: '#0D9488',
+        createdAt: now,
+        updatedAt: now
+      });
+      showToast(
+        'Concepto creado',
+        `"${newConceptName.trim()}" agregado al grafo. Conéctalo usando [[${newConceptName.trim()}]] en tus notas.`,
+        'success'
+      );
+      setNewConceptName('');
+      setNewConceptDesc('');
+      setIsNewConceptModalOpen(false);
+    } catch {
+      showToast('Error', 'No se pudo guardar el concepto en la base de datos.', 'error');
+    }
   };
 
   // Filtered Notes
@@ -340,7 +346,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
                       </h3>
 
                       <p className="text-xs text-[#5A6275] line-clamp-3 leading-relaxed">
-                        {note.content.replace(/#+\s/g, '').replace(/\[\[|\]\]/g, '')}
+                        {note.content.replace(/#+\s/g, '').replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, '$2 || $1').replace(/[*_`~>]/g, '').trim()}
                       </p>
                     </div>
 

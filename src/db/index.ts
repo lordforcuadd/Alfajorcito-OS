@@ -10,8 +10,10 @@ import type {
   Concept,
   Task,
   InquiryToTeacher,
-  SettingRecord
+  SettingRecord,
+  UserProfile
 } from '../types';
+import { DEFAULT_USER_PROFILE } from '../types';
 
 export class AlfajorcitoDB extends Dexie {
   courses!: Table<Course, string>;
@@ -87,16 +89,7 @@ export async function clearAllDatabaseData(): Promise<void> {
       await db.settings.bulkPut([
         {
           key: 'user_profile',
-          value: {
-            name: 'Saory',
-            institution: 'Universidad de San Martín de Porres (USMP)',
-            faculty: 'Facultad de Ciencias de la Comunicación, Turismo y Psicología',
-            major: 'Psicología',
-            currentCycle: 'VIII Ciclo',
-            specialty: 'CLINICA',
-            thesisTitle: 'Regulación Emocional y Ansiedad Académica',
-            defaultCitationStyle: 'APA_7'
-          },
+          value: { ...DEFAULT_USER_PROFILE },
           updatedAt: now
         },
         {

@@ -39,9 +39,11 @@ export function getDeadlineUrgencyMeta(daysRemaining: number, isDelivered: boole
     };
   }
 
+  const daysLabel = daysRemaining === 1 ? '1 día restante' : `${daysRemaining} días restantes`;
+
   if (daysRemaining <= 3) {
     return {
-      label: `${daysRemaining} días restantes`,
+      label: daysLabel,
       urgency: 'urgent',
       colorClass: 'bg-rose-50 text-rose-800 border border-rose-200'
     };
@@ -49,17 +51,50 @@ export function getDeadlineUrgencyMeta(daysRemaining: number, isDelivered: boole
 
   if (daysRemaining <= 7) {
     return {
-      label: `${daysRemaining} días restantes`,
+      label: daysLabel,
       urgency: 'warning',
       colorClass: 'bg-amber-50 text-amber-800 border border-amber-200'
     };
   }
 
   return {
-    label: `${daysRemaining} días restantes`,
+    label: daysLabel,
     urgency: 'normal',
     colorClass: 'bg-[#FAF8F5] text-[#5A6275] border border-[#EBE5DF]'
   };
+}
+
+export function parseAcademicCycle(cycleStr?: string): number {
+  const str = String(cycleStr || '').toUpperCase().trim();
+  if (!str) return 8;
+  if (/\b(IX|9NO|NOVENO)\b/i.test(str) || /\b9\b/.test(str)) return 9;
+  if (/\b(X|10MO|DECIMO|DÉCIMO)\b/i.test(str) || /\b10\b/.test(str)) return 10;
+  if (/\b(VIII|8VO|OCTAVO)\b/i.test(str) || /\b8\b/.test(str)) return 8;
+  if (/\b(VII|7MO|SEPTIMO|SÉPTIMO)\b/i.test(str) || /\b7\b/.test(str)) return 7;
+  if (/\b(VI|6TO|SEXTO)\b/i.test(str) || /\b6\b/.test(str)) return 6;
+  if (/\b(IV|4TO|CUARTO)\b/i.test(str) || /\b4\b/.test(str)) return 4;
+  if (/\b(V|5TO|QUINTO)\b/i.test(str) || /\b5\b/.test(str)) return 5;
+  if (/\b(III|3RO|TERCERO)\b/i.test(str) || /\b3\b/.test(str)) return 3;
+  if (/\b(II|2DO|SEGUNDO)\b/i.test(str) || /\b2\b/.test(str)) return 2;
+  if (/\b(I|1ER|1RO|PRIMER|PRIMERO)\b/i.test(str) || /\b1\b/.test(str)) return 1;
+  return 8;
+}
+
+export function filterTodayTasks<T extends { isCompleted: boolean; dueDate?: number }>(
+  tasks: T[],
+  startOfToday: number,
+  endOfToday: number
+): T[] {
+  return tasks.filter(
+    (t) => !t.isCompleted && (!t.dueDate || (t.dueDate >= startOfToday && t.dueDate <= endOfToday))
+  );
+}
+
+export function filterOverdueTasks<T extends { isCompleted: boolean; dueDate?: number }>(
+  tasks: T[],
+  startOfToday: number
+): T[] {
+  return tasks.filter((t) => !t.isCompleted && t.dueDate && t.dueDate < startOfToday);
 }
 
 export function calculateTaskProgress(tasks: { isCompleted: boolean }[]): {

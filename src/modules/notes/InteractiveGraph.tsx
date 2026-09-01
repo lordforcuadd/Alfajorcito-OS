@@ -12,14 +12,10 @@ import {
   Pause,
   Layers,
   ArrowRight,
-  ExternalLink,
-  BookOpen,
-  GraduationCap,
   Sparkles,
   FileText,
-  HelpCircle,
   Tag,
-  CheckCircle2,
+  GraduationCap,
   Network,
   X
 } from 'lucide-react';
@@ -325,18 +321,27 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
       // 6. Dynamic [[wiki-links]] parsing from note text content
       if (n.content) {
         const matches = n.content.matchAll(/\[\[(.*?)\]\]/g);
+        const normalizeStr = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
         for (const match of matches) {
-          const targetName = match[1]?.trim().toLowerCase();
+          const rawTarget = match[1]?.trim();
+          if (!rawTarget) continue;
+          const targetName = (rawTarget.split('|')[0] || '').trim();
           if (!targetName) continue;
 
-          // Search matching node by title or label with minimum length guard
-          const matchedTarget = newNodes.find(
-            (node) =>
-              node.id !== n.id &&
-              (node.label.toLowerCase() === targetName ||
-                (targetName.length >= 3 && node.label.toLowerCase().includes(targetName)) ||
-                (node.label.length >= 3 && targetName.includes(node.label.toLowerCase())))
-          );
+          const targetNorm = normalizeStr(targetName);
+
+          // Search matching node by title or label with strict matching guard
+          const matchedTarget = newNodes.find((node) => {
+            if (node.id === n.id) return false;
+            const nodeNorm = normalizeStr(node.label);
+            if (nodeNorm === targetNorm) return true;
+            if (targetNorm.length >= 4 && nodeNorm.length >= 4) {
+              const regex = new RegExp(`\\b${targetNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+              return regex.test(nodeNorm);
+            }
+            return false;
+          });
 
           if (matchedTarget) {
             const alreadyExists = newEdges.some(
@@ -361,7 +366,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
 
     nodesRef.current = newNodes;
     edgesRef.current = newEdges;
-  }, [courses, works, concepts, notes, filterTypes, isFullscreen]);
+  }, [courses, works, concepts, notes, filterTypes]);
 
   // Rebuild on data or filter change
   useEffect(() => {

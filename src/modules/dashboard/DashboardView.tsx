@@ -27,7 +27,7 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge, VerificationBadge, CitationStyleBadge } from '../../components/common/Badge';
 import { useToast } from '../../components/common/Toast';
-import { calculateDaysRemaining, isWorkUpcoming, isWorkOverdue } from '../../utils/academicWorkUtils';
+import { calculateDaysRemaining, isWorkUpcoming, isWorkOverdue, filterTodayTasks, filterOverdueTasks } from '../../utils/academicWorkUtils';
 import { DEFAULT_USER_PROFILE, type UserProfile, type Work, type Course, type Task, type Source, type InquiryToTeacher, type Note, type Concept, type Paraphrase } from '../../types';
 import type { NavTab } from '../../components/layout/AppShell';
 
@@ -46,6 +46,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateTab,
   onQuickCapture
 }) => {
+  const { showToast } = useToast();
   const now = Date.now();
   const oneDayMs = 86400000;
 
@@ -65,9 +66,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const endOfToday = new Date().setHours(23, 59, 59, 999);
 
   // 1. ¿Qué debo hacer hoy? (Tasks due today or checklist items without date, strictly not past days)
-  const todayTasks = tasks.filter(
-    (t) => !t.isCompleted && (!t.dueDate || (t.dueDate >= startOfToday && t.dueDate <= endOfToday))
-  );
+  const todayTasks = filterTodayTasks(tasks, startOfToday, endOfToday);
 
   // 2. ¿Qué se acerca? (Works or deadlines in next 14 days)
   const upcomingWorks = works
@@ -76,7 +75,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // 3. ¿Qué está atrasado? (Overdue tasks strictly before today or overdue unsubmitted works)
   const overdueWorks = works.filter((w) => isWorkOverdue(w, now));
-  const overdueTasks = tasks.filter((t) => !t.isCompleted && t.dueDate && t.dueDate < startOfToday);
+  const overdueTasks = filterOverdueTasks(tasks, startOfToday);
 
   // 4. ¿Qué está bloqueado? (Pending teacher inquiries)
   const blockedInquiries = inquiries.filter((inq) => inq.status === 'SENT' || inq.status === 'DRAFT');
@@ -119,11 +118,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Toggle Task Completion Handler
   const handleToggleTask = async (taskId: string, currentStatus: boolean) => {
-    await db.tasks.update(taskId, {
-      isCompleted: !currentStatus,
-      completedAt: !currentStatus ? Date.now() : undefined,
-      updatedAt: Date.now()
-    });
+    try {
+      await db.tasks.update(taskId, {
+        isCompleted: !currentStatus,
+        completedAt: !currentStatus ? Date.now() : undefined,
+        updatedAt: Date.now()
+      });
+    } catch {
+      showToast('Error', 'No se pudo actualizar la tarea en la base de datos.', 'error');
+    }
   };
 
   return (
@@ -399,7 +402,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           type="button"
                           onClick={async (e) => {
                             e.stopPropagation();
-                            await db.tasks.update(task.id, { isCompleted: true, updatedAt: Date.now() });
+                            try {
+                              await db.tasks.update(task.id, {
+                                isCompleted: true,
+                                completedAt: Date.now(),
+                                updatedAt: Date.now()
+                              });
+                            } catch {
+                              showToast('Error', 'No se pudo completar la tarea.', 'error');
+                            }
                           }}
                           className="text-rose-400 hover:text-emerald-600 transition-colors cursor-pointer shrink-0"
                           title="Marcar como completada"

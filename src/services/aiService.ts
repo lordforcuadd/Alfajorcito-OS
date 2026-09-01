@@ -502,31 +502,6 @@ async function trackTokensUsed(estimatedCount: number) {
   }
 }
 
-// Query available models from Gemini ListModels endpoint using secure headers
-async function discoverSupportedGeminiModels(key: string): Promise<string[]> {
-  try {
-    const listUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
-    const listRes = await fetch(listUrl, {
-      headers: {
-        'x-goog-api-key': key
-      },
-      signal: AbortSignal.timeout(6000)
-    });
-    if (listRes.ok) {
-      const listData = await listRes.json();
-      return (listData.models || [])
-        .filter((m: { supportedGenerationMethods?: string[] }) =>
-          (m.supportedGenerationMethods || []).includes('generateContent')
-        )
-        .map((m: { name?: string }) => (m.name || '').replace(/^models\//, ''))
-        .filter(Boolean);
-    }
-  } catch {
-    // ignore
-  }
-  return [];
-}
-
 async function callGemini(
   prompt: string,
   key: string,

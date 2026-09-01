@@ -7,6 +7,7 @@ import { Input } from '../common/Input';
 import { db } from '../../db';
 import { useToast } from '../common/Toast';
 import { generateId } from '../../utils/idHelper';
+import { sanitizeSafeUrl } from '../../utils/urlHelper';
 import type { Course, UserProfile } from '../../types';
 
 export interface CourseModalProps {
@@ -92,7 +93,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
           period: period.trim(),
           teacherName: teacherName.trim() || undefined,
           teacherEmail: teacherEmail.trim() || undefined,
-          syllabusUrl: syllabusUrl.trim() || undefined,
+          syllabusUrl: sanitizeSafeUrl(syllabusUrl),
           color,
           updatedAt: now
         });
@@ -107,7 +108,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
           period: period.trim(),
           teacherName: teacherName.trim() || undefined,
           teacherEmail: teacherEmail.trim() || undefined,
-          syllabusUrl: syllabusUrl.trim() || undefined,
+          syllabusUrl: sanitizeSafeUrl(syllabusUrl),
           color,
           isArchived: false,
           createdAt: now,
@@ -123,10 +124,18 @@ export const CourseModal: React.FC<CourseModalProps> = ({
 
   const handleDeleteCourse = async () => {
     if (!courseToEdit) return;
-    await db.courses.delete(courseToEdit.id);
-    showToast('Curso eliminado', 'El curso se eliminó de tu lista.', 'info');
-    setIsConfirmDeleteOpen(false);
-    onClose();
+    try {
+      await db.transaction('rw', [db.courses, db.works, db.notes], async () => {
+        await db.works.where('courseId').equals(courseToEdit.id).modify({ courseId: undefined });
+        await db.notes.where('courseId').equals(courseToEdit.id).modify({ courseId: undefined });
+        await db.courses.delete(courseToEdit.id);
+      });
+      showToast('Curso eliminado', 'El curso se eliminó y sus trabajos y notas se desvincularon.', 'info');
+      setIsConfirmDeleteOpen(false);
+      onClose();
+    } catch {
+      showToast('Error', 'No se pudo eliminar el curso de la base de datos.', 'error');
+    }
   };
 
   return (

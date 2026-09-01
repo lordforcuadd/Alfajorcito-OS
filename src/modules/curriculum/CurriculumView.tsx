@@ -27,6 +27,7 @@ import { USMP_PSYCHOLOGY_CURRICULUM } from '../../services/usmpCurriculum';
 import { db } from '../../db';
 import { useToast } from '../../components/common/Toast';
 import { generateId } from '../../utils/idHelper';
+import { parseAcademicCycle } from '../../utils/academicWorkUtils';
 import type { CurriculumCourse, Course, Work, UserProfile } from '../../types';
 import { DEFAULT_ACADEMIC_PERIOD } from '../../types';
 
@@ -49,21 +50,9 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
     return rec?.value as UserProfile | undefined;
   });
 
-  // Calculate active cycle number dynamically from userProfile
+  // Calculate active cycle number dynamically from userProfile using centralized utility
   const userCycleNum = React.useMemo(() => {
-    const cycleStr = String(userProfile?.currentCycle || '').toUpperCase();
-    // 1. Check Roman numerals in strict disambiguation order (IX before X, IV before V, etc.)
-    if (/\bIX\b/.test(cycleStr) || cycleStr.includes('IX') || /\b9\b|9NO|NOVENO/i.test(cycleStr)) return 9;
-    if (/\bX\b/.test(cycleStr) || cycleStr.includes('X') || /\b10\b|10MO|DECIMO|DÉCIMO/i.test(cycleStr)) return 10;
-    if (/\bVIII\b/.test(cycleStr) || cycleStr.includes('VIII') || /\b8\b|8VO|OCTAVO/i.test(cycleStr)) return 8;
-    if (/\bVII\b/.test(cycleStr) || cycleStr.includes('VII') || /\b7\b|7MO|SEPTIMO|SÉPTIMO/i.test(cycleStr)) return 7;
-    if (/\bVI\b/.test(cycleStr) || cycleStr.includes('VI') || /\b6\b|6TO|SEXTO/i.test(cycleStr)) return 6;
-    if (/\bIV\b/.test(cycleStr) || cycleStr.includes('IV') || /\b4\b|4TO|CUARTO/i.test(cycleStr)) return 4;
-    if (/\bV\b/.test(cycleStr) || cycleStr.includes('V') || /\b5\b|5TO|QUINTO/i.test(cycleStr)) return 5;
-    if (/\bIII\b/.test(cycleStr) || cycleStr.includes('III') || /\b3\b|3RO|TERCERO/i.test(cycleStr)) return 3;
-    if (/\bII\b/.test(cycleStr) || cycleStr.includes('II') || /\b2\b|2DO|SEGUNDO/i.test(cycleStr)) return 2;
-    if (/\bI\b/.test(cycleStr) || cycleStr.includes('I') || /\b1\b|1RO|PRIMER/i.test(cycleStr)) return 1;
-    return 8;
+    return parseAcademicCycle(userProfile?.currentCycle !== undefined ? String(userProfile.currentCycle) : undefined);
   }, [userProfile?.currentCycle]);
 
   const [selectedCycle, setSelectedCycle] = useState<number>(8);
@@ -74,7 +63,7 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
 
   // Sync selectedCycle with userProfile on initial load or profile update if not manually clicked
   React.useEffect(() => {
-    if (!hasUserManuallySelectedCycle && userCycleNum) {
+    if (!hasUserManuallySelectedCycle) {
       setSelectedCycle(userCycleNum);
     }
   }, [userCycleNum, hasUserManuallySelectedCycle]);
@@ -102,10 +91,9 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
     }
   };
 
-  // Toggle Enroll / Unenroll USMP Course in User's Active Courses
+  // Toggle or Enroll course from curriculum
   const handleToggleEnrollCourse = async (curriculumCourse: CurriculumCourse, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-
     const existingCourse = userCourses.find(
       (c) => c.code === curriculumCourse.code || c.name.toLowerCase() === curriculumCourse.name.toLowerCase()
     );
@@ -117,17 +105,21 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
       // Enroll
       const colors = ['#D98880', '#B39DDB', '#80CBC4', '#FFCC80', '#90CAF9'];
       const assignedColor = colors[Math.floor(Math.random() * colors.length)];
-      await db.courses.add({
-        id: generateId('course'),
-        code: curriculumCourse.code,
-        name: curriculumCourse.name,
-        period: `${DEFAULT_ACADEMIC_PERIOD} (${curriculumCourse.cycle}vo Ciclo)`,
-        color: assignedColor,
-        isArchived: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      });
-      showToast('¡Matrícula registrada!', `${curriculumCourse.name} agregada a tus cursos activos.`, 'success');
+      try {
+        await db.courses.add({
+          id: generateId('course'),
+          code: curriculumCourse.code,
+          name: curriculumCourse.name,
+          period: `${DEFAULT_ACADEMIC_PERIOD} (${curriculumCourse.cycle}vo Ciclo)`,
+          color: assignedColor,
+          isArchived: false,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        });
+        showToast('¡Matrícula registrada!', `${curriculumCourse.name} agregada a tus cursos activos.`, 'success');
+      } catch {
+        showToast('Error', 'No se pudo registrar la matrícula en la base de datos.', 'error');
+      }
     }
   };
 
@@ -454,18 +446,25 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
                     if (existing) {
                       courseId = existing.id;
                     } else {
+                      const colors = ['#D98880', '#B39DDB', '#80CBC4', '#FFCC80', '#90CAF9'];
+                      const assignedColor = colors[Math.floor(Math.random() * colors.length)];
                       const newCourseId = generateId('course');
-                      await db.courses.add({
-                        id: newCourseId,
-                        code: inspectedCourse.code,
-                        name: inspectedCourse.name,
-                        period: `${DEFAULT_ACADEMIC_PERIOD} (${inspectedCourse.cycle}vo Ciclo)`,
-                        color: '#D98880',
-                        isArchived: false,
-                        createdAt: Date.now(),
-                        updatedAt: Date.now()
-                      });
-                      courseId = newCourseId;
+                      try {
+                        await db.courses.add({
+                          id: newCourseId,
+                          code: inspectedCourse.code,
+                          name: inspectedCourse.name,
+                          period: `${DEFAULT_ACADEMIC_PERIOD} (${inspectedCourse.cycle}vo Ciclo)`,
+                          color: assignedColor,
+                          isArchived: false,
+                          createdAt: Date.now(),
+                          updatedAt: Date.now()
+                        });
+                        courseId = newCourseId;
+                      } catch {
+                        showToast('Error', 'No se pudo crear el curso en la base de datos.', 'error');
+                        return;
+                      }
                     }
                     setInspectedCourse(null);
                     onOpenQuickCapture('work', courseId);
@@ -491,7 +490,7 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
         >
           <div className="space-y-4">
             <p className="text-xs sm:text-sm text-[#5A6275] leading-relaxed">
-              La asignatura se quitará de tus cursos activos. Los trabajos y notas vinculados se mantendrán en el sistema.
+              La asignatura se quitará de tus cursos activos. Los trabajos y notas vinculados se mantendrán desvinculados de forma segura sin registros huérfanos.
             </p>
             <div className="flex justify-end gap-2 pt-2 border-t border-[#EBE5DF]">
               <Button variant="ghost" onClick={() => setUnenrollTarget(null)}>
@@ -500,9 +499,17 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
               <Button
                 variant="danger"
                 onClick={async () => {
-                  await db.courses.delete(unenrollTarget.existingId);
-                  showToast('Asignatura retirada', `${unenrollTarget.course.name} se eliminó de tus cursos activos.`, 'info');
-                  setUnenrollTarget(null);
+                  try {
+                    await db.transaction('rw', [db.courses, db.works, db.notes], async () => {
+                      await db.works.where('courseId').equals(unenrollTarget.existingId).modify({ courseId: undefined });
+                      await db.notes.where('courseId').equals(unenrollTarget.existingId).modify({ courseId: undefined });
+                      await db.courses.delete(unenrollTarget.existingId);
+                    });
+                    showToast('Asignatura retirada', `${unenrollTarget.course.name} se eliminó de tus cursos activos.`, 'info');
+                    setUnenrollTarget(null);
+                  } catch {
+                    showToast('Error', 'No se pudo retirar la asignatura de la base de datos.', 'error');
+                  }
                 }}
               >
                 Sí, retirar asignatura

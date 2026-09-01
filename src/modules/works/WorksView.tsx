@@ -5,26 +5,23 @@ import {
   GraduationCap,
   Plus,
   Calendar,
-  BookOpen,
   CheckCircle2,
   Clock,
-  Filter,
   Layers,
   ChevronRight,
   Edit2,
-  BookMarked,
-  Search,
-  FileText,
-  HelpCircle,
-  Sparkles,
   TrendingUp,
   FolderOpen,
-  Trash2
+  Trash2,
+  Search,
+  BookOpen,
+  HelpCircle
 } from 'lucide-react';
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { Badge, CitationStyleBadge, WorkStatusBadge, WORK_STATUS_META, type BadgeVariant } from '../../components/common/Badge';
+import { WorkStatusBadge, CitationStyleBadge, WORK_STATUS_META } from '../../components/common/Badge';
+import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../components/common/Toast';
 import { CourseModal } from '../../components/modals/CourseModal';
 import { WorkModal } from '../../components/modals/WorkModal';
@@ -115,18 +112,39 @@ export const WorksView: React.FC<WorksViewProps> = ({
   const handleCardStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>, work: Work) => {
     e.stopPropagation();
     const newStatus = e.target.value as WorkStatus;
-    await db.works.update(work.id, { status: newStatus, updatedAt: Date.now() });
+    try {
+      await db.works.update(work.id, { status: newStatus, updatedAt: Date.now() });
 
-    if (newStatus === 'ENTREGADO') {
-      triggerCelebrationConfetti();
-      window.dispatchEvent(new CustomEvent('work-delivered', { detail: { title: work.title } }));
-      showToast('¡Felicitaciones!', `"${work.title}" marcado como ENTREGADO.`, 'success');
-    } else {
-      showToast(
-        'Estado actualizado',
-        `"${work.title}" cambió a ${WORK_STATUS_META[newStatus]?.label || newStatus}.`,
-        'success'
-      );
+      if (newStatus === 'ENTREGADO') {
+        triggerCelebrationConfetti();
+        window.dispatchEvent(new CustomEvent('work-delivered', { detail: { title: work.title } }));
+        showToast('¡Felicitaciones!', `"${work.title}" marcado como ENTREGADO.`, 'success');
+      } else {
+        showToast(
+          'Estado actualizado',
+          `"${work.title}" cambió a ${WORK_STATUS_META[newStatus]?.label || newStatus}.`,
+          'success'
+        );
+      }
+    } catch {
+      showToast('Error', 'No se pudo actualizar el estado del trabajo.', 'error');
+    }
+  };
+
+  const [workToDelete, setWorkToDelete] = useState<Work | null>(null);
+
+  const handleConfirmDeleteWork = async () => {
+    if (!workToDelete) return;
+    try {
+      await db.transaction('rw', [db.works, db.tasks, db.notes], async () => {
+        await db.tasks.where('workId').equals(workToDelete.id).delete();
+        await db.notes.where('workId').equals(workToDelete.id).modify({ workId: undefined });
+        await db.works.delete(workToDelete.id);
+      });
+      showToast('Trabajo eliminado', `"${workToDelete.title}" ha sido eliminado del sistema.`, 'info');
+      setWorkToDelete(null);
+    } catch {
+      showToast('Error', 'No se pudo eliminar el trabajo de la base de datos.', 'error');
     }
   };
 
@@ -448,8 +466,7 @@ export const WorksView: React.FC<WorksViewProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setWorkToEdit(work);
-                          setIsWorkModalOpen(true);
+                          setWorkToDelete(work);
                         }}
                         className="p-1 hover:bg-rose-50 text-[#8D99AE] hover:text-[#C62828] rounded-lg transition-colors cursor-pointer"
                         title={`Eliminar trabajo: ${work.title}`}
@@ -544,6 +561,30 @@ export const WorksView: React.FC<WorksViewProps> = ({
         workToEdit={workToEdit}
         initialCourseId={selectedCourseFilter !== 'ALL' ? selectedCourseFilter : undefined}
       />
+
+      {/* Delete Work Confirmation Modal */}
+      {workToDelete && (
+        <Modal
+          isOpen={!!workToDelete}
+          onClose={() => setWorkToDelete(null)}
+          title={`¿Eliminar "${workToDelete.title}"?`}
+          maxWidth="md"
+        >
+          <div className="space-y-4">
+            <p className="text-xs sm:text-sm text-[#5A6275] leading-relaxed">
+              Se eliminará permanentemente este trabajo y sus tareas asociadas. Las fuentes y notas se mantendrán intactas en tu biblioteca y se desvincularán de forma segura.
+            </p>
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#EBE5DF]">
+              <Button variant="ghost" onClick={() => setWorkToDelete(null)}>
+                Cancelar
+              </Button>
+              <Button variant="danger" onClick={handleConfirmDeleteWork}>
+                Sí, eliminar trabajo
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

@@ -1,19 +1,12 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
-  Sparkles,
   Send,
-  Bot,
   User,
-  X,
-  BookOpen,
-  GraduationCap,
-  RefreshCw,
   Copy,
   Check,
   RotateCcw,
-  Lightbulb,
-  FileText,
+  RefreshCw
 } from "lucide-react";
 import { Modal } from "../../components/common/Modal";
 import { Button } from "../../components/common/Button";
@@ -62,21 +55,16 @@ export const GraphAIChatModal: React.FC<GraphAIChatModalProps> = ({
   onNavigateToNote,
   onNavigateToWork,
 }) => {
-  const userProfile = useLiveQuery(async () => {
-    const rec = await db.settings.get("user_profile");
-    return rec?.value as UserProfile | undefined;
-  });
-
-  const studentName = userProfile?.name || "Estudiante";
-  const cycle = userProfile?.currentCycle || "";
-  const specialty =
-    userProfile?.specialty === "CLINICA"
-      ? "Psicología Clínica"
-      : userProfile?.specialty || userProfile?.major || "Psicología";
-  const thesisTitle = userProfile?.thesisTitle || "";
-  const institution = userProfile?.institution || "Universidad";
-
   const { showToast } = useToast();
+
+  const userProfileRecord = useLiveQuery(() => db.settings.get("user_profile"));
+  const userProfile = userProfileRecord?.value as UserProfile | undefined;
+  const studentName = userProfile?.name?.trim() || "Estudiante";
+  const cycle = userProfile?.currentCycle || "8vo Ciclo";
+  const specialty = userProfile?.specialty || "";
+  const institution = userProfile?.institution || "USMP";
+  const thesisTitle = userProfile?.thesisTitle || "";
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -84,17 +72,19 @@ export const GraphAIChatModal: React.FC<GraphAIChatModalProps> = ({
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const isMountedRef = useRef(true);
+  const sessionSeqRef = useRef(0);
 
   useEffect(() => {
     isMountedRef.current = true;
+    sessionSeqRef.current++;
     return () => {
       isMountedRef.current = false;
     };
   }, [isOpen]);
 
-  const activeNotes = notes.filter((n) => n.paraCategory !== "ARCHIVE");
-  const activeWorks = works.filter((w) => !w.isArchived);
-  const activeCourses = courses.filter((c) => !c.isArchived);
+  const activeNotes = useMemo(() => notes.filter((n) => n.paraCategory !== "ARCHIVE"), [notes]);
+  const activeWorks = useMemo(() => works.filter((w) => !w.isArchived), [works]);
+  const activeCourses = useMemo(() => courses.filter((c) => !c.isArchived), [courses]);
 
   // Initialize personalized welcome message
   const initWelcome = () => {
@@ -164,6 +154,7 @@ export const GraphAIChatModal: React.FC<GraphAIChatModalProps> = ({
     setMessages(updatedHistory);
     setInputText("");
     setIsLoading(true);
+    const thisSession = sessionSeqRef.current;
 
     try {
       const result = await queryGraphAssistant(text, {
@@ -179,7 +170,7 @@ export const GraphAIChatModal: React.FC<GraphAIChatModalProps> = ({
         })),
       });
 
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current || thisSession !== sessionSeqRef.current) return;
 
       const aiMsg: ChatMessage = {
         id: `ai-${Date.now()}`,
@@ -191,7 +182,7 @@ export const GraphAIChatModal: React.FC<GraphAIChatModalProps> = ({
 
       setMessages((prev) => [...prev, aiMsg]);
     } catch {
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current || thisSession !== sessionSeqRef.current) return;
 
       const errorMsg: ChatMessage = {
         id: `error-${Date.now()}`,
@@ -201,7 +192,7 @@ export const GraphAIChatModal: React.FC<GraphAIChatModalProps> = ({
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
-      if (isMountedRef.current) {
+      if (isMountedRef.current && thisSession === sessionSeqRef.current) {
         setIsLoading(false);
         setTimeout(() => inputRef.current?.focus(), 100);
       }

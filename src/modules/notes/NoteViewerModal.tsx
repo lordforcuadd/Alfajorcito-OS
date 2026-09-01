@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FileText,
   Edit3,
@@ -7,12 +7,7 @@ import {
   Share2,
   FolderDown,
   Sparkles,
-  Link2,
-  Calendar,
-  BookOpen,
-  GraduationCap,
-  Plus,
-  Check
+  Link2
 } from 'lucide-react';
 import { db } from '../../db';
 import { Modal } from '../../components/common/Modal';
@@ -81,36 +76,9 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
     }
   }, [isOpen, note?.id]);
 
-  // Keyboard shortcut Ctrl+S (Must be declared before any conditional return)
-  useEffect(() => {
-    if (!isOpen || mode !== 'edit' || !currentNote) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        handleSave();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, mode, currentNote, editTitle, editContent, editCategory, editCourseId, editWorkId, editTags]);
-
-  if (!currentNote) return null;
-
-  const currentCourse = courses.find((c) => c.id === currentNote.courseId);
-  const currentWork = works.find((w) => w.id === currentNote.workId);
-
-  // Find incoming backlinks (notes that mention this note's title in their content)
-  const noteTitleLower = currentNote.title.toLowerCase();
-  const backlinks = notes.filter(
-    (n) =>
-      n.id !== currentNote.id &&
-      (n.content.toLowerCase().includes(`[[${noteTitleLower}]]`) ||
-        n.content.toLowerCase().includes(`[[${currentNote.slug}]]`) ||
-        (n.backlinks || []).includes(currentNote.id))
-  );
-
   // Handle Save
   const handleSave = async () => {
+    if (!currentNote) return;
     if (!editTitle.trim()) {
       showToast('Título requerido', 'Por favor ingresa un título para la nota.', 'warning');
       return;
@@ -146,18 +114,64 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
       ...updatedData
     };
 
-    await db.notes.update(currentNote.id, updatedData);
-    onSelectNote(updatedNote);
-    showToast('Nota guardada', 'Cambios sincronizados en el Segundo Cerebro.', 'success');
-    setMode('view');
+    try {
+      await db.notes.update(currentNote.id, updatedData);
+      onSelectNote(updatedNote);
+      showToast('Nota guardada', 'Cambios sincronizados en el Segundo Cerebro.', 'success');
+      setMode('view');
+    } catch {
+      showToast('Error', 'No se pudo guardar la nota en la base de datos.', 'error');
+    }
   };
+
+  const handleSaveRef = useRef(handleSave);
+  handleSaveRef.current = handleSave;
+
+  // Keyboard shortcut Ctrl+S (Must be declared before any conditional return)
+  useEffect(() => {
+    if (!isOpen || mode !== 'edit' || !currentNote) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSaveRef.current();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, mode, currentNote]);
+
+  if (!currentNote) return null;
+
+  const currentCourse = courses.find((c) => c.id === currentNote.courseId);
+  const currentWork = works.find((w) => w.id === currentNote.workId);
+
+  // Find incoming backlinks (notes that mention this note's title in their content, accent-insensitive)
+  const normalizeBacklinkText = (str: string) =>
+    str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  const noteTitleNorm = normalizeBacklinkText(currentNote.title);
+  const noteSlugNorm = normalizeBacklinkText(currentNote.slug);
+
+  const backlinks = notes.filter((n) => {
+    if (n.id === currentNote.id) return false;
+    if ((n.backlinks || []).includes(currentNote.id)) return true;
+    const contentNorm = normalizeBacklinkText(n.content);
+    return (
+      contentNorm.includes(`[[${noteTitleNorm}]]`) ||
+      contentNorm.includes(`[[${noteSlugNorm}]]`)
+    );
+  });
 
   // Handle Delete
   const handleDelete = async () => {
-    await db.notes.delete(currentNote.id);
-    showToast('Nota eliminada', 'La nota ha sido retirada de tu Segundo Cerebro.', 'info');
-    setIsConfirmDeleteOpen(false);
-    onClose();
+    try {
+      await db.notes.delete(currentNote.id);
+      showToast('Nota eliminada', 'La nota ha sido retirada de tu Segundo Cerebro.', 'info');
+      setIsConfirmDeleteOpen(false);
+      onClose();
+    } catch {
+      showToast('Error', 'No se pudo eliminar la nota de la base de datos.', 'error');
+    }
   };
 
   // Insert helper text into editor
