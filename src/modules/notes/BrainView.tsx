@@ -346,7 +346,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
                       </h3>
 
                       <p className="text-xs text-[#5A6275] line-clamp-3 leading-relaxed">
-                        {note.content.replace(/#+\s/g, '').replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, '$2 || $1').replace(/[*_`~>]/g, '').trim()}
+                        {note.content.replace(/#+\s/g, '').replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target, alias) => alias || target).replace(/[*_`~>]/g, '').trim()}
                       </p>
                     </div>
 

@@ -405,7 +405,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         year: finalYear,
         type: 'JOURNAL_ARTICLE',
         publication: finalPub,
-        doi: extractedDoi || (rawDoi.length > 0 ? rawDoi : undefined),
+        doi: extractedDoi || undefined,
         accessedAt: now,
         verificationStatus: verifiedStatus,
         verificationProvider: verifiedProvider,

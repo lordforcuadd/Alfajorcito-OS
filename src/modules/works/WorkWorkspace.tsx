@@ -95,6 +95,13 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
     });
   }, [workSources, work?.citationStyle]);
 
+  const validatedWorkSources = React.useMemo(() => {
+    return workSources.map((source) => ({
+      source,
+      ageCheck: validateSourceAge(source, work)
+    }));
+  }, [workSources, work]);
+
   // Local draft editing state
   const [draftText, setDraftText] = useState<string>('');
   const [hasUnsavedDraft, setHasUnsavedDraft] = useState(false);
@@ -719,11 +726,15 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                             type="checkbox"
                             checked={t.isCompleted}
                             onChange={async () => {
-                              await db.tasks.update(t.id, {
-                                isCompleted: !t.isCompleted,
-                                completedAt: !t.isCompleted ? Date.now() : undefined,
-                                updatedAt: Date.now()
-                              });
+                              try {
+                                await db.tasks.update(t.id, {
+                                  isCompleted: !t.isCompleted,
+                                  completedAt: !t.isCompleted ? Date.now() : undefined,
+                                  updatedAt: Date.now()
+                                });
+                              } catch {
+                                showToast('Error', 'No se pudo actualizar la tarea.', 'error');
+                              }
                             }}
                             className="rounded border-[#EBE5DF] text-[#E8A598] focus:ring-[#E8A598] cursor-pointer shrink-0 w-4 h-4"
                           />
@@ -742,8 +753,12 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                           </Badge>
                           <button
                             onClick={async () => {
-                              await db.tasks.delete(t.id);
-                              showToast('Tarea eliminada', 'La tarea ha sido retirada.', 'info');
+                              try {
+                                await db.tasks.delete(t.id);
+                                showToast('Tarea eliminada', 'La tarea ha sido retirada.', 'info');
+                              } catch {
+                                showToast('Error', 'No se pudo eliminar la tarea.', 'error');
+                              }
                             }}
                             className="p-1 text-[#8D99AE] hover:text-[#C62828] hover:bg-[#F5F1EB] rounded-lg transition-colors cursor-pointer"
                             title="Eliminar tarea"
@@ -837,12 +852,16 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                             type="button"
                             onClick={async () => {
                               const nextStatus = inq.status === 'DRAFT' ? 'SENT' : 'DRAFT';
-                              await db.inquiries.update(inq.id, { status: nextStatus, updatedAt: Date.now() });
-                              showToast(
-                                nextStatus === 'SENT' ? 'Marcada como Enviada' : 'Marcada como Borrador',
-                                'Estado de la consulta actualizado.',
-                                'info'
-                              );
+                              try {
+                                await db.inquiries.update(inq.id, { status: nextStatus, updatedAt: Date.now() });
+                                showToast(
+                                  nextStatus === 'SENT' ? 'Marcada como Enviada' : 'Marcada como Borrador',
+                                  'Estado de la consulta actualizado.',
+                                  'info'
+                                );
+                              } catch {
+                                showToast('Error', 'No se pudo actualizar el estado de la consulta.', 'error');
+                              }
                             }}
                             className="text-[10px] font-bold text-[#5A6275] bg-[#F5F1EB] hover:bg-[#EBE5DF] px-2 py-0.5 rounded-md cursor-pointer transition-colors"
                             title="Cambiar estado"
@@ -929,18 +948,22 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                           onClick={async () => {
                             const answer = (inquiryTeacherAnswers[inq.id] || '').trim();
                             if (!answer) return;
-                            await db.inquiries.update(inq.id, {
-                              teacherAnswer: answer,
-                              status: 'ANSWERED',
-                              answeredDate: Date.now(),
-                              updatedAt: Date.now()
-                            });
-                            setInquiryTeacherAnswers((prev) => {
-                              const copy = { ...prev };
-                              delete copy[inq.id];
-                              return copy;
-                            });
-                            showToast('Respuesta guardada', 'La respuesta oficial del profesor ha sido registrada.', 'success');
+                            try {
+                              await db.inquiries.update(inq.id, {
+                                teacherAnswer: answer,
+                                status: 'ANSWERED',
+                                answeredDate: Date.now(),
+                                updatedAt: Date.now()
+                              });
+                              setInquiryTeacherAnswers((prev) => {
+                                const copy = { ...prev };
+                                delete copy[inq.id];
+                                return copy;
+                              });
+                              showToast('Respuesta guardada', 'La respuesta oficial del profesor ha sido registrada.', 'success');
+                            } catch {
+                              showToast('Error', 'No se pudo guardar la respuesta en la base de datos.', 'error');
+                            }
                           }}
                         >
                           Guardar Respuesta Oficial
@@ -966,8 +989,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
               </div>
 
               <div className="space-y-3">
-                {workSources.map((source) => {
-                  const ageCheck = validateSourceAge(source, work);
+                {validatedWorkSources.map(({ source, ageCheck }) => {
                   return (
                     <Card key={source.id} variant="elevated" className="space-y-3">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -1058,10 +1080,14 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                         <div className="flex justify-end pt-1">
                           <button
                             onClick={async () => {
-                              await db.sources.update(source.id, {
-                                historicalContextApproved: !source.historicalContextApproved,
-                                updatedAt: Date.now()
-                              });
+                              try {
+                                await db.sources.update(source.id, {
+                                  historicalContextApproved: !source.historicalContextApproved,
+                                  updatedAt: Date.now()
+                                });
+                              } catch {
+                                showToast('Error', 'No se pudo actualizar el estado de la fuente.', 'error');
+                              }
                             }}
                             className={`text-[11px] px-2.5 py-1 rounded-xl font-semibold border transition-all cursor-pointer ${
                               source.historicalContextApproved
@@ -1527,13 +1553,17 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
               <Button
                 variant="primary"
                 onClick={async () => {
-                  await db.works.update(workId, {
-                    googleDocUrl: sanitizeSafeUrl(editGoogleDocUrl),
-                    canvaUrl: sanitizeSafeUrl(editCanvaUrl),
-                    updatedAt: Date.now()
-                  });
-                  showToast('Enlaces actualizados', 'Google Docs y Canva vinculados al trabajo.', 'success');
-                  setIsLinksModalOpen(false);
+                  try {
+                    await db.works.update(workId, {
+                      googleDocUrl: sanitizeSafeUrl(editGoogleDocUrl),
+                      canvaUrl: sanitizeSafeUrl(editCanvaUrl),
+                      updatedAt: Date.now()
+                    });
+                    showToast('Enlaces actualizados', 'Google Docs y Canva vinculados al trabajo.', 'success');
+                    setIsLinksModalOpen(false);
+                  } catch {
+                    showToast('Error', 'No se pudieron actualizar los enlaces del trabajo.', 'error');
+                  }
                 }}
                 className="w-full sm:w-auto font-bold"
               >

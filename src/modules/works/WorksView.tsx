@@ -4,13 +4,9 @@ import { triggerCelebrationConfetti } from '../../utils/confettiHelper';
 import {
   GraduationCap,
   Plus,
-  Calendar,
-  CheckCircle2,
   Clock,
-  Layers,
   ChevronRight,
   Edit2,
-  TrendingUp,
   FolderOpen,
   Trash2,
   Search,
@@ -26,7 +22,7 @@ import { useToast } from '../../components/common/Toast';
 import { CourseModal } from '../../components/modals/CourseModal';
 import { WorkModal } from '../../components/modals/WorkModal';
 import { WorkWorkspace } from './WorkWorkspace';
-import { calculateDaysRemaining, getDeadlineUrgencyMeta, calculateTaskProgress } from '../../utils/academicWorkUtils';
+import { calculateDaysRemaining, getDeadlineUrgencyMeta, calculateTaskProgress, deleteAcademicWorkCascade } from '../../utils/academicWorkUtils';
 import type { Work, Course, WorkStatus, WorkType } from '../../types';
 
 export interface WorksViewProps {
@@ -136,11 +132,7 @@ export const WorksView: React.FC<WorksViewProps> = ({
   const handleConfirmDeleteWork = async () => {
     if (!workToDelete) return;
     try {
-      await db.transaction('rw', [db.works, db.tasks, db.notes], async () => {
-        await db.tasks.where('workId').equals(workToDelete.id).delete();
-        await db.notes.where('workId').equals(workToDelete.id).modify({ workId: undefined });
-        await db.works.delete(workToDelete.id);
-      });
+      await deleteAcademicWorkCascade(workToDelete.id);
       showToast('Trabajo eliminado', `"${workToDelete.title}" ha sido eliminado del sistema.`, 'info');
       setWorkToDelete(null);
     } catch {

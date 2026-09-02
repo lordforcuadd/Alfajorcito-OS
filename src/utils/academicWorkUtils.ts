@@ -1,3 +1,5 @@
+import { db } from '../db';
+
 /**
  * Academic Work Utilities & Calculations for Alfajorcito OS
  */
@@ -143,3 +145,62 @@ export const WORK_DELETION_CONSEQUENCES = {
   dissociationNotice:
     '* Las fuentes científicas, notas, ideas extraídas y paráfrasis de tu biblioteca se conservarán intactas; únicamente se desvincularán de este trabajo para evitar registros huérfanos.'
 };
+
+export async function deleteAcademicWorkCascade(workIdToDelete: string): Promise<void> {
+  await db.transaction(
+    'rw',
+    [
+      db.works,
+      db.tasks,
+      db.inquiries,
+      db.citations,
+      db.sources,
+      db.ideas,
+      db.paraphrases,
+      db.notes
+    ],
+    async () => {
+      // 1. Delete associated tasks
+      await db.tasks.where({ workId: workIdToDelete }).delete();
+
+      // 2. Delete associated inquiries
+      await db.inquiries.where({ workId: workIdToDelete }).delete();
+
+      // 3. Delete citations explicitly linked to this work
+      await db.citations.where({ workId: workIdToDelete }).delete();
+
+      // 4. Dissociate ideas & paraphrases (preserve knowledge in library, remove work link)
+      const relatedIdeas = await db.ideas.where({ workId: workIdToDelete }).toArray();
+      for (const idea of relatedIdeas) {
+        await db.ideas.update(idea.id, { workId: undefined, updatedAt: Date.now() });
+      }
+
+      const relatedParaphrases = await db.paraphrases.where({ workId: workIdToDelete }).toArray();
+      for (const p of relatedParaphrases) {
+        await db.paraphrases.update(p.id, { workId: undefined, updatedAt: Date.now() });
+      }
+
+      // 5. Clean workIds array in sources (dissociate rather than hard delete source knowledge)
+      const relatedSources = await db.sources.toArray();
+      const dissociated = dissociateWorkIdFromSources(relatedSources, workIdToDelete);
+      for (let i = 0; i < relatedSources.length; i++) {
+        const original = relatedSources[i];
+        if (original.workIds && original.workIds.includes(workIdToDelete)) {
+          await db.sources.update(original.id, {
+            workIds: dissociated[i].workIds,
+            updatedAt: Date.now()
+          });
+        }
+      }
+
+      // 6. Dissociate notes (preserve notes in Second Brain, remove orphan workId link)
+      const relatedNotes = await db.notes.where({ workId: workIdToDelete }).toArray();
+      for (const note of relatedNotes) {
+        await db.notes.update(note.id, { workId: undefined, updatedAt: Date.now() });
+      }
+
+      // 7. Delete work record itself
+      await db.works.delete(workIdToDelete);
+    }
+  );
+}

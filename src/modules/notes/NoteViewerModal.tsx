@@ -84,13 +84,20 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
       return;
     }
 
-    const updatedSlug = editTitle
+    const baseSlug = editTitle
       .trim()
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)+/g, '') || currentNote.slug;
+
+    let updatedSlug = baseSlug;
+    let counter = 2;
+    while (notes.some((n) => n.id !== currentNote.id && n.slug === updatedSlug)) {
+      updatedSlug = `${baseSlug}-${counter}`;
+      counter++;
+    }
 
     const parsedTags = editTags
       .split(',')

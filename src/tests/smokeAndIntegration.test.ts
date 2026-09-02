@@ -211,4 +211,40 @@ describe('Interactive Smoke & Integration Suite', () => {
       expect(courseIds.has(inq.courseId)).toBe(true);
     }
   });
+
+  it('cleans note preview markdown and wikilinks without orphaned pipes or markers', () => {
+    const rawContent = '## Encabezado\nNota sobre [[Regulación Emocional]] y también [[Terapia Cognitiva|TCC]] con **énfasis** y *cursiva*.';
+    const preview = rawContent
+      .replace(/#+\s/g, '')
+      .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target, alias) => alias || target)
+      .replace(/[*_`~>]/g, '')
+      .trim();
+
+    expect(preview).not.toContain('||');
+    expect(preview).toContain('Regulación Emocional');
+    expect(preview).toContain('TCC');
+    expect(preview).not.toContain('*');
+    expect(preview).not.toContain('#');
+  });
+
+  it('guarantees unique note slug generation by appending incremental counter', () => {
+    const existingNotes = [
+      { id: 'n1', slug: 'regulacion-emocional' },
+      { id: 'n2', slug: 'regulacion-emocional-2' }
+    ];
+
+    const generateUniqueSlug = (baseSlug: string, currentNoteId: string) => {
+      let updatedSlug = baseSlug;
+      let counter = 2;
+      while (existingNotes.some((n) => n.id !== currentNoteId && n.slug === updatedSlug)) {
+        updatedSlug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+      return updatedSlug;
+    };
+
+    expect(generateUniqueSlug('regulacion-emocional', 'n3')).toBe('regulacion-emocional-3');
+    expect(generateUniqueSlug('regulacion-emocional', 'n1')).toBe('regulacion-emocional');
+    expect(generateUniqueSlug('nueva-nota', 'n4')).toBe('nueva-nota');
+  });
 });
