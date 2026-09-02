@@ -16,6 +16,7 @@ import { Input, TextArea, Select } from '../../components/common/Input';
 import { Badge } from '../../components/common/Badge';
 import { useToast } from '../../components/common/Toast';
 import { FormattedNoteContent } from './WikiLinkRenderer';
+import { slugifyTitle, generateUniqueSlug } from '../../utils/idHelper';
 import type { Note, Concept, Course, Work, ParaCategory } from '../../types';
 
 export interface NoteViewerModalProps {
@@ -84,20 +85,8 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
       return;
     }
 
-    const baseSlug = editTitle
-      .trim()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)+/g, '') || currentNote.slug;
-
-    let updatedSlug = baseSlug;
-    let counter = 2;
-    while (notes.some((n) => n.id !== currentNote.id && n.slug === updatedSlug)) {
-      updatedSlug = `${baseSlug}-${counter}`;
-      counter++;
-    }
+    const baseSlug = slugifyTitle(editTitle, currentNote.slug);
+    const updatedSlug = generateUniqueSlug(baseSlug, currentNote.id, notes);
 
     const parsedTags = editTags
       .split(',')

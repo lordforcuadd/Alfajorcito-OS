@@ -18,7 +18,7 @@ import { Input, Select, TextArea } from '../common/Input';
 import { db } from '../../db';
 import { useToast } from '../common/Toast';
 import { triggerCelebrationConfetti } from '../../utils/confettiHelper';
-import { dissociateWorkIdFromSources, WORK_DELETION_CONSEQUENCES, deleteAcademicWorkCascade } from '../../utils/academicWorkUtils';
+import { WORK_DELETION_CONSEQUENCES, deleteAcademicWorkCascade } from '../../utils/academicWorkUtils';
 import { generateId } from '../../utils/idHelper';
 import { analyzeInstructionsWithAI } from '../../services/aiService';
 import { formatLocalDateForInput, parseDeadlineTimestamp } from '../../utils/dateHelper';

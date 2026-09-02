@@ -3,6 +3,8 @@ import { generateGoogleCalendarUrl, generateICSFile, generateGoogleDocsRichHTML 
 import { formatFullReference, formatInTextNarrative, formatInTextParenthetical } from '../utils/citationEngine';
 import { sanitizeSlug } from '../utils/obsidianExporter';
 import { parseAcademicCycle, filterTodayTasks, filterOverdueTasks, getDeadlineUrgencyMeta } from '../utils/academicWorkUtils';
+import { slugifyTitle, generateUniqueSlug } from '../utils/idHelper';
+import { formatNotePreview } from '../utils/notePreview';
 import type { Work, Source, UserProfile } from '../types';
 
 describe('Interactive Smoke & Integration Suite', () => {
@@ -214,11 +216,7 @@ describe('Interactive Smoke & Integration Suite', () => {
 
   it('cleans note preview markdown and wikilinks without orphaned pipes or markers', () => {
     const rawContent = '## Encabezado\nNota sobre [[Regulación Emocional]] y también [[Terapia Cognitiva|TCC]] con **énfasis** y *cursiva*.';
-    const preview = rawContent
-      .replace(/#+\s/g, '')
-      .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target, alias) => alias || target)
-      .replace(/[*_`~>]/g, '')
-      .trim();
+    const preview = formatNotePreview(rawContent);
 
     expect(preview).not.toContain('||');
     expect(preview).toContain('Regulación Emocional');
@@ -233,18 +231,11 @@ describe('Interactive Smoke & Integration Suite', () => {
       { id: 'n2', slug: 'regulacion-emocional-2' }
     ];
 
-    const generateUniqueSlug = (baseSlug: string, currentNoteId: string) => {
-      let updatedSlug = baseSlug;
-      let counter = 2;
-      while (existingNotes.some((n) => n.id !== currentNoteId && n.slug === updatedSlug)) {
-        updatedSlug = `${baseSlug}-${counter}`;
-        counter++;
-      }
-      return updatedSlug;
-    };
-
-    expect(generateUniqueSlug('regulacion-emocional', 'n3')).toBe('regulacion-emocional-3');
-    expect(generateUniqueSlug('regulacion-emocional', 'n1')).toBe('regulacion-emocional');
-    expect(generateUniqueSlug('nueva-nota', 'n4')).toBe('nueva-nota');
+    expect(generateUniqueSlug('regulacion-emocional', 'n3', existingNotes)).toBe('regulacion-emocional-3');
+    expect(generateUniqueSlug('regulacion-emocional', 'n1', existingNotes)).toBe('regulacion-emocional');
+    expect(generateUniqueSlug('nueva-nota', 'n4', existingNotes)).toBe('nueva-nota');
+    expect(slugifyTitle('Regulación Emocional en USMP')).toBe('regulacion-emocional-en-usmp');
+    expect(slugifyTitle('¡¿Título imposible?!')).toBe('titulo-imposible');
+    expect(slugifyTitle('***', 'fallback')).toBe('fallback');
   });
 });

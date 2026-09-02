@@ -26,7 +26,7 @@ import { resolveDOI, extractDOI } from '../../services/academicApis';
 import { auditSourceMetadata } from '../../utils/antiHallucination';
 import { formulateQuestionForTeacher, analyzeInstructionsWithAI } from '../../services/aiService';
 import { useToast } from '../common/Toast';
-import { generateId } from '../../utils/idHelper';
+import { generateId, slugifyTitle } from '../../utils/idHelper';
 import { parseDeadlineTimestamp } from '../../utils/dateHelper';
 import { sanitizeSafeUrl } from '../../utils/urlHelper';
 import type { CitationStyle, WorkType, WorkStatus, ParaCategory, TaskPriority, SourceType, Author, UserProfile, Source, VerificationProvider } from '../../types';
@@ -193,13 +193,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
     setIsSubmitting(true);
     try {
       const now = Date.now();
-      const slug = noteTitle
-        .trim()
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)+/g, '') || `nota-${now}`;
+      const slug = slugifyTitle(noteTitle, `nota-${now}`);
 
       const parsedTags = noteTags
         .split(',')

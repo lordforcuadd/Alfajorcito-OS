@@ -24,6 +24,7 @@ import { InteractiveGraph } from './InteractiveGraph';
 import { NoteViewerModal } from './NoteViewerModal';
 import { generateId } from '../../utils/idHelper';
 import { formatLocalDateForInput } from '../../utils/dateHelper';
+import { formatNotePreview } from '../../utils/notePreview';
 import type { Note, Concept, ParaCategory, Course, Work, Source } from '../../types';
 
 export interface BrainViewProps {
@@ -346,7 +347,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
                       </h3>
 
                       <p className="text-xs text-[#5A6275] line-clamp-3 leading-relaxed">
-                        {note.content.replace(/#+\s/g, '').replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target, alias) => alias || target).replace(/[*_`~>]/g, '').trim()}
+                        {formatNotePreview(note.content)}
                       </p>
                     </div>
 
