@@ -10,9 +10,7 @@ import {
   Settings,
   WifiOff,
   GitFork,
-  Award,
-  Sparkles,
-  Heart
+  Award
 } from 'lucide-react';
 import { Button } from '../common/Button';
 import { db } from '../../db';

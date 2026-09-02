@@ -5,12 +5,8 @@ import {
   Trash2,
   Calendar,
   BookOpen,
-  GraduationCap,
-  Sparkles,
   Link2,
-  AlertTriangle,
-  Clock,
-  Layers
+  AlertTriangle
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';

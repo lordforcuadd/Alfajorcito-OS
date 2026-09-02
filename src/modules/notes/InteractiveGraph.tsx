@@ -4,19 +4,14 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
-  Minimize2,
   RefreshCw,
   Search,
   Filter,
   Play,
   Pause,
-  Layers,
-  ArrowRight,
   Sparkles,
   FileText,
-  Tag,
   GraduationCap,
-  Network,
   X
 } from 'lucide-react';
 import { Card } from '../../components/common/Card';

@@ -8,13 +8,10 @@ import {
   CheckSquare,
   Search,
   Sparkles,
-  CheckCircle2,
-  AlertCircle,
   BookMarked,
   Palette,
   User,
   Mail,
-  Link as LinkIcon,
   Calendar,
   Plus
 } from 'lucide-react';

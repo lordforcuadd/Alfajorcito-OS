@@ -9,18 +9,11 @@ import {
   BookOpen,
   CheckSquare,
   Sparkles,
-  ChevronRight,
   Plus,
-  BookMarked,
   CheckCircle2,
-  AlertCircle,
   Brain,
   GraduationCap,
-  ArrowUpRight,
-  Bookmark,
-  Check,
-  Award,
-  FileText
+  ArrowUpRight
 } from 'lucide-react';
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';

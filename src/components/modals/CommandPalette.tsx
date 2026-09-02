@@ -9,7 +9,6 @@ import {
   HelpCircle,
   CheckSquare,
   ArrowRight,
-  Sparkles,
   X
 } from 'lucide-react';
 import { db } from '../../db';

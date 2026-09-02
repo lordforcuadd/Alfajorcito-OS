@@ -1,12 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  FileText,
   Edit3,
   Eye,
   Trash2,
-  Share2,
-  FolderDown,
-  Sparkles,
   Link2
 } from 'lucide-react';
 import { db } from '../../db';

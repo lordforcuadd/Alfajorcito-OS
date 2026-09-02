@@ -12,7 +12,6 @@ import {
   FolderDown,
   ShieldCheck,
   Key,
-  ExternalLink,
   User,
   GraduationCap,
   Award,

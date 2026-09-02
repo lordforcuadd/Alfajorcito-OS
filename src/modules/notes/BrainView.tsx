@@ -5,11 +5,8 @@ import {
   Plus,
   FolderDown,
   FileText,
-  Tag,
   Search,
-  Sparkles,
   Lightbulb,
-  Layers,
   Network
 } from 'lucide-react';
 import { db } from '../../db';

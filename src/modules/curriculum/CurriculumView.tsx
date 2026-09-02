@@ -2,20 +2,9 @@ import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   GraduationCap,
-  BookOpen,
-  Award,
-  Calendar,
   CheckCircle2,
   ChevronRight,
-  ShieldCheck,
-  Stethoscope,
-  Building2,
-  FileText,
-  Search,
-  ExternalLink,
   Plus,
-  Edit2,
-  Trash2,
   Check
 } from 'lucide-react';
 import { Card } from '../../components/common/Card';
