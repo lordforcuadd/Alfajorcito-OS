@@ -14,6 +14,7 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Input, TextArea } from '../../components/common/Input';
 import { Badge } from '../../components/common/Badge';
+import { EmptyState } from '../../components/common/EmptyState';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../components/common/Toast';
 import { exportVaultZip } from '../../utils/obsidianExporter';
@@ -272,11 +273,14 @@ export const BrainView: React.FC<BrainViewProps> = ({
 
           {/* Notes Grid */}
           {filteredNotes.length === 0 ? (
-            <Card variant="subtle" className="text-center py-12 px-4">
-              <FileText className="w-8 h-8 text-[#8D99AE] mx-auto mb-2 opacity-60" />
-              <p className="text-sm font-semibold text-[#5A6275]">No se encontraron notas con estos filtros.</p>
-              <p className="text-xs text-[#8D99AE] mt-0.5">Prueba a buscar con otro término o crea una nueva nota de estudio.</p>
-            </Card>
+            <EmptyState
+              icon={<FileText className="w-7 h-7 text-[#8C3A32]" />}
+              title="No se encontraron notas"
+              description="Prueba a buscar con otro término, ajustar el filtro de categoría o registrar una nueva nota en tu Segundo Cerebro."
+              actionLabel="Crear Nueva Nota"
+              actionIcon={<Plus className="w-4 h-4" />}
+              onAction={() => onOpenQuickCapture('note')}
+            />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {filteredNotes.map((note) => {
@@ -352,7 +356,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
                       <div className="flex items-center gap-1 flex-wrap min-w-0">
                         {note.tags.slice(0, 2).map((tag, i) => (
                           <span key={i} className="text-[10px] bg-[#F5F1EB] px-1.5 py-0.5 rounded-md text-[#5A6275] font-medium truncate max-w-[90px]">
-                            #{tag}
+                            #{tag.replace(/^#+/, '')}
                           </span>
                         ))}
                       </div>

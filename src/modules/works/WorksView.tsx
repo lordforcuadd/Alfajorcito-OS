@@ -16,6 +16,7 @@ import {
 import { db } from '../../db';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
+import { EmptyState } from '../../components/common/EmptyState';
 import { WorkStatusBadge, CitationStyleBadge, WORK_STATUS_META } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../components/common/Toast';
@@ -354,29 +355,17 @@ export const WorksView: React.FC<WorksViewProps> = ({
 
       {/* ─── 3. WORKS CARDS GRID ─── */}
       {filteredWorks.length === 0 ? (
-        <Card variant="subtle" className="text-center py-12 rounded-3xl border-dashed space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-[#FDF2F0] border border-[#E8A598]/40 flex items-center justify-center mx-auto text-[#D98880]">
-            <FolderOpen className="w-6 h-6" />
-          </div>
-          <div className="space-y-1">
-            <h4 className="font-bold text-[#2B2D42] text-sm">No se encontraron trabajos</h4>
-            <p className="text-xs text-[#8D99AE] max-w-sm mx-auto">
-              No hay entregables que coincidan con los filtros seleccionados o búsqueda.
-            </p>
-          </div>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              setSelectedCourseFilter('ALL');
-              setSelectedStatusFilter('ALL');
-              setSearchQuery('');
-            }}
-            className="font-bold mt-2"
-          >
-            Limpiar Filtros
-          </Button>
-        </Card>
+        <EmptyState
+          icon={<FolderOpen className="w-7 h-7 text-[#8C3A32]" />}
+          title="No se encontraron trabajos"
+          description="No hay entregables que coincidan con los filtros seleccionados o la búsqueda actual."
+          actionLabel="Limpiar Filtros"
+          onAction={() => {
+            setSelectedCourseFilter('ALL');
+            setSelectedStatusFilter('ALL');
+            setSearchQuery('');
+          }}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredWorks.map((work) => {
@@ -402,11 +391,11 @@ export const WorksView: React.FC<WorksViewProps> = ({
               >
                 {/* Card Top: Badges & Status Dropdown */}
                 <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-2 flex-wrap sm:flex-nowrap">
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap min-w-0 flex-1">
                       {/* Course Pill */}
                       <span
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold text-[#2B2D42] truncate max-w-[180px]"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold text-[#2B2D42] truncate max-w-[140px] sm:max-w-[180px]"
                         style={{
                           backgroundColor: course?.color ? `${course.color}25` : '#FAF8F5',
                           border: `1px solid ${course?.color ? `${course.color}50` : '#EBE5DF'}`
@@ -434,6 +423,7 @@ export const WorksView: React.FC<WorksViewProps> = ({
                         onChange={(e) => handleCardStatusChange(e, work)}
                         className="text-[11px] font-bold bg-[#FAF8F5] border border-[#EBE5DF] rounded-xl px-2 py-1 text-[#2B2D42] focus:outline-none focus:border-[#E8A598] cursor-pointer shadow-2xs hover:bg-white transition-colors"
                         title="Cambiar estado del trabajo"
+                        aria-label={`Cambiar estado del trabajo: ${work.title}`}
                       >
                         {Object.entries(WORK_STATUS_META).map(([statusKey, meta]) => (
                           <option key={statusKey} value={statusKey}>
@@ -448,7 +438,7 @@ export const WorksView: React.FC<WorksViewProps> = ({
                           setWorkToEdit(work);
                           setIsWorkModalOpen(true);
                         }}
-                        className="p-1 hover:bg-[#F5F1EB] text-[#8D99AE] hover:text-[#2B2D42] rounded-lg transition-colors cursor-pointer"
+                        className="p-1 hover:bg-[#F5F1EB] text-[#5A6275] hover:text-[#2B2D42] rounded-lg transition-colors cursor-pointer"
                         title={`Editar trabajo: ${work.title}`}
                         aria-label={`Editar trabajo: ${work.title}`}
                       >
@@ -460,7 +450,7 @@ export const WorksView: React.FC<WorksViewProps> = ({
                           e.stopPropagation();
                           setWorkToDelete(work);
                         }}
-                        className="p-1 hover:bg-rose-50 text-[#8D99AE] hover:text-[#C62828] rounded-lg transition-colors cursor-pointer"
+                        className="p-1 hover:bg-rose-50 text-[#5A6275] hover:text-[#C62828] rounded-lg transition-colors cursor-pointer"
                         title={`Eliminar trabajo: ${work.title}`}
                         aria-label={`Eliminar trabajo: ${work.title}`}
                       >

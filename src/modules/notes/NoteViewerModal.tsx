@@ -13,6 +13,7 @@ import { Badge } from '../../components/common/Badge';
 import { useToast } from '../../components/common/Toast';
 import { FormattedNoteContent } from './WikiLinkRenderer';
 import { slugifyTitle, generateUniqueSlug } from '../../utils/idHelper';
+import { containsBacklinkTo } from '../../utils/wikiLinkHelper';
 import type { Note, Concept, Course, Work, ParaCategory } from '../../types';
 
 export interface NoteViewerModalProps {
@@ -137,21 +138,11 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
   const currentCourse = courses.find((c) => c.id === currentNote.courseId);
   const currentWork = works.find((w) => w.id === currentNote.workId);
 
-  // Find incoming backlinks (notes that mention this note's title in their content, accent-insensitive)
-  const normalizeBacklinkText = (str: string) =>
-    str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-  const noteTitleNorm = normalizeBacklinkText(currentNote.title);
-  const noteSlugNorm = normalizeBacklinkText(currentNote.slug);
-
+  // Find incoming backlinks (notes that mention this note's title or slug in their content, supporting aliases, anchors and accents)
   const backlinks = notes.filter((n) => {
     if (n.id === currentNote.id) return false;
     if ((n.backlinks || []).includes(currentNote.id)) return true;
-    const contentNorm = normalizeBacklinkText(n.content);
-    return (
-      contentNorm.includes(`[[${noteTitleNorm}]]`) ||
-      contentNorm.includes(`[[${noteSlugNorm}]]`)
-    );
+    return containsBacklinkTo(n.content, currentNote.title, currentNote.slug);
   });
 
   // Handle Delete

@@ -289,6 +289,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     } catch (err) {
       console.error('Error al importar backup JSON:', err);
       showToast('Error de importación', 'El archivo no contiene un esquema de datos válido o está dañado.', 'error');
+    } finally {
+      e.target.value = '';
     }
   };
 
@@ -310,7 +312,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       a.href = url;
       a.download = `Alfajorcito_Obsidian_Vault_${formatLocalDateForInput(new Date())}.zip`;
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       showToast('Vault generado', 'Archivo .zip listo para abrir en Obsidian.', 'success');
     } catch {
       showToast('Error', 'No se pudo generar el Vault.', 'error');

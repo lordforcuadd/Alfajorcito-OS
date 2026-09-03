@@ -8,6 +8,7 @@ import { db } from '../../db';
 import { useToast } from '../common/Toast';
 import { generateId } from '../../utils/idHelper';
 import { sanitizeSafeUrl } from '../../utils/urlHelper';
+import { COURSE_PASTEL_PALETTE as PASTEL_COLORS } from '../../utils/themeTokens';
 import type { Course, UserProfile } from '../../types';
 
 export interface CourseModalProps {
@@ -15,17 +16,6 @@ export interface CourseModalProps {
   onClose: () => void;
   courseToEdit?: Course | null;
 }
-
-const PASTEL_COLORS = [
-  '#D98880', // Rose
-  '#B39DDB', // Lavender
-  '#80CBC4', // Mint
-  '#FFCC80', // Amber
-  '#90CAF9', // Blue
-  '#EF9A9A', // Coral
-  '#A5D6A7', // Sage Green
-  '#CE93D8'  // Purple
-];
 
 export const CourseModal: React.FC<CourseModalProps> = ({
   isOpen,

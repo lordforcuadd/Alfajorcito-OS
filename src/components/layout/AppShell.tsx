@@ -261,7 +261,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] text-[#2B2D42] flex flex-col md:flex-row pb-20 md:pb-0">
+    <div className="min-h-screen bg-[#FAF8F5] text-[#2B2D42] flex flex-col md:flex-row pb-24 md:pb-0">
       {/* Desktop / Tablet Modern Sidebar */}
       <aside className="hidden md:flex flex-col w-64 lg:w-72 bg-white/95 backdrop-blur-md border-r border-[#EBE5DF] h-screen sticky top-0 shrink-0 z-30 p-4 lg:p-5 justify-between select-none overflow-y-auto tab-scroll-pc">
         <div className="space-y-4 lg:space-y-5">
@@ -422,7 +422,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
             <button
               onClick={onOpenSettings}
-              className="md:hidden p-1.5 rounded-xl text-[#5A6275] hover:bg-white hover:border-[#EBE5DF] border border-transparent transition-all cursor-pointer"
+              className="md:hidden min-w-[40px] min-h-[40px] flex items-center justify-center p-2 rounded-xl text-[#5A6275] hover:bg-white hover:border-[#EBE5DF] border border-transparent transition-all cursor-pointer"
               title="Configuración & Perfil"
               aria-label="Configuración y Perfil"
             >
@@ -437,8 +437,11 @@ export const AppShell: React.FC<AppShellProps> = ({
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation Bar (Fixed bottom with balanced spacing and touch targets) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-[#EBE5DF] px-1 py-1 shadow-lg">
+      {/* Mobile Bottom Navigation Bar (Fixed bottom with balanced spacing and safe-area padding) */}
+      <div
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-[#EBE5DF] px-1 pt-1 shadow-lg"
+        style={{ paddingBottom: 'max(0.375rem, env(safe-area-inset-bottom))' }}
+      >
         <div className="flex items-center justify-between gap-0.5 max-w-md mx-auto">
           {navItems.slice(0, 3).map((item) => {
             const Icon = item.icon;
@@ -448,9 +451,10 @@ export const AppShell: React.FC<AppShellProps> = ({
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
                 className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1 px-0.5 rounded-xl transition-all cursor-pointer ${
-                  isActive ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
+                  isActive ? 'text-[#8C3A32] font-bold' : 'text-[#5A6275]'
                 }`}
                 title={item.label}
+                aria-label={item.label}
               >
                 <Icon className="w-4.5 h-4.5 shrink-0" />
                 <span className="text-[9px] truncate max-w-full leading-tight">{item.mobileLabel}</span>
@@ -476,9 +480,10 @@ export const AppShell: React.FC<AppShellProps> = ({
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
                 className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1 px-0.5 rounded-xl transition-all cursor-pointer ${
-                  isActive ? 'text-[#8C3A32] font-bold' : 'text-[#8D99AE]'
+                  isActive ? 'text-[#8C3A32] font-bold' : 'text-[#5A6275]'
                 }`}
                 title={item.label}
+                aria-label={item.label}
               >
                 <Icon className="w-4.5 h-4.5 shrink-0" />
                 <span className="text-[9px] truncate max-w-full leading-tight">{item.mobileLabel}</span>

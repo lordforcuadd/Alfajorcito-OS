@@ -53,7 +53,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
       {error ? (
         <p className="text-[11px] sm:text-xs text-[#C62828] font-medium">{error}</p>
       ) : helperText ? (
-        <p className="text-[11px] sm:text-xs text-[#8D99AE]">{helperText}</p>
+        <p className="text-[11px] sm:text-xs text-[#5A6275]">{helperText}</p>
       ) : null}
     </div>
   );
@@ -96,6 +96,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(({
         <select
           ref={ref}
           id={selectId}
+          aria-label={props['aria-label'] || label || 'Seleccionar opción'}
           className={`w-full appearance-none bg-white border ${
             error ? 'border-[#EF9A9A] focus:ring-[#EF9A9A]' : 'border-[#EBE5DF] focus:border-[#E8A598] focus:ring-[#E8A598]/20'
           } rounded-xl sm:rounded-2xl px-3 py-2 sm:px-3.5 sm:py-2.5 pr-9 sm:pr-10 text-xs sm:text-sm text-[#2B2D42] focus:outline-none focus:ring-2 sm:focus:ring-3 transition-all duration-150 shadow-2xs cursor-pointer ${
@@ -112,7 +113,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(({
       {error ? (
         <p className="text-[11px] sm:text-xs text-[#C62828] font-medium">{error}</p>
       ) : helperText ? (
-        <p className="text-[11px] sm:text-xs text-[#8D99AE]">{helperText}</p>
+        <p className="text-[11px] sm:text-xs text-[#5A6275]">{helperText}</p>
       ) : null}
     </div>
   );
@@ -134,18 +135,18 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(({
   rows = 4,
   ...props
 }, ref) => {
-  const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const textareaId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
   return (
     <div className="w-full space-y-1 sm:space-y-1.5">
       {label && (
-        <label htmlFor={inputId} className="block text-[11px] sm:text-xs font-bold text-[#5A6275] uppercase tracking-wider">
+        <label htmlFor={textareaId} className="block text-[11px] sm:text-xs font-bold text-[#5A6275] uppercase tracking-wider">
           {label}
         </label>
       )}
       <textarea
         ref={ref}
-        id={inputId}
+        id={textareaId}
         rows={rows}
         className={`w-full bg-white border ${
           error ? 'border-[#EF9A9A] focus:ring-[#EF9A9A]' : 'border-[#EBE5DF] focus:border-[#E8A598] focus:ring-[#E8A598]/20'
@@ -155,7 +156,7 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(({
       {error ? (
         <p className="text-[11px] sm:text-xs text-[#C62828] font-medium">{error}</p>
       ) : helperText ? (
-        <p className="text-[11px] sm:text-xs text-[#8D99AE]">{helperText}</p>
+        <p className="text-[11px] sm:text-xs text-[#5A6275]">{helperText}</p>
       ) : null}
     </div>
   );

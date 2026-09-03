@@ -1,5 +1,6 @@
 import React from 'react';
-import { FileText, Sparkles, GraduationCap, BookOpen, ExternalLink, Plus } from 'lucide-react';
+import { FileText, Sparkles, GraduationCap, BookOpen, Plus } from 'lucide-react';
+import { parseWikiLink, normalizeWikiTarget, matchWikiEntity } from '../../utils/wikiLinkHelper';
 import type { Note, Concept, Course, Work } from '../../types';
 
 export interface FormattedContentProps {
@@ -29,15 +30,17 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
     return <p className="text-xs text-[#8D99AE] italic">Nota vacía.</p>;
   }
 
-  // Handle Wiki-Link Navigation
-  const handleLinkClick = (rawTarget: string) => {
-    const target = rawTarget.trim();
-    const targetLower = target.toLowerCase();
+  // Handle Wiki-Link Navigation with Alias and Target resolution
+  const handleLinkClick = (rawPart: string) => {
+    const parsed = parseWikiLink(rawPart);
+    const targetNorm = parsed.cleanTarget;
+
     // 1. Check matching note by title or slug
     const matchedNote = notes.find((n) => {
-      const nt = n.title.toLowerCase();
-      if (nt === targetLower || n.slug.toLowerCase() === targetLower) return true;
-      if (targetLower.length >= 3 && (nt.includes(targetLower) || (nt.length >= 3 && targetLower.includes(nt)))) return true;
+      const ntNorm = normalizeWikiTarget(n.title);
+      const nsNorm = normalizeWikiTarget(n.slug);
+      if (ntNorm === targetNorm || (nsNorm && nsNorm === targetNorm)) return true;
+      if (matchWikiEntity(targetNorm, n.title)) return true;
       return false;
     });
     if (matchedNote) {
@@ -47,9 +50,9 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
 
     // 2. Check matching concept
     const matchedConcept = concepts.find((c) => {
-      const cn = c.name.toLowerCase();
-      if (cn === targetLower) return true;
-      if (targetLower.length >= 3 && (cn.includes(targetLower) || (cn.length >= 3 && targetLower.includes(cn)))) return true;
+      const cnNorm = normalizeWikiTarget(c.name);
+      if (cnNorm === targetNorm) return true;
+      if (matchWikiEntity(targetNorm, c.name)) return true;
       return false;
     });
     if (matchedConcept) {
@@ -63,9 +66,9 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
 
     // 3. Check matching work / thesis
     const matchedWork = works.find((w) => {
-      const wt = w.title.toLowerCase();
-      if (wt === targetLower) return true;
-      if (targetLower.length >= 3 && (wt.includes(targetLower) || (wt.length >= 3 && targetLower.includes(wt)))) return true;
+      const wtNorm = normalizeWikiTarget(w.title);
+      if (wtNorm === targetNorm) return true;
+      if (matchWikiEntity(targetNorm, w.title)) return true;
       return false;
     });
     if (matchedWork && onNavigateToWork) {
@@ -75,10 +78,10 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
 
     // 4. Check matching course
     const matchedCourse = courses.find((c) => {
-      const ct = c.name.toLowerCase();
-      if (ct === targetLower) return true;
-      if (c.code && c.code.toLowerCase() === targetLower) return true;
-      if (targetLower.length >= 3 && (ct.includes(targetLower) || targetLower.includes(ct))) return true;
+      const ctNorm = normalizeWikiTarget(c.name);
+      const ccNorm = c.code ? normalizeWikiTarget(c.code) : '';
+      if (ctNorm === targetNorm || (ccNorm && ccNorm === targetNorm)) return true;
+      if (matchWikiEntity(targetNorm, c.name)) return true;
       return false;
     });
     if (matchedCourse) {
@@ -91,21 +94,12 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
 
     // 5. If not found, offer to create it
     if (onCreateMissingNote) {
-      onCreateMissingNote(target);
+      onCreateMissingNote(parsed.target);
     }
   };
 
   // Helper to parse inline markdown (bold, italic, tags, and [[wiki-links]])
   const renderInlineText = (text: string, keyPrefix: string) => {
-    // Regex matching [[wiki-links]] or #tags
-    const targetSet = new Set([
-      ...notes.map((n) => n.title.toLowerCase()),
-      ...notes.map((n) => n.slug.toLowerCase()),
-      ...concepts.map((c) => c.name.toLowerCase()),
-      ...works.map((w) => w.title.toLowerCase()),
-      ...courses.map((c) => c.name.toLowerCase()),
-      ...courses.map((c) => (c.code || '').toLowerCase()).filter(Boolean)
-    ]);
     const parts = text.split(/(\[\[.*?\]\]|#[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ_]+)/g);
 
     return parts.map((part, index) => {
@@ -113,32 +107,36 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
 
       // 1. Is [[Wiki-Link]]
       if (part.startsWith('[[') && part.endsWith(']]')) {
-        const linkTitle = part.slice(2, -2).trim();
-        if (!linkTitle) return null;
+        const parsed = parseWikiLink(part);
+        if (!parsed.target) return null;
+
+        const targetNorm = parsed.cleanTarget;
+        const displayLabel = parsed.displayLabel;
 
         const isCourse = courses.some(
           (c) =>
-            c.name.toLowerCase() === linkTitle.toLowerCase() ||
-            (c.code && c.code.toLowerCase() === linkTitle.toLowerCase()) ||
-            (linkTitle.length >= 4 && c.name.toLowerCase().includes(linkTitle.toLowerCase()))
+            normalizeWikiTarget(c.name) === targetNorm ||
+            (c.code && normalizeWikiTarget(c.code) === targetNorm) ||
+            matchWikiEntity(targetNorm, c.name)
         );
         const isWork = works.some(
           (w) =>
-            w.title.toLowerCase() === linkTitle.toLowerCase() ||
-            (linkTitle.length >= 4 && w.title.toLowerCase().includes(linkTitle.toLowerCase()))
+            normalizeWikiTarget(w.title) === targetNorm ||
+            matchWikiEntity(targetNorm, w.title)
         );
         const isConcept = concepts.some(
           (c) =>
-            c.name.toLowerCase() === linkTitle.toLowerCase() ||
-            (linkTitle.length >= 4 && c.name.toLowerCase().includes(linkTitle.toLowerCase()))
+            normalizeWikiTarget(c.name) === targetNorm ||
+            matchWikiEntity(targetNorm, c.name)
         );
         const isNote = notes.some(
           (n) =>
-            n.title.toLowerCase() === linkTitle.toLowerCase() ||
-            (linkTitle.length >= 4 && n.title.toLowerCase().includes(linkTitle.toLowerCase()))
+            normalizeWikiTarget(n.title) === targetNorm ||
+            (n.slug && normalizeWikiTarget(n.slug) === targetNorm) ||
+            matchWikiEntity(targetNorm, n.title)
         );
 
-        const exists = isCourse || isWork || isConcept || isNote || targetSet.has(linkTitle.toLowerCase());
+        const exists = isCourse || isWork || isConcept || isNote;
 
         let badgeStyle = 'bg-[#FAF8F5] text-[#2B2D42] border-[#CBD5E1] hover:bg-white hover:border-[#8C3A32]';
         let Icon = FileText;
@@ -167,13 +165,13 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              handleLinkClick(linkTitle);
+              handleLinkClick(part);
             }}
             className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 mx-1 my-0.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-2xs hover:scale-[1.02] active:scale-[0.98] align-middle select-none max-w-full ${badgeStyle}`}
-            title={`Clic para saltar a: "${linkTitle}"`}
+            title={`Clic para saltar a: "${parsed.target}"${parsed.alias ? ` (${parsed.alias})` : ''}`}
           >
             <Icon className="w-3.5 h-3.5 shrink-0 opacity-90" />
-            <span className="truncate max-w-[180px] sm:max-w-[280px]">{linkTitle}</span>
+            <span className="truncate max-w-[180px] sm:max-w-[280px]">{displayLabel}</span>
           </button>
         );
       }
@@ -269,7 +267,7 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
           const isNumbered = /^\d+\./.test(marker);
           return (
             <div key={lineIdx} className="flex items-start gap-2 pl-1.5 my-0.5">
-              <span className={`font-bold text-xs shrink-0 select-none ${isNumbered ? 'text-[#8C3A32]' : 'text-[#D98880]'}`}>
+              <span className={`font-bold text-xs shrink-0 select-none ${isNumbered ? 'text-[#8C3A32]' : 'text-[#8C3A32]'}`}>
                 {isNumbered ? marker : '•'}
               </span>
               <div className="flex-1 min-w-0">{renderInlineText(bulletMatch[3], `li-${lineIdx}`)}</div>

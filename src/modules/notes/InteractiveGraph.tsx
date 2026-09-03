@@ -6,7 +6,6 @@ import {
   Maximize2,
   RefreshCw,
   Search,
-  Filter,
   Play,
   Pause,
   Sparkles,
@@ -14,11 +13,10 @@ import {
   GraduationCap,
   X
 } from 'lucide-react';
-import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { Badge } from '../../components/common/Badge';
 import { FormattedNoteContent } from './WikiLinkRenderer';
 import { GraphAIChatModal } from './GraphAIChatModal';
+import { parseWikiLink, normalizeWikiTarget } from '../../utils/wikiLinkHelper';
 import type { Note, Concept, Course, Work } from '../../types';
 
 export interface InteractiveGraphProps {
@@ -316,20 +314,17 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
       // 6. Dynamic [[wiki-links]] parsing from note text content
       if (n.content) {
         const matches = n.content.matchAll(/\[\[(.*?)\]\]/g);
-        const normalizeStr = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
         for (const match of matches) {
-          const rawTarget = match[1]?.trim();
-          if (!rawTarget) continue;
-          const targetName = (rawTarget.split('|')[0] || '').trim();
-          if (!targetName) continue;
+          const parsed = parseWikiLink(match[1] || '');
+          if (!parsed.target) continue;
 
-          const targetNorm = normalizeStr(targetName);
+          const targetNorm = parsed.cleanTarget;
 
           // Search matching node by title or label with strict matching guard
           const matchedTarget = newNodes.find((node) => {
             if (node.id === n.id) return false;
-            const nodeNorm = normalizeStr(node.label);
+            const nodeNorm = normalizeWikiTarget(node.label);
             if (nodeNorm === targetNorm) return true;
             if (targetNorm.length >= 4 && nodeNorm.length >= 4) {
               const regex = new RegExp(`\\b${targetNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
@@ -742,14 +737,9 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
             ctx.fillStyle = isDimmed ? '#94A3B8' : '#0F172A';
             ctx.fillText(labelText, node.x, node.y + node.radius + 15);
           } else {
-            // Clean, uncluttered typography with subtle text shadow
-            ctx.shadowColor = 'rgba(255, 255, 255, 0.95)';
-            ctx.shadowBlur = 4;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 0;
+            // Clean, uncluttered typography
             ctx.fillStyle = isDimmed ? 'rgba(148, 163, 184, 0.7)' : '#334155';
             ctx.fillText(labelText, node.x, node.y + node.radius + 13);
-            ctx.shadowColor = 'transparent';
           }
         }
 
@@ -767,7 +757,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     return () => {
       cancelAnimationFrame(animationId);
     };
-  }, []);
+  }, [isFullscreen]);
 
   // Convert Screen Mouse/Touch Coordinates to Graph World Coordinates
   const getGraphCoords = (clientX: number, clientY: number) => {
@@ -1255,9 +1245,17 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
               const noteItem = selectedNode.rawItem as Note;
               return (
                 <>
-                  <p className="text-xs text-[#475569] line-clamp-3 bg-[#FAF8F5] p-2.5 rounded-xl border border-[#E2E8F0] leading-relaxed">
-                    {noteItem.content}
-                  </p>
+                  <div className="text-xs text-[#5A6275] max-h-36 overflow-y-auto bg-[#FAF8F5] p-2.5 rounded-xl border border-[#EBE5DF] leading-relaxed">
+                    <FormattedNoteContent
+                      content={noteItem.content}
+                      notes={notes}
+                      concepts={concepts}
+                      courses={courses}
+                      works={works}
+                      onNavigateToNote={onOpenNote}
+                      onNavigateToWork={onOpenWork}
+                    />
+                  </div>
                   <Button
                     variant="primary"
                     size="md"
@@ -1275,7 +1273,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
               const workItem = selectedNode.rawItem as Work;
               return (
                 <>
-                  <div className="space-y-1.5 text-xs bg-[#FAF8F5] p-3 rounded-2xl border border-[#E2E8F0]">
+                  <div className="space-y-1.5 text-xs bg-[#FAF8F5] p-3 rounded-2xl border border-[#EBE5DF]">
                     <p>Tipo: <strong>{workItem.type}</strong></p>
                     <p>Estado: <strong>{workItem.status}</strong></p>
                     {workItem.deadline && (

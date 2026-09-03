@@ -26,6 +26,7 @@ import { useToast } from '../common/Toast';
 import { generateId, slugifyTitle } from '../../utils/idHelper';
 import { parseDeadlineTimestamp } from '../../utils/dateHelper';
 import { sanitizeSafeUrl } from '../../utils/urlHelper';
+import { COURSE_PASTEL_PALETTE as PASTEL_COLORS } from '../../utils/themeTokens';
 import type { CitationStyle, WorkType, WorkStatus, ParaCategory, TaskPriority, SourceType, Author, UserProfile, Source, VerificationProvider } from '../../types';
 
 export type CaptureTab = 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task';
@@ -37,16 +38,6 @@ export interface QuickCaptureModalProps {
   initialCourseId?: string;
   initialWorkId?: string;
 }
-
-const PASTEL_COLORS = [
-  '#FFD1DC', // Pastel Pink
-  '#C1E1C1', // Pastel Mint
-  '#B5EAD7', // Pastel Seafoam
-  '#C7CEEA', // Pastel Periwinkle
-  '#FFDAC1', // Pastel Peach
-  '#E2F0CB', // Pastel Lime
-  '#DED2F9'  // Pastel Lavender
-];
 
 export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
   isOpen,

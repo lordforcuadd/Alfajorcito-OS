@@ -436,7 +436,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                   <p className="text-sm sm:text-base font-extrabold text-[#2B2D42] mt-1">
                     {new Date(work.deadline).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
                   </p>
-                  <span className="text-[11px] text-[#D98880] font-semibold">
+                  <span className="text-[11px] text-[#8C3A32] font-semibold">
                     {getDeadlineUrgencyMeta(calculateDaysRemaining(work.deadline)).label}
                   </span>
                 </Card>
@@ -1339,13 +1339,13 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                 <TextArea
                   ref={draftTextareaRef}
                   id="work-draft-textarea"
-                  rows={16}
+                  rows={10}
                   value={draftText}
                   onChange={(e) => {
                     setDraftText(e.target.value);
                     setHasUnsavedDraft(true);
                   }}
-                  className="font-serif leading-relaxed text-sm"
+                  className="font-serif leading-relaxed text-sm min-h-[220px] sm:min-h-[360px]"
                   placeholder="Comienza a redactar tu ensayo o trabajo aquí. Usa la barra superior de herramientas para negritas, subtítulos, listas, citas en bloque o tablas APA..."
                 />
               </div>
@@ -1482,6 +1482,8 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                       <button
                         onClick={() => handleInsertCitation(s, 'parenthetical')}
                         className="text-[11px] font-bold text-[#8C3A32] hover:underline flex items-center gap-1 cursor-pointer"
+                        title={`Insertar cita: ${s.title}`}
+                        aria-label={`Insertar cita de ${s.title}`}
                       >
                         <Plus className="w-3 h-3 stroke-[2.5]" />
                         <span>Citar</span>

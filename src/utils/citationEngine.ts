@@ -314,10 +314,12 @@ export function formatFullReferenceHTML(source: Source, style: CitationStyle = '
         const doiPart = url ? ` <a href="${url}">${url}</a>` : '';
         return `${authors} (${year}). ${titleWithPeriod}${chapterDetails}${doiPart}`.trim();
       } else {
+        const hasTerminalPunctuation = /[.?!]$/.test(title.trim());
         const italicTitle = `<i>${title}</i>`;
+        const titleDot = hasTerminalPunctuation ? '' : '.';
         const pub = pubEsc ? ` ${ensurePeriod(pubEsc)}` : '';
         const doiPart = url ? ` ${url}` : '';
-        return `${authors} (${year}). ${italicTitle}.${pub}${doiPart}`.trim();
+        return `${authors} (${year}). ${italicTitle}${titleDot}${pub}${doiPart}`.trim();
       }
     }
 

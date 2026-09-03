@@ -242,7 +242,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="py-6 text-center space-y-1">
                   <CheckCircle2 className="w-6 h-6 text-emerald-600 mx-auto opacity-80" />
                   <p className="text-xs font-bold text-[#2B2D42]">¡Estás al día!</p>
-                  <p className="text-[11px] text-[#8D99AE]">No tienes tareas urgentes pendientes para hoy.</p>
+                  <p className="text-[11px] text-[#5A6275]">No tienes tareas urgentes pendientes para hoy.</p>
                 </div>
               ) : (
                 todayTasks.slice(0, 3).map((task) => (
@@ -250,12 +250,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     key={task.id}
                     className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#FAF8F5] hover:bg-[#FDF2F0] border border-[#EBE5DF] transition-colors"
                   >
-                    <input
-                      type="checkbox"
-                      checked={task.isCompleted}
-                      onChange={() => handleToggleTask(task.id, task.isCompleted)}
-                      className="mt-0.5 w-4 h-4 rounded text-[#E8A598] focus:ring-[#E8A598] cursor-pointer shrink-0"
-                    />
+                    <label className="flex items-center justify-center p-1 -m-1 min-w-[36px] min-h-[36px] cursor-pointer shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={task.isCompleted}
+                        onChange={() => handleToggleTask(task.id, task.isCompleted)}
+                        aria-label={`Marcar como completada: ${task.title}`}
+                        className="w-4 h-4 rounded text-[#E8A598] focus:ring-[#E8A598] cursor-pointer"
+                      />
+                    </label>
                     <div className="min-w-0 flex-1">
                       <p className={`text-xs font-semibold leading-snug break-words [overflow-wrap:anywhere] ${task.isCompleted ? 'line-through text-[#8D99AE]' : 'text-[#2B2D42]'}`}>
                         {task.title}
@@ -304,7 +307,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="py-6 text-center space-y-1">
                   <Calendar className="w-6 h-6 text-amber-500 mx-auto opacity-70" />
                   <p className="text-xs font-bold text-[#2B2D42]">Calendario despejado</p>
-                  <p className="text-[11px] text-[#8D99AE]">No hay entregas en las próximas 2 semanas.</p>
+                  <p className="text-[11px] text-[#5A6275]">No hay entregas en las próximas 2 semanas.</p>
                 </div>
               ) : (
                 upcomingWorks.slice(0, 3).map((work) => {
@@ -405,7 +408,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                               showToast('Error', 'No se pudo completar la tarea.', 'error');
                             }
                           }}
-                          className="text-rose-400 hover:text-emerald-600 transition-colors cursor-pointer shrink-0"
+                          className="min-w-[36px] min-h-[36px] flex items-center justify-center p-1 -m-1 text-rose-400 hover:text-emerald-600 transition-colors cursor-pointer shrink-0"
                           title="Marcar como completada"
                           aria-label="Marcar tarea como completada"
                         >
@@ -512,7 +515,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="py-6 text-center space-y-1">
                   <Search className="w-6 h-6 text-indigo-400 mx-auto opacity-70" />
                   <p className="text-xs font-bold text-[#2B2D42]">Sin investigaciones</p>
-                  <p className="text-[11px] text-[#8D99AE]">Crea un nuevo entregable para iniciar.</p>
+                  <p className="text-[11px] text-[#5A6275]">Crea un nuevo entregable para iniciar.</p>
                 </div>
               ) : (
                 activeResearchWorks.slice(0, 3).map((work) => {
@@ -571,7 +574,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="py-6 text-center space-y-1">
                   <BookOpen className="w-6 h-6 text-teal-500 mx-auto opacity-70" />
                   <p className="text-xs font-bold text-[#2B2D42]">Sin fuentes aún</p>
-                  <p className="text-[11px] text-[#8D99AE]">Indexa tu primer paper con DOI.</p>
+                  <p className="text-[11px] text-[#5A6275]">Indexa tu primer paper con DOI.</p>
                 </div>
               ) : (
                 recentSources.map((src) => (
@@ -685,7 +688,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="py-6 text-center space-y-1">
                   <Brain className="w-6 h-6 text-[#D98880] mx-auto opacity-70" />
                   <p className="text-xs font-bold text-[#2B2D42]">Sin notas atómicas</p>
-                  <p className="text-[11px] text-[#8D99AE]">Crea tu primera nota para alimentar el grafo.</p>
+                  <p className="text-[11px] text-[#5A6275]">Crea tu primera nota para alimentar el grafo.</p>
                 </div>
               ) : (
                 recentNotes.map((note) => {
