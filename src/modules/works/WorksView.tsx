@@ -154,7 +154,7 @@ export const WorksView: React.FC<WorksViewProps> = ({
       const q = searchQuery.toLowerCase().trim();
       const matchTitle = w.title.toLowerCase().includes(q);
       const matchInstructions = (w.rawInstructions || '').toLowerCase().includes(q);
-      const courseName = coursesMap.get(w.courseId)?.name.toLowerCase() || '';
+      const courseName = coursesMap.get(w.courseId ?? '')?.name.toLowerCase() || '';
       return matchTitle || matchInstructions || courseName.includes(q);
     }
     return true;
@@ -248,13 +248,13 @@ export const WorksView: React.FC<WorksViewProps> = ({
       <div className="space-y-3">
         {/* Search Bar */}
         <div className="relative">
-          <Search className="w-4 h-4 text-[#8D99AE] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-[#5A6275] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             placeholder="Buscar trabajos por título, indicaciones o curso..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white border border-[#EBE5DF] text-xs sm:text-sm text-[#2B2D42] placeholder-[#8D99AE] focus:outline-none focus:border-[#E8A598] focus:ring-2 focus:ring-[#E8A598]/20 transition-all shadow-2xs"
+            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white border border-[#EBE5DF] text-xs sm:text-sm text-[#2B2D42] placeholder-[#5A6275] focus:outline-none focus:border-[#E8A598] focus:ring-2 focus:ring-[#E8A598]/20 transition-all shadow-2xs"
           />
         </div>
 
@@ -308,7 +308,7 @@ export const WorksView: React.FC<WorksViewProps> = ({
                     setCourseToEdit(c);
                     setIsCourseModalOpen(true);
                   }}
-                  className="p-1 hover:bg-[#F5F1EB] text-[#8D99AE] hover:text-[#2B2D42] rounded-lg transition-colors cursor-pointer"
+                  className="p-1 hover:bg-[#F5F1EB] text-[#5A6275] hover:text-[#2B2D42] rounded-lg transition-colors cursor-pointer"
                   title={`Editar curso: ${c.name}`}
                   aria-label={`Editar curso: ${c.name}`}
                 >
@@ -369,7 +369,7 @@ export const WorksView: React.FC<WorksViewProps> = ({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredWorks.map((work) => {
-            const course = coursesMap.get(work.courseId);
+            const course = coursesMap.get(work.courseId ?? '');
             const workSources = sourcesByWorkId.get(work.id) || [];
             const verifiedSourcesCount = workSources.filter((s) => s.verificationStatus === 'VERIFIED').length;
             const workTasks = tasksByWorkId.get(work.id) || [];
@@ -490,7 +490,7 @@ export const WorksView: React.FC<WorksViewProps> = ({
                 <div className="pt-3 border-t border-[#EBE5DF]/70 flex items-center justify-between text-xs text-[#5A6275] gap-2 flex-wrap">
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1" title={`${workSources.length} fuentes científicas vinculadas (${verifiedSourcesCount} verificadas)`}>
-                      <BookOpen className="w-3.5 h-3.5 text-[#8D99AE]" />
+                      <BookOpen className="w-3.5 h-3.5 text-[#5A6275]" />
                       <span className="font-semibold text-[#2B2D42]">{workSources.length}</span>
                       <span className="text-[11px]">fuentes</span>
                       {verifiedSourcesCount > 0 && (
@@ -514,7 +514,7 @@ export const WorksView: React.FC<WorksViewProps> = ({
                       <Clock className="w-3 h-3" />
                       <span>{urgencyMeta.label}</span>
                     </span>
-                    <ChevronRight className="w-4 h-4 text-[#8D99AE] group-hover:text-[#2B2D42] group-hover:translate-x-0.5 transition-all" />
+                    <ChevronRight className="w-4 h-4 text-[#5A6275] group-hover:text-[#2B2D42] group-hover:translate-x-0.5 transition-all" />
                   </div>
                 </div>
               </div>

@@ -140,8 +140,8 @@ export const AppShell: React.FC<AppShellProps> = ({
       const workTitle = customEvent.detail?.title || 'tu trabajo académico';
       setAnimIndex(3); // party celebration mode!
       setIsPusheenPopping(true);
-      setIsCelebratingUntil(Date.now() + 14000); // 14 seconds celebration
-      showPusheenBubble(`¡Felicitaciones, ${profile.name}! 🎉 ¡Entregaste "${workTitle.slice(0, 30)}..."! 🎓`, 6000);
+      const truncatedTitle = workTitle.length > 30 ? `${workTitle.slice(0, 30)}...` : workTitle;
+      showPusheenBubble(`¡Felicitaciones, ${profile.name}! 🎉 ¡Entregaste "${truncatedTitle}"! 🎓`, 6000);
       setTimeout(() => setIsPusheenPopping(false), 800);
     };
 
@@ -307,7 +307,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className={`transition-transform duration-200 ${isActive ? 'text-[#8C3A32] scale-110' : 'text-[#8D99AE] group-hover:text-[#2B2D42] group-hover:scale-105'}`}>
+                    <span className={`transition-transform duration-200 ${isActive ? 'text-[#8C3A32] scale-110' : 'text-[#5A6275] group-hover:text-[#2B2D42] group-hover:scale-105'}`}>
                       <item.icon className="w-4.5 h-4.5" />
                     </span>
                     <span className="truncate">{item.label}</span>
@@ -373,10 +373,10 @@ export const AppShell: React.FC<AppShellProps> = ({
               </div>
               <div className="text-left min-w-0">
                 <span className="text-xs font-extrabold text-[#2B2D42] block truncate group-hover:text-[#8C3A32]">{profile.name}</span>
-                <span className="text-[10px] text-[#8D99AE] block truncate">{profile.currentCycle || '8vo Ciclo'}</span>
+                <span className="text-[10px] text-[#5A6275] block truncate">{profile.currentCycle || '8vo Ciclo'}</span>
               </div>
             </div>
-            <Settings className="w-4 h-4 text-[#8D99AE] group-hover:text-[#8C3A32] group-hover:rotate-45 transition-all shrink-0" />
+            <Settings className="w-4 h-4 text-[#5A6275] group-hover:text-[#8C3A32] group-hover:rotate-45 transition-all shrink-0" />
           </button>
         </div>
       </aside>
@@ -401,11 +401,11 @@ export const AppShell: React.FC<AppShellProps> = ({
           {/* Search Bar (Click to open command palette) */}
           <button
             onClick={onOpenSearch}
-            className="flex-1 max-w-md flex items-center gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white border border-[#EBE5DF] text-xs sm:text-sm text-[#8D99AE] hover:border-[#E8A598] hover:shadow-2xs transition-all cursor-pointer select-none"
+            className="flex-1 max-w-md flex items-center gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white border border-[#EBE5DF] text-xs sm:text-sm text-[#5A6275] hover:border-[#E8A598] hover:shadow-2xs transition-all cursor-pointer select-none"
             title="Abrir buscador global"
             aria-label="Abrir buscador global"
           >
-            <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8D99AE] shrink-0" />
+            <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#5A6275] shrink-0" />
             <span className="truncate">Buscar<span className="hidden sm:inline"> trabajos, fuentes, notas, conceptos, citas...</span></span>
             <kbd className="hidden sm:inline-block ml-auto text-[10px] bg-[#F5F1EB] text-[#5A6275] px-1.5 py-0.5 rounded font-mono border border-[#EBE5DF]">
               Ctrl K

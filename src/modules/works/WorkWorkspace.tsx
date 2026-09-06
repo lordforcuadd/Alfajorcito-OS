@@ -242,7 +242,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
   if (!work) {
     return (
       <div className="p-8 text-center">
-        <p className="text-sm text-[#8D99AE]">Cargando espacio de trabajo...</p>
+        <p className="text-sm text-[#5A6275]">Cargando espacio de trabajo...</p>
       </div>
     );
   }
@@ -268,15 +268,32 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
     }
   };
 
-  // Insert Citation into Draft
-  const handleInsertCitation = (source: Source, type: 'parenthetical' | 'narrative') => {
-    const refNum = sortedWorkSources.findIndex((ws) => ws.id === source.id) + 1;
-    const citeText = type === 'parenthetical'
-      ? formatInTextParenthetical(source, work.citationStyle, undefined, refNum || 1)
-      : formatInTextNarrative(source, work.citationStyle, refNum || 1);
+  // Insert Citation into Draft & Record in db.citations
+  const handleInsertCitation = async (source: Source, type: 'parenthetical' | 'narrative') => {
+    const refNum = workSources.findIndex((ws) => ws.id === source.id) + 1;
+    const narrativeText = formatInTextNarrative(source, work.citationStyle, refNum || 1);
+    const parentheticalText = formatInTextParenthetical(source, work.citationStyle, undefined, refNum || 1);
+    const citeText = type === 'parenthetical' ? parentheticalText : narrativeText;
 
     setDraftText((prev) => `${prev} ${citeText}`);
     setHasUnsavedDraft(true);
+
+    try {
+      await db.citations.add({
+        id: generateId('cite'),
+        sourceId: source.id,
+        workId: work.id,
+        style: work.citationStyle,
+        inTextNarrative: narrativeText,
+        inTextParenthetical: parentheticalText,
+        fullReferenceFormatted: formatFullReference(source, work.citationStyle),
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      });
+    } catch (err) {
+      console.error('Error persisting citation record:', err);
+    }
+
     showToast('Cita insertada', `Añadida cita ${type} en estilo ${work.citationStyle}`, 'success');
   };
 
@@ -437,7 +454,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                     {new Date(work.deadline).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
                   </p>
                   <span className="text-[11px] text-[#8C3A32] font-semibold">
-                    {getDeadlineUrgencyMeta(calculateDaysRemaining(work.deadline)).label}
+                    {getDeadlineUrgencyMeta(calculateDaysRemaining(work.deadline), work.status === 'ENTREGADO').label}
                   </span>
                 </Card>
 
@@ -700,7 +717,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
               {/* Tasks List */}
               <div className="space-y-2 pt-2">
                 {tasks.length === 0 ? (
-                  <p className="text-xs text-[#8D99AE] py-4 text-center italic bg-[#F5F1EB]/40 rounded-2xl border border-dashed border-[#EBE5DF]">
+                  <p className="text-xs text-[#5A6275] py-4 text-center italic bg-[#F5F1EB]/40 rounded-2xl border border-dashed border-[#EBE5DF]">
                     No hay tareas registradas para este trabajo. ¡Añade una arriba!
                   </p>
                 ) : (
@@ -740,7 +757,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                           />
                           <span
                             className={`text-xs font-semibold break-words [overflow-wrap:anywhere] min-w-0 flex-1 ${
-                              t.isCompleted ? 'line-through text-[#8D99AE]' : 'text-[#2B2D42]'
+                              t.isCompleted ? 'line-through text-[#5A6275]' : 'text-[#2B2D42]'
                             }`}
                           >
                             {t.title}
@@ -760,7 +777,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                                 showToast('Error', 'No se pudo eliminar la tarea.', 'error');
                               }
                             }}
-                            className="p-1 text-[#8D99AE] hover:text-[#C62828] hover:bg-[#F5F1EB] rounded-lg transition-colors cursor-pointer"
+                            className="p-1 text-[#5A6275] hover:text-[#C62828] hover:bg-[#F5F1EB] rounded-lg transition-colors cursor-pointer"
                             title="Eliminar tarea"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -1191,7 +1208,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                       <BookMarked className="w-3.5 h-3.5" />
                       <span>Citas Rápidas de tus Fuentes (Haz clic para insertar en el borrador)</span>
                     </span>
-                    <span className="text-[10px] text-[#8D99AE]">
+                    <span className="text-[10px] text-[#5A6275]">
                       Estilo {work.citationStyle.replace('_', ' ')}
                     </span>
                   </div>
@@ -1235,7 +1252,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
                   <label className="text-[11px] font-bold uppercase tracking-wider text-[#5A6275]">
                     Editor de Redacción (Formato APA 7 / Markdown)
                   </label>
-                  <span className="text-[11px] text-[#8D99AE]">Selecciona texto para aplicar formato rápido</span>
+                  <span className="text-[11px] text-[#5A6275]">Selecciona texto para aplicar formato rápido</span>
                 </div>
 
                 <div className="flex items-center gap-1.5 p-1.5 bg-[#F5F1EB] rounded-xl border border-[#EBE5DF] overflow-x-auto tab-scroll-pc scroll-touch touch-pan-x flex-nowrap">

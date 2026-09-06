@@ -13,7 +13,14 @@ export interface DeadlineUrgencyMeta {
 }
 
 export function calculateDaysRemaining(deadlineTimestamp: number, currentTimestamp: number = Date.now()): number {
-  return Math.ceil((deadlineTimestamp - currentTimestamp) / 86400000);
+  const dDate = new Date(deadlineTimestamp);
+  const cDate = new Date(currentTimestamp);
+
+  // Normalize both to midnight local time to compute exact calendar days
+  const dMidnight = new Date(dDate.getFullYear(), dDate.getMonth(), dDate.getDate()).getTime();
+  const cMidnight = new Date(cDate.getFullYear(), cDate.getMonth(), cDate.getDate()).getTime();
+
+  return Math.round((dMidnight - cMidnight) / 86400000);
 }
 
 export function getDeadlineUrgencyMeta(daysRemaining: number, isDelivered: boolean = false): DeadlineUrgencyMeta {
@@ -180,17 +187,14 @@ export async function deleteAcademicWorkCascade(workIdToDelete: string): Promise
         await db.paraphrases.update(p.id, { workId: undefined, updatedAt: Date.now() });
       }
 
-      // 5. Clean workIds array in sources (dissociate rather than hard delete source knowledge)
-      const relatedSources = await db.sources.toArray();
-      const dissociated = dissociateWorkIdFromSources(relatedSources, workIdToDelete);
-      for (let i = 0; i < relatedSources.length; i++) {
-        const original = relatedSources[i];
-        if (original.workIds && original.workIds.includes(workIdToDelete)) {
-          await db.sources.update(original.id, {
-            workIds: dissociated[i].workIds,
-            updatedAt: Date.now()
-          });
-        }
+      // 5. Clean workIds array in sources using multi-entry index *workIds
+      const relatedSources = await db.sources.where('workIds').equals(workIdToDelete).toArray();
+      for (const source of relatedSources) {
+        const filteredWorkIds = (source.workIds || []).filter((id) => id !== workIdToDelete);
+        await db.sources.update(source.id, {
+          workIds: filteredWorkIds,
+          updatedAt: Date.now()
+        });
       }
 
       // 6. Dissociate notes (preserve notes in Second Brain, remove orphan workId link)
@@ -201,6 +205,58 @@ export async function deleteAcademicWorkCascade(workIdToDelete: string): Promise
 
       // 7. Delete work record itself
       await db.works.delete(workIdToDelete);
+    }
+  );
+}
+
+export async function deleteCourseCascade(courseIdToDelete: string): Promise<void> {
+  await db.transaction(
+    'rw',
+    [db.courses, db.works, db.notes, db.tasks, db.inquiries],
+    async () => {
+      // 1. Dissociate works (remove course link, preserve deliverable in workspace)
+      await db.works.where('courseId').equals(courseIdToDelete).modify({ courseId: undefined });
+
+      // 2. Dissociate notes (remove course link, preserve note in Second Brain)
+      await db.notes.where('courseId').equals(courseIdToDelete).modify({ courseId: undefined });
+
+      // 3. Dissociate tasks (keep user task, unlink course)
+      await db.tasks.where('courseId').equals(courseIdToDelete).modify({ courseId: undefined });
+
+      // 4. Dissociate teacher inquiries
+      await db.inquiries.where('courseId').equals(courseIdToDelete).modify({ courseId: undefined });
+
+      // 5. Delete course record itself
+      await db.courses.delete(courseIdToDelete);
+    }
+  );
+}
+
+export async function deleteSourceCascade(sourceIdToDelete: string): Promise<void> {
+  await db.transaction(
+    'rw',
+    [db.sources, db.citations, db.ideas, db.paraphrases, db.notes],
+    async () => {
+      // 1. Dissociate notes (remove sourceId from note.sourceIds multi-entry array)
+      const affectedNotes = await db.notes.where('sourceIds').equals(sourceIdToDelete).toArray();
+      for (const note of affectedNotes) {
+        const updatedIds = (note.sourceIds || []).filter((id) => id !== sourceIdToDelete);
+        await db.notes.update(note.id, { sourceIds: updatedIds, updatedAt: Date.now() });
+      }
+
+      // 2. Delete citations linked to this source
+      await db.citations.where({ sourceId: sourceIdToDelete }).delete();
+
+      // 3. Delete ideas linked to this source and their linked paraphrases
+      const relatedIdeas = await db.ideas.where({ sourceId: sourceIdToDelete }).toArray();
+      for (const idea of relatedIdeas) {
+        await db.paraphrases.where({ ideaId: idea.id }).delete();
+        await db.ideas.delete(idea.id);
+      }
+      await db.paraphrases.where({ sourceId: sourceIdToDelete }).delete();
+
+      // 4. Delete source record itself
+      await db.sources.delete(sourceIdToDelete);
     }
   );
 }

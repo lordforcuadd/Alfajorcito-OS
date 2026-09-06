@@ -67,6 +67,12 @@ describe('WikiLink Helper Unit Tests', () => {
 
     const unrelatedContent = 'Este texto no menciona la idea.';
     expect(containsBacklinkTo(unrelatedContent, 'Memoria')).toBe(false);
+
+    // CRITICAL: Substring notes must NOT be claimed as backlinks
+    const contentWithCompound = 'Ver [[Memoria de Trabajo]] y [[Tesis de Regulación]].';
+    expect(containsBacklinkTo(contentWithCompound, 'Memoria')).toBe(false);
+    expect(containsBacklinkTo(contentWithCompound, 'Tesis')).toBe(false);
+    expect(containsBacklinkTo(contentWithCompound, 'Memoria de Trabajo')).toBe(true);
   });
 });
 
@@ -83,9 +89,28 @@ describe('Citation Engine HTML Double Punctuation Tests', () => {
     } as unknown as Source;
 
     const html = formatFullReferenceHTML(mockBook, 'APA_7');
-    // Ensure no "</i>." or ".. "
     expect(html).not.toContain('..');
     expect(html).not.toContain('</i>.');
     expect(html).toContain('<i>Manual de psicopatología y trastornos.</i> McGraw-Hill.');
+  });
+
+  it('does not produce double periods in Chicago Author-Date or Vancouver HTML', () => {
+    const mockBook: Source = {
+      id: 'src-2',
+      title: 'Manual de psicopatología y trastornos.',
+      authors: [{ firstName: 'Amparo', lastName: 'Belloch' }],
+      year: 2020,
+      type: 'BOOK',
+      publication: 'McGraw-Hill',
+      workIds: []
+    } as unknown as Source;
+
+    const chicagoHtml = formatFullReferenceHTML(mockBook, 'CHICAGO_AUTHOR_DATE');
+    expect(chicagoHtml).not.toContain('..');
+    expect(chicagoHtml).toContain('Belloch, A. 2020.');
+
+    const vancouverHtml = formatFullReferenceHTML(mockBook, 'VANCOUVER');
+    expect(vancouverHtml).not.toContain('..');
+    expect(vancouverHtml).not.toContain('</i>.');
   });
 });

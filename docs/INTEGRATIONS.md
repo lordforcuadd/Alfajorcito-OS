@@ -87,11 +87,10 @@
 ## 4. Proveedores de Inteligencia Artificial (BYOK Contextual)
 
 ### 4.1. Proveedores Soportados
-1. **Google Gemini API**: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`
-2. **OpenAI API**: `https://api.openai.com/v1/chat/completions` (GPT-4o-mini / GPT-4o)
-3. **Anthropic API**: `https://api.anthropic.com/v1/messages` (Claude 3.5 Haiku / Sonnet)
-4. **OpenRouter API**: Agregador multimodelo con acceso a modelos abiertos como Llama 3.3 y DeepSeek R1.
-5. **Ollama Local**: `http://localhost:11434/api/generate` (Cero costes, 100% privado y offline).
+1. **Google Gemini API**: `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` (`gemini-2.5-flash` por defecto con fallback a `gemini-2.0-flash` y `gemini-2.0-flash-lite`).
+2. **OpenAI API**: `https://api.openai.com/v1/chat/completions` (GPT-4o-mini / GPT-4o).
+3. **OpenRouter API**: Agregador multimodelo con acceso a modelos abiertos como Llama 3.3, Mistral y DeepSeek R1.
+4. **Ollama Local**: `http://localhost:11434/api/generate` (Cero costes, 100% privado y offline).
 
 ### 4.2. Motor Heurístico Offline (Fallback Automático)
 - Cuando no se configure API key o no haya conexión:

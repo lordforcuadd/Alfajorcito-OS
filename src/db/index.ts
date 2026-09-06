@@ -52,6 +52,15 @@ export class AlfajorcitoDB extends Dexie {
       paraphrases: '&id, ideaId, sourceId, workId, fidelityReviewStatus, updatedAt',
       citations: '&id, sourceId, workId, style, updatedAt'
     });
+
+    // Version 3: Adds indexes required by cascade dissociation queries.
+    // notes.sourceIds (multi-entry) — used by deleteSourceCascade to find notes
+    // referencing a source. citations.paraphraseId — used by paraphrase deletion
+    // to orphan citations instead of leaving stale paraphraseId links.
+    this.version(3).stores({
+      notes: '&id, slug, paraCategory, courseId, workId, *tags, *sourceIds, isPinned, updatedAt',
+      citations: '&id, sourceId, workId, paraphraseId, style, updatedAt'
+    });
   }
 }
 

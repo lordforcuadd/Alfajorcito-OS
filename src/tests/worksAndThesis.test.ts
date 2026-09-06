@@ -123,6 +123,27 @@ describe('Works and Thesis Management Suite', () => {
     expect(metaDelivered.label).toContain('Entregado');
   });
 
+  it('correctly calculates calendar days when deadline is end-of-day (23:59:59) and now is morning/afternoon', () => {
+    // 10:00 AM on 2026-09-03
+    const morningNow = new Date(2026, 8, 3, 10, 0, 0, 0).getTime();
+    
+    // Deadline is tonight at 23:59:59.999
+    const dueTonight = new Date(2026, 8, 3, 23, 59, 59, 999).getTime();
+    expect(calculateDaysRemaining(dueTonight, morningNow)).toBe(0);
+    expect(getDeadlineUrgencyMeta(calculateDaysRemaining(dueTonight, morningNow)).label).toBe('¡Vence hoy!');
+
+    // Deadline is tomorrow night at 23:59:59.999
+    const dueTomorrow = new Date(2026, 8, 4, 23, 59, 59, 999).getTime();
+    expect(calculateDaysRemaining(dueTomorrow, morningNow)).toBe(1);
+    expect(getDeadlineUrgencyMeta(calculateDaysRemaining(dueTomorrow, morningNow)).label).toBe('1 día restante');
+
+    // Deadline was yesterday night at 23:59:59.999 and now is 2:00 AM the next day
+    const lateNightNow = new Date(2026, 8, 4, 2, 0, 0, 0).getTime();
+    const expiredYesterday = new Date(2026, 8, 3, 23, 59, 59, 999).getTime();
+    expect(calculateDaysRemaining(expiredYesterday, lateNightNow)).toBe(-1);
+    expect(getDeadlineUrgencyMeta(calculateDaysRemaining(expiredYesterday, lateNightNow)).label).toBe('Venció hace 1d');
+  });
+
   it('calculates task completion percentage using production helper', () => {
     const progress = calculateTaskProgress(sampleTasks);
 

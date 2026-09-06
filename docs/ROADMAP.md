@@ -30,6 +30,6 @@
 - [x] Asistente de IA Contextual BYOK con motor heurístico offline de respaldo.
 
 ## Fase 5: Testing, Auditoría y Empaquetado PWA (Finalización 🎯)
-- [ ] Suite de pruebas unitarias con Vitest.
-- [ ] Auditoría de accesibilidad WCAG AA, rendimiento y seguridad.
-- [ ] Service Worker para caching offline total.
+- [x] Suite de pruebas unitarias con Vitest (16 suites de pruebas cubriendo citación, ingesta, seguridad, backup, formateo y trazabilidad).
+- [x] Auditoría integral de arquitectura, integridad de datos, seguridad BYOK (sanitización de API keys), cascade deletes y accesibilidad WCAG.
+- [ ] Service Worker para caching offline total (PWA installable assets).

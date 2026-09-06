@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   FileText,
@@ -57,9 +57,18 @@ export const WorkModal: React.FC<WorkModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
+  const prevIsOpenRef = useRef(false);
+  const prevWorkToEditIdRef = useRef<string | undefined>(undefined);
+
   // Initialize or reset form when modal opens or workToEdit changes
   useEffect(() => {
-    if (!isOpen) return;
+    const justOpened = isOpen && !prevIsOpenRef.current;
+    const workChanged = workToEdit?.id !== prevWorkToEditIdRef.current;
+
+    prevIsOpenRef.current = isOpen;
+    prevWorkToEditIdRef.current = workToEdit?.id;
+
+    if (!isOpen || (!justOpened && !workChanged)) return;
 
     if (workToEdit) {
       setTitle(workToEdit.title || '');
@@ -92,7 +101,7 @@ export const WorkModal: React.FC<WorkModalProps> = ({
       setGoogleDocUrl('');
       setCanvaUrl('');
     }
-  }, [workToEdit, isOpen, initialCourseId, courses.length, userProfile?.defaultCitationStyle]);
+  }, [workToEdit, isOpen, initialCourseId, courses, userProfile?.defaultCitationStyle]);
 
   const handleSaveWork = async () => {
     if (!title.trim()) {
@@ -194,6 +203,7 @@ export const WorkModal: React.FC<WorkModalProps> = ({
   const handleDeleteWork = async () => {
     if (!workToEdit) return;
 
+    setIsSubmitting(true);
     try {
       await deleteAcademicWorkCascade(workToEdit.id);
       showToast('Trabajo eliminado', `"${workToEdit.title}" y sus tareas vinculadas han sido eliminados.`, 'info');
@@ -203,6 +213,8 @@ export const WorkModal: React.FC<WorkModalProps> = ({
     } catch (err) {
       console.error('Error deleting work:', err);
       showToast('Error', 'No se pudo eliminar el trabajo.', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -284,7 +296,7 @@ export const WorkModal: React.FC<WorkModalProps> = ({
               type="date"
               value={deadlineStr}
               onChange={(e) => setDeadlineStr(e.target.value)}
-              leftIcon={<Calendar className="w-4 h-4 text-[#8D99AE]" />}
+              leftIcon={<Calendar className="w-4 h-4 text-[#5A6275]" />}
             />
 
             <Select

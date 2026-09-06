@@ -16,7 +16,8 @@ import { USMP_PSYCHOLOGY_CURRICULUM } from '../../services/usmpCurriculum';
 import { db } from '../../db';
 import { useToast } from '../../components/common/Toast';
 import { generateId } from '../../utils/idHelper';
-import { parseAcademicCycle } from '../../utils/academicWorkUtils';
+import { parseAcademicCycle, deleteCourseCascade } from '../../utils/academicWorkUtils';
+import { getRandomCourseColor } from '../../utils/themeTokens';
 import type { CurriculumCourse, Course, Work, UserProfile } from '../../types';
 import { DEFAULT_ACADEMIC_PERIOD } from '../../types';
 
@@ -24,6 +25,14 @@ export interface CurriculumViewProps {
   onOpenQuickCapture: (tab?: 'note' | 'work' | 'course' | 'source' | 'inquiry' | 'task', courseId?: string) => void;
   onOpenWork?: (workId: string) => void;
 }
+
+const formatCycleOrdinal = (cycle: number): string => {
+  const ordinals: Record<number, string> = {
+    1: '1er', 2: '2do', 3: '3er', 4: '4to', 5: '5to',
+    6: '6to', 7: '7mo', 8: '8vo', 9: '9no', 10: '10mo'
+  };
+  return ordinals[cycle] ? `${ordinals[cycle]} Ciclo` : `${cycle}° Ciclo`;
+};
 
 export const CurriculumView: React.FC<CurriculumViewProps> = ({
   onOpenQuickCapture,
@@ -92,14 +101,13 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
       setUnenrollTarget({ course: curriculumCourse, existingId: existingCourse.id });
     } else {
       // Enroll
-      const colors = ['#D98880', '#B39DDB', '#80CBC4', '#FFCC80', '#90CAF9'];
-      const assignedColor = colors[Math.floor(Math.random() * colors.length)];
+      const assignedColor = getRandomCourseColor();
       try {
         await db.courses.add({
           id: generateId('course'),
           code: curriculumCourse.code,
           name: curriculumCourse.name,
-          period: `${DEFAULT_ACADEMIC_PERIOD} (${curriculumCourse.cycle}vo Ciclo)`,
+          period: `${DEFAULT_ACADEMIC_PERIOD} (${formatCycleOrdinal(curriculumCourse.cycle)})`,
           color: assignedColor,
           isArchived: false,
           createdAt: Date.now(),
@@ -311,7 +319,7 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
                 </button>
 
                 <span className="text-[11px] font-bold text-[#8C3A32] flex items-center gap-1 shrink-0">
-                  Ver Sílabo <ChevronRight className="w-3.5 h-3.5" />
+                  Ver Ficha <ChevronRight className="w-3.5 h-3.5" />
                 </span>
               </div>
             </Card>
@@ -435,15 +443,14 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
                     if (existing) {
                       courseId = existing.id;
                     } else {
-                      const colors = ['#D98880', '#B39DDB', '#80CBC4', '#FFCC80', '#90CAF9'];
-                      const assignedColor = colors[Math.floor(Math.random() * colors.length)];
+                      const assignedColor = getRandomCourseColor();
                       const newCourseId = generateId('course');
                       try {
                         await db.courses.add({
                           id: newCourseId,
                           code: inspectedCourse.code,
                           name: inspectedCourse.name,
-                          period: `${DEFAULT_ACADEMIC_PERIOD} (${inspectedCourse.cycle}vo Ciclo)`,
+                          period: `${DEFAULT_ACADEMIC_PERIOD} (${formatCycleOrdinal(inspectedCourse.cycle)})`,
                           color: assignedColor,
                           isArchived: false,
                           createdAt: Date.now(),
@@ -489,11 +496,7 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
                 variant="danger"
                 onClick={async () => {
                   try {
-                    await db.transaction('rw', [db.courses, db.works, db.notes], async () => {
-                      await db.works.where('courseId').equals(unenrollTarget.existingId).modify({ courseId: undefined });
-                      await db.notes.where('courseId').equals(unenrollTarget.existingId).modify({ courseId: undefined });
-                      await db.courses.delete(unenrollTarget.existingId);
-                    });
+                    await deleteCourseCascade(unenrollTarget.existingId);
                     showToast('Asignatura retirada', `${unenrollTarget.course.name} se eliminó de tus cursos activos.`, 'info');
                     setUnenrollTarget(null);
                   } catch {

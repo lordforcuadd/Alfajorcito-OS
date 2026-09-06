@@ -42,6 +42,7 @@ import type {
   InquiryToTeacher,
   SettingRecord
 } from '../../types';
+import { WORK_STATUSES } from '../../types';
 
 export interface SettingsModalProps {
   isOpen: boolean;
@@ -135,43 +136,68 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       showToast('Nombre requerido', 'Ingresa tu nombre para los encabezados.', 'warning');
       return;
     }
-    await db.settings.put({
-      key: 'user_profile',
-      value: {
-        name: userName.trim(),
-        institution: userInstitution.trim(),
-        faculty: userFaculty.trim(),
-        major: userMajor.trim(),
-        currentCycle: userCycle,
-        specialty: userSpecialty,
-        thesisTitle: userThesis.trim(),
-        internshipSite: userInternship.trim(),
-        defaultCitationStyle: userCitationStyle
-      } as UserProfile,
-      updatedAt: Date.now()
-    });
-    showToast('Perfil actualizado', 'Datos de portada y encabezados APA 7 guardados.', 'success');
-    onClose();
+    try {
+      await db.settings.put({
+        key: 'user_profile',
+        value: {
+          name: userName.trim(),
+          institution: userInstitution.trim(),
+          faculty: userFaculty.trim(),
+          major: userMajor.trim(),
+          currentCycle: userCycle,
+          specialty: userSpecialty,
+          thesisTitle: userThesis.trim(),
+          internshipSite: userInternship.trim(),
+          defaultCitationStyle: userCitationStyle
+        } as UserProfile,
+        updatedAt: Date.now()
+      });
+      showToast('Perfil actualizado', 'Datos de portada y encabezados APA 7 guardados.', 'success');
+      onClose();
+    } catch (err) {
+      console.error('Error saving profile:', err);
+      showToast('Error al guardar', 'No se pudo guardar el perfil en la base de datos.', 'error');
+    }
   };
 
   // Save AI Settings
   const handleSaveAISettings = async () => {
-    await db.settings.put({
-      key: 'ai_settings',
-      value: {
-        provider: aiProvider,
-        apiKey: aiApiKey.trim(),
-        modelName: aiModel.trim(),
-        ollamaEndpoint: ollamaUrl.trim()
-      } as AISettings,
-      updatedAt: Date.now()
-    });
-    showToast('IA configurada', 'Ajustes del proveedor de IA guardados.', 'success');
-    onClose();
+    try {
+      await db.settings.put({
+        key: 'ai_settings',
+        value: {
+          provider: aiProvider,
+          apiKey: aiApiKey.trim(),
+          modelName: aiModel.trim(),
+          ollamaEndpoint: ollamaUrl.trim()
+        } as AISettings,
+        updatedAt: Date.now()
+      });
+      showToast('IA configurada', 'Ajustes del proveedor de IA guardados.', 'success');
+      onClose();
+    } catch (err) {
+      console.error('Error saving AI settings:', err);
+      showToast('Error al guardar', 'No se pudieron guardar los ajustes de IA.', 'error');
+    }
   };
 
   // Export JSON Backup
   const handleExportJsonBackup = async () => {
+    const rawSettings = await db.settings.toArray();
+    // Security: Sanitize sensitive API keys before exporting backup JSON
+    const sanitizedSettings = rawSettings.map((s) => {
+      if (s.key === 'ai_settings' && s.value && typeof s.value === 'object') {
+        return {
+          ...s,
+          value: {
+            ...(s.value as Record<string, unknown>),
+            apiKey: '' // Never export plaintext private credentials
+          }
+        };
+      }
+      return s;
+    });
+
     const backup = {
       version: '1.0',
       exportedAt: new Date().toISOString(),
@@ -185,7 +211,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       concepts: await db.concepts.toArray(),
       tasks: await db.tasks.toArray(),
       inquiries: await db.inquiries.toArray(),
-      settings: await db.settings.toArray()
+      settings: sanitizedSettings
     };
 
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -213,7 +239,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
       const validateItems = <T extends { id: string }>(
         arr: unknown,
-        requiredFields: string[] = []
+        requiredFields: string[] = [],
+        typeValidators?: Record<string, (val: unknown, rec: Record<string, unknown>) => boolean>
       ): T[] => {
         if (!Array.isArray(arr)) return [];
         for (const item of arr) {
@@ -229,13 +256,51 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               throw new Error(`Elemento sin campo requerido: ${field}`);
             }
           }
+          if (typeValidators) {
+            for (const [field, validator] of Object.entries(typeValidators)) {
+              if (rec[field] !== undefined && !validator(rec[field], rec)) {
+                throw new Error(`Elemento con tipo inválido en campo: ${field}`);
+              }
+            }
+          }
         }
         return arr as T[];
       };
 
-      const validCourses = validateItems<Course>(data.courses, ['name']);
-      const validWorks = validateItems<Work>(data.works, ['title', 'status', 'deadline']);
-      const validSources = validateItems<Source>(data.sources, ['title']);
+      const validCourses = validateItems<Course>(data.courses, ['name'], {
+        name: (v) => typeof v === 'string' && v.trim().length > 0
+      });
+
+      const validWorks = validateItems<Work>(data.works, ['title', 'status', 'deadline'], {
+        title: (v) => typeof v === 'string' && v.trim().length > 0,
+        status: (v) =>
+          typeof v === 'string' && (WORK_STATUSES as readonly string[]).includes(v),
+        deadline: (v, rec) => {
+          if (typeof v === 'number' && !isNaN(v) && v > 0) return true;
+          if (typeof v === 'string') {
+            const parsed = new Date(v).getTime();
+            if (!isNaN(parsed) && parsed > 0) {
+              rec.deadline = parsed;
+              return true;
+            }
+          }
+          return false;
+        }
+      });
+
+      const validSources = validateItems<Source>(data.sources, ['title'], {
+        title: (v) => typeof v === 'string' && v.trim().length > 0,
+        year: (v, rec) => {
+          if (v === undefined || v === null) return true;
+          if (typeof v === 'number' && !isNaN(v)) return true;
+          const num = Number(v);
+          if (!isNaN(num)) {
+            rec.year = num;
+            return true;
+          }
+          return false;
+        }
+      });
       const validIdeas = validateItems<Idea>(data.ideas, ['extractedCoreIdea']);
       const validParaphrases = validateItems<Paraphrase>(data.paraphrases, ['finalParaphrase']);
       const validCitations = validateItems<Citation>(data.citations, ['fullReferenceFormatted']);
@@ -251,7 +316,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             throw new Error('Ajuste inválido en settings');
           }
         }
-        validSettings = data.settings;
+        
+        // Preserve local AI apiKey if imported settings has blank apiKey
+        const existingAISettings = await db.settings.get('ai_settings');
+        const existingApiKey = (existingAISettings?.value as Record<string, unknown> | undefined)?.apiKey;
+
+        validSettings = data.settings.map((s: { key: string; value: unknown; updatedAt: number }) => {
+          if (s.key === 'ai_settings' && s.value && typeof s.value === 'object') {
+            const importedVal = s.value as Record<string, unknown>;
+            if ((!importedVal.apiKey || !String(importedVal.apiKey).trim()) && existingApiKey) {
+              return {
+                ...s,
+                value: {
+                  ...importedVal,
+                  apiKey: existingApiKey
+                }
+              };
+            }
+          }
+          return s;
+        });
       }
 
       await db.transaction(
@@ -473,10 +557,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           <div className="p-4 rounded-2xl bg-white border border-[#EBE5DF] space-y-3 shadow-2xs">
             <div className="flex items-center justify-between">
               <h4 className="font-bold text-xs uppercase tracking-wider text-[#5A6275] flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-[#8D99AE]" />
+                <FileText className="w-3.5 h-3.5 text-[#5A6275]" />
                 <span>Proyectos de Grado & Prácticas (Opcionales)</span>
               </h4>
-              <span className="text-[10px] text-[#8D99AE] bg-[#F5F1EB] px-2 py-0.5 rounded-full font-bold">
+              <span className="text-[10px] text-[#5A6275] bg-[#F5F1EB] px-2 py-0.5 rounded-full font-bold">
                 Opcional
               </span>
             </div>
@@ -537,7 +621,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             }}
           >
             <option value="offline_heuristics">Heurístico Offline Integrado (Sin API Key / 100% Privado)</option>
-            <option value="gemini">Google Gemini (Gemini 2.5 Flash / 1.5 Flash)</option>
+            <option value="gemini">Google Gemini (Gemini 2.5 Flash / 2.0 Flash)</option>
             <option value="openai">OpenAI (GPT-4o-mini / GPT-4o)</option>
             <option value="openrouter">OpenRouter (Llama 3.3, DeepSeek R1, Claude)</option>
             <option value="ollama">Ollama Local (http://localhost:11434)</option>
@@ -569,7 +653,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 label="Nombre del Modelo (Decidido por el Usuario)"
                 placeholder={
                   aiProvider === 'gemini'
-                    ? 'e.g. gemini-2.5-flash, gemini-1.5-flash'
+                    ? 'e.g. gemini-2.5-flash, gemini-2.0-flash'
                     : aiProvider === 'openai'
                     ? 'e.g. gpt-4o-mini, gpt-4o'
                     : aiProvider === 'openrouter'
@@ -581,9 +665,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               />
               {/* Quick Model Selector Pills */}
               <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                <span className="text-[10px] text-[#8D99AE] font-bold uppercase">Sugerencias:</span>
+                <span className="text-[10px] text-[#5A6275] font-bold uppercase">Sugerencias:</span>
                 {aiProvider === 'gemini' &&
-                  ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'].map((m) => (
+                  ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'].map((m) => (
                     <button
                       key={m}
                       type="button"

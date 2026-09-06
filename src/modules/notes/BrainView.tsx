@@ -230,13 +230,13 @@ export const BrainView: React.FC<BrainViewProps> = ({
         <div className="space-y-4">
           {/* Instant Search Bar */}
           <div className="relative">
-            <Search className="w-4 h-4 text-[#8D99AE] absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-[#5A6275] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Buscar notas por título, etiqueta, contenido o enlace wiki..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3.5 py-2.5 bg-white rounded-xl border border-[#EBE5DF] text-xs sm:text-sm text-[#2B2D42] placeholder-[#8D99AE] focus:outline-none focus:ring-2 focus:ring-[#E8A598]"
+              className="w-full pl-9 pr-3.5 py-2.5 bg-white rounded-xl border border-[#EBE5DF] text-xs sm:text-sm text-[#2B2D42] placeholder-[#5A6275] focus:outline-none focus:ring-2 focus:ring-[#E8A598]"
             />
           </div>
 
@@ -352,7 +352,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
                       </p>
                     </div>
 
-                    <div className="pt-2.5 border-t border-[#EBE5DF] flex items-center justify-between gap-2 text-xs text-[#8D99AE]">
+                    <div className="pt-2.5 border-t border-[#EBE5DF] flex items-center justify-between gap-2 text-xs text-[#5A6275]">
                       <div className="flex items-center gap-1 flex-wrap min-w-0">
                         {note.tags.slice(0, 2).map((tag, i) => (
                           <span key={i} className="text-[10px] bg-[#F5F1EB] px-1.5 py-0.5 rounded-md text-[#5A6275] font-medium truncate max-w-[90px]">
@@ -366,7 +366,7 @@ export const BrainView: React.FC<BrainViewProps> = ({
                           {wikiLinkMatches} {wikiLinkMatches === 1 ? 'enlace' : 'enlaces'}
                         </span>
                       ) : (
-                        <span className="text-[10px] font-mono text-[#8D99AE]">
+                        <span className="text-[10px] font-mono text-[#5A6275]">
                           [[nota]]
                         </span>
                       )}

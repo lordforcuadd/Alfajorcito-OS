@@ -25,6 +25,21 @@ export type WorkStatus =
   | 'ENTREGADO' 
   | 'ARCHIVADO';
 
+/**
+ * Canonical runtime list of WorkStatus values. Single source of truth shared by
+ * the backup-restore validator (SettingsModal) and tests — derived from the type
+ * union above; keep in sync when adding statuses.
+ */
+export const WORK_STATUSES: WorkStatus[] = [
+  'PLANIFICACION',
+  'INVESTIGACION',
+  'REDACTANDO',
+  'EN_REVISION',
+  'CORRECCION',
+  'ENTREGADO',
+  'ARCHIVADO'
+];
+
 export type VerificationStatus = 
   | 'VERIFIED' 
   | 'PARTIALLY_VERIFIED' 
@@ -112,7 +127,7 @@ export interface InstructionAnalysis {
 
 export interface Work {
   id: string;
-  courseId: string;
+  courseId?: string;
   title: string;
   type: WorkType;
   status: WorkStatus;
@@ -134,7 +149,7 @@ export interface Work {
 export interface InquiryToTeacher {
   id: string;
   workId: string;
-  courseId: string;
+  courseId?: string;
   topic: string;
   rawQuestion: string;
   formalQuestion: string;

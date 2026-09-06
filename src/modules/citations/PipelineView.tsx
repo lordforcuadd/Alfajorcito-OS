@@ -60,7 +60,10 @@ export const PipelineView: React.FC = () => {
   const handleConfirmDelete = async () => {
     if (!paraToDelete) return;
     try {
-      await db.paraphrases.delete(paraToDelete.id);
+      await db.transaction('rw', [db.paraphrases, db.citations], async () => {
+        await db.paraphrases.delete(paraToDelete.id);
+        await db.citations.where({ paraphraseId: paraToDelete.id }).modify({ paraphraseId: undefined, updatedAt: Date.now() });
+      });
       showToast('Paráfrasis eliminada', 'La ficha ha sido retirada de tus citas.', 'info');
       setParaToDelete(null);
     } catch {
@@ -214,7 +217,7 @@ export const PipelineView: React.FC = () => {
             </Button>
 
             <div className="flex items-center gap-1 overflow-x-auto no-scrollbar scroll-touch bg-white border border-[#EBE5DF] p-1 rounded-2xl shadow-xs">
-              {(['APA_7', 'MLA_9', 'IEEE', 'CHICAGO_AUTHOR_DATE', 'VANCOUVER'] as const).map((style) => (
+              {(['APA_7', 'MLA_9', 'IEEE', 'CHICAGO_AUTHOR_DATE', 'CHICAGO_NOTES', 'VANCOUVER'] as const).map((style) => (
                 <button
                   key={style}
                   onClick={() => setSelectedStyle(style)}
@@ -231,7 +234,9 @@ export const PipelineView: React.FC = () => {
                     : style === 'IEEE'
                     ? 'IEEE'
                     : style === 'CHICAGO_AUTHOR_DATE'
-                    ? 'Chicago'
+                    ? 'Chicago (A-F)'
+                    : style === 'CHICAGO_NOTES'
+                    ? 'Chicago (Notas)'
                     : 'Vancouver'}
                 </button>
               ))}
@@ -302,13 +307,13 @@ export const PipelineView: React.FC = () => {
       {/* Search & Work Filter Toolbar */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
         <div className="sm:col-span-2 relative min-w-0">
-          <Search className="w-4 h-4 text-[#8D99AE] absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-[#5A6275] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Buscar por autor, cita textual, tema o paráfrasis..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-white border border-[#EBE5DF] text-xs sm:text-sm text-[#2B2D42] placeholder-[#8D99AE] focus:outline-none focus:ring-2 focus:ring-[#E8A598] shadow-xs"
+            className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-white border border-[#EBE5DF] text-xs sm:text-sm text-[#2B2D42] placeholder-[#5A6275] focus:outline-none focus:ring-2 focus:ring-[#E8A598] shadow-xs"
           />
         </div>
 
@@ -388,7 +393,7 @@ export const PipelineView: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                   {/* Original Author Text */}
                   <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EBE5DF] space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#8D99AE] uppercase tracking-wider">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#5A6275] uppercase tracking-wider">
                       <Quote className="w-3.5 h-3.5 text-[#FFA000]" />
                       <span>Cita Textual del Autor:</span>
                     </div>
@@ -532,7 +537,7 @@ export const PipelineView: React.FC = () => {
                     </button>
                     <button
                       onClick={() => setParaToDelete(para)}
-                      className="p-1.5 text-[#8D99AE] hover:text-[#C62828] hover:bg-rose-50 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-rose-200"
+                      className="p-1.5 text-[#5A6275] hover:text-[#C62828] hover:bg-rose-50 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-rose-200"
                       title="Eliminar cita/paráfrasis"
                       aria-label="Eliminar cita y paráfrasis"
                     >
@@ -573,7 +578,7 @@ export const PipelineView: React.FC = () => {
               return (
                 <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EBE5DF] space-y-1.5">
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-bold text-[#8D99AE] uppercase tracking-wider flex items-center gap-1">
+                    <span className="font-bold text-[#5A6275] uppercase tracking-wider flex items-center gap-1">
                       <Quote className="w-3.5 h-3.5 text-[#FFA000]" /> Cita Textual de la Fuente:
                     </span>
                     {src && <span className="font-bold text-[#2B2D42] truncate max-w-[220px]">{src.title}</span>}

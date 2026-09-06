@@ -17,9 +17,11 @@ import {
   Check,
   BookMarked,
   ChevronRight,
-  Info
+  Info,
+  Trash2
 } from 'lucide-react';
 import { db } from '../../db';
+import { deleteSourceCascade } from '../../utils/academicWorkUtils';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Input, TextArea, Select } from '../../components/common/Input';
@@ -119,6 +121,8 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
   const [newCoreIdea, setNewCoreIdea] = useState('');
   const [newParaphraseText, setNewParaphraseText] = useState('');
   const [isSavingQuote, setIsSavingQuote] = useState(false);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const [isDeletingSource, setIsDeletingSource] = useState(false);
 
   // Live queries
   const sources = useLiveQuery(() => db.sources.toArray()) || [];
@@ -351,6 +355,23 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
     }
   };
 
+  const handleDeleteSource = async () => {
+    if (!inspectedSource) return;
+    setIsDeletingSource(true);
+    try {
+      await deleteSourceCascade(inspectedSource.id);
+      showToast('Fuente eliminada', `"${inspectedSource.title}" ha sido retirada de la biblioteca.`, 'info');
+      setIsConfirmDeleteOpen(false);
+      setInspectedSource(null);
+      if (onSelectSource) onSelectSource(null);
+    } catch (err) {
+      console.error('Error deleting source:', err);
+      showToast('Error', 'No se pudo eliminar la fuente de la biblioteca.', 'error');
+    } finally {
+      setIsDeletingSource(false);
+    }
+  };
+
   const filteredSources = sources.filter((s) => {
     if (verificationFilter !== 'ALL' && s.verificationStatus !== verificationFilter) return false;
     if (libraryWorkFilter !== 'ALL' && !(s.workIds || []).includes(libraryWorkFilter)) return false;
@@ -522,11 +543,11 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
           <div className="space-y-3">
             {searchResults.length === 0 && !isSearching ? (
               <Card variant="subtle" className="text-center py-10 px-4">
-                <BookOpen className="w-8 h-8 text-[#8D99AE] mx-auto mb-2 opacity-60" />
+                <BookOpen className="w-8 h-8 text-[#5A6275] mx-auto mb-2 opacity-60" />
                 <p className="text-sm font-semibold text-[#5A6275]">
                   Escribe un tema de psicología o pega un DOI para buscar artículos verificados.
                 </p>
-                <p className="text-xs text-[#8D99AE] mt-0.5">
+                <p className="text-xs text-[#5A6275] mt-0.5">
                   Conexión directa con bases indexadas de DOAJ (Español), Crossref, OpenAlex y Semantic Scholar.
                 </p>
               </Card>
@@ -592,7 +613,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                               href={item.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-xs text-[#8D99AE] hover:text-[#2B2D42] flex items-center justify-center sm:justify-end gap-1 transition-colors py-0.5"
+                              className="text-xs text-[#5A6275] hover:text-[#2B2D42] flex items-center justify-center sm:justify-end gap-1 transition-colors py-0.5"
                             >
                               <span>Ver artículo original</span>
                               <ExternalLink className="w-3 h-3" />
@@ -625,13 +646,13 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
           {/* Instant Search & Project Filter */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <div className="sm:col-span-2 relative">
-              <Search className="w-4 h-4 text-[#8D99AE] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-[#5A6275] absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Buscar por título, autor, revista, DOI o año..."
                 value={librarySearchQuery}
                 onChange={(e) => setLibrarySearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3.5 py-2.5 bg-white rounded-xl border border-[#EBE5DF] text-xs sm:text-sm text-[#2B2D42] placeholder-[#8D99AE] focus:outline-none focus:ring-2 focus:ring-[#E8A598]"
+                className="w-full pl-9 pr-3.5 py-2.5 bg-white rounded-xl border border-[#EBE5DF] text-xs sm:text-sm text-[#2B2D42] placeholder-[#5A6275] focus:outline-none focus:ring-2 focus:ring-[#E8A598]"
               />
             </div>
             <div>
@@ -641,7 +662,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
               >
                 <option value="ALL">Todos los Trabajos / Tesis</option>
                 {works.map((w) => {
-                  const c = coursesMap.get(w.courseId);
+                  const c = coursesMap.get(w.courseId ?? '');
                   return (
                     <option key={w.id} value={w.id}>
                       {w.title} {c ? `(${c.code || c.name})` : ''}
@@ -684,9 +705,9 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
           {/* Source Cards Grid */}
           {filteredSources.length === 0 ? (
             <Card variant="subtle" className="text-center py-12 px-4">
-              <BookOpen className="w-8 h-8 text-[#8D99AE] mx-auto mb-2 opacity-60" />
+              <BookOpen className="w-8 h-8 text-[#5A6275] mx-auto mb-2 opacity-60" />
               <p className="text-sm font-semibold text-[#5A6275]">No se encontraron fuentes con estos filtros.</p>
-              <p className="text-xs text-[#8D99AE] mt-0.5">Prueba a buscar con otro término o agregar una nueva fuente.</p>
+              <p className="text-xs text-[#5A6275] mt-0.5">Prueba a buscar con otro término o agregar una nueva fuente.</p>
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -789,7 +810,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                 <span>Formato de Cita:</span>
               </div>
               <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-white border border-[#EBE5DF] p-1 rounded-xl shadow-2xs">
-                {(['APA_7', 'MLA_9', 'IEEE', 'CHICAGO_AUTHOR_DATE', 'VANCOUVER'] as const).map((st) => (
+                {(['APA_7', 'MLA_9', 'IEEE', 'CHICAGO_AUTHOR_DATE', 'CHICAGO_NOTES', 'VANCOUVER'] as const).map((st) => (
                   <button
                     key={st}
                     onClick={() => setModalStyle(st)}
@@ -806,7 +827,9 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                       : st === 'IEEE'
                       ? 'IEEE'
                       : st === 'CHICAGO_AUTHOR_DATE'
-                      ? 'Chicago'
+                      ? 'Chicago (A-F)'
+                      : st === 'CHICAGO_NOTES'
+                      ? 'Chicago (Notas)'
                       : 'Vancouver'}
                   </button>
                 ))}
@@ -822,7 +845,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                     <span className="text-[10px] font-bold text-[#8C3A32] uppercase">
                       Cita Parentética
                     </span>
-                    <span className="text-[10px] text-[#8D99AE]">(Al final)</span>
+                    <span className="text-[10px] text-[#5A6275]">(Al final)</span>
                   </div>
                   <code className="text-xs font-mono font-bold text-[#2B2D42] block break-words [overflow-wrap:anywhere]">
                     {formatInTextParenthetical(inspectedSource, modalStyle, undefined, sourceRefNum)}
@@ -860,7 +883,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                     <span className="text-[10px] font-bold text-[#8C3A32] uppercase">
                       Cita Narrativa
                     </span>
-                    <span className="text-[10px] text-[#8D99AE]">(En la oración)</span>
+                    <span className="text-[10px] text-[#5A6275]">(En la oración)</span>
                   </div>
                   <code className="text-xs font-mono font-bold text-[#2B2D42] block break-words [overflow-wrap:anywhere]">
                     {formatInTextNarrative(inspectedSource, modalStyle, sourceRefNum)}
@@ -973,7 +996,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                   <User className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="text-[10px] font-bold text-[#8D99AE] uppercase tracking-wider block">Autores</span>
+                  <span className="text-[10px] font-bold text-[#5A6275] uppercase tracking-wider block">Autores</span>
                   <p className="font-semibold text-[#2B2D42] text-xs leading-snug break-words mt-0.5">
                     {inspectedSource.authors?.length
                       ? inspectedSource.authors.map((a) => `${a.lastName}${a.firstName ? `, ${a.firstName.charAt(0)}.` : ''}`).join('; ')
@@ -988,7 +1011,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="text-[10px] font-bold text-[#8D99AE] uppercase tracking-wider block">Año & Revista</span>
+                  <span className="text-[10px] font-bold text-[#5A6275] uppercase tracking-wider block">Año & Revista</span>
                   <p className="font-semibold text-[#2B2D42] text-xs leading-snug break-words mt-0.5">
                     <span className="font-bold text-[#D98880]">{inspectedSource.year || 's/f'}</span> • {inspectedSource.publication || 'Revista o Editorial'}
                   </p>
@@ -1001,7 +1024,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                   <ExternalLink className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="text-[10px] font-bold text-[#8D99AE] uppercase tracking-wider block">Código DOI / Acceso</span>
+                  <span className="text-[10px] font-bold text-[#5A6275] uppercase tracking-wider block">Código DOI / Acceso</span>
                   {inspectedSource.doi ? (
                     <a
                       href={inspectedSource.doi.startsWith('http') ? inspectedSource.doi : `https://doi.org/${inspectedSource.doi}`}
@@ -1021,7 +1044,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                       Ver enlace del paper
                     </a>
                   ) : (
-                    <span className="text-xs text-[#8D99AE] italic block mt-0.5">Sin DOI registrado</span>
+                    <span className="text-xs text-[#5A6275] italic block mt-0.5">Sin DOI registrado</span>
                   )}
                 </div>
               </div>
@@ -1032,7 +1055,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="text-[10px] font-bold text-[#8D99AE] uppercase tracking-wider block">Trazabilidad Científica</span>
+                  <span className="text-[10px] font-bold text-[#5A6275] uppercase tracking-wider block">Trazabilidad Científica</span>
                   <div className="pt-1">
                     <VerificationBadge status={inspectedSource.verificationStatus} />
                   </div>
@@ -1057,14 +1080,14 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
               </div>
 
               {works.length === 0 ? (
-                <p className="text-xs text-[#8D99AE] italic py-2">
+                <p className="text-xs text-[#5A6275] italic py-2">
                   No tienes trabajos activos creados aún.
                 </p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {works.map((work) => {
                     const isLinked = (inspectedSource.workIds || []).includes(work.id);
-                    const course = coursesMap.get(work.courseId);
+                    const course = coursesMap.get(work.courseId ?? '');
 
                     return (
                       <div
@@ -1141,7 +1164,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                     Guardar Cita Textual & Paráfrasis Propia
                   </h5>
                 </div>
-                <span className="text-[10px] font-bold text-[#8D99AE] bg-[#FAF8F5] px-2 py-0.5 rounded-md">
+                <span className="text-[10px] font-bold text-[#5A6275] bg-[#FAF8F5] px-2 py-0.5 rounded-md">
                   Paso a Paso
                 </span>
               </div>
@@ -1196,29 +1219,78 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
                 </div>
               )}
 
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1">
+              <div className="pt-3 border-t border-[#EBE5DF] flex flex-col sm:flex-row items-center justify-between gap-2.5">
                 <Button
-                  variant="secondary"
-                  size="md"
-                  className="w-full sm:w-auto font-bold"
-                  disabled={isSavingQuote}
-                  isLoading={isSavingQuote}
-                  onClick={() => handleSaveQuoteAndParaphrase({ auditWithAi: false })}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsConfirmDeleteOpen(true)}
+                  className="w-full sm:w-auto text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                  icon={<Trash2 className="w-3.5 h-3.5" />}
                 >
-                  Guardar Cita & Paráfrasis
+                  Eliminar Fuente
                 </Button>
-                <Button
-                  variant="primary"
-                  size="md"
-                  icon={<Sparkles className="w-4 h-4" />}
-                  className="w-full sm:w-auto font-bold"
-                  disabled={isSavingQuote}
-                  isLoading={isSavingQuote}
-                  onClick={() => handleSaveQuoteAndParaphrase({ auditWithAi: true })}
-                >
-                  Guardar y Auditar con IA
-                </Button>
+                <div className="flex flex-col-reverse sm:flex-row gap-2 w-full sm:w-auto sm:justify-end">
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    className="w-full sm:w-auto font-bold"
+                    disabled={isSavingQuote}
+                    isLoading={isSavingQuote}
+                    onClick={() => handleSaveQuoteAndParaphrase({ auditWithAi: false })}
+                  >
+                    Guardar Cita & Paráfrasis
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    icon={<Sparkles className="w-4 h-4" />}
+                    className="w-full sm:w-auto font-bold"
+                    disabled={isSavingQuote}
+                    isLoading={isSavingQuote}
+                    onClick={() => handleSaveQuoteAndParaphrase({ auditWithAi: true })}
+                  >
+                    Guardar y Auditar con IA
+                  </Button>
+                </div>
               </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Confirm Delete Source Modal */}
+      {isConfirmDeleteOpen && inspectedSource && (
+        <Modal
+          isOpen={isConfirmDeleteOpen}
+          onClose={() => setIsConfirmDeleteOpen(false)}
+          title="¿Eliminar fuente de la biblioteca?"
+          maxWidth="sm"
+        >
+          <div className="space-y-4 text-xs text-[#2B2D42]">
+            <p>
+              Se eliminará <strong className="text-[#8C3A32]">"{inspectedSource.title}"</strong> de tu biblioteca de fuentes académicas.
+            </p>
+            <p className="text-[11px] text-[#5A6275]">
+              Las citas vinculadas a esta fuente se removerán y sus ideas o paráfrasis quedarán archivadas sin perderse.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsConfirmDeleteOpen(false)}
+                disabled={isDeletingSource}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleDeleteSource}
+                isLoading={isDeletingSource}
+                className="bg-[#C62828] hover:bg-[#B71C1C] text-white font-bold"
+              >
+                Confirmar Eliminación
+              </Button>
             </div>
           </div>
         </Modal>

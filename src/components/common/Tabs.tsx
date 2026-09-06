@@ -44,7 +44,7 @@ export function Tabs<T extends string>({
                 : 'text-[#5A6275] hover:text-[#2B2D42] hover:bg-white/60'
             }`}
           >
-            {tab.icon && <span className={`shrink-0 ${isActive ? 'text-[#D98880]' : 'text-[#8D99AE]'}`}>{tab.icon}</span>}
+            {tab.icon && <span className={`shrink-0 ${isActive ? 'text-[#D98880]' : 'text-[#5A6275]'}`}>{tab.icon}</span>}
             <span>{tab.label}</span>
             {tab.badge !== undefined && (
               <span

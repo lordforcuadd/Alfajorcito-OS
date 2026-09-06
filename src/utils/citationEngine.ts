@@ -1,5 +1,6 @@
 import type { Source, CitationStyle, Author } from '../types';
 import { copyText } from './clipboardHelper';
+import { isSafeHttpUrl } from './urlHelper';
 
 export function formatAuthorNamesAPA(authors: Author[]): string {
   if (!authors || authors.length === 0) return 'Autor Desconocido';
@@ -142,6 +143,16 @@ function ensurePeriod(str: string): string {
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
 
+/**
+ * Collapses accidental double periods ("A.. 2020") into a single one while
+ * preserving legitimate ellipses ("Estudio..."). Implemented with a replacer
+ * instead of a lookbehind regex so the module parses in Safari < 16.4
+ * (lookbehind is a SyntaxError there at parse time, not runtime).
+ */
+function collapseAccidentalDoublePeriods(str: string): string {
+  return str.replace(/\.+/g, (run) => (run.length >= 3 ? '...' : '.'));
+}
+
 export function formatFullReference(source: Source, style: CitationStyle = 'APA_7'): string {
   const year = source.year || 's.f.';
   const title = source.title || 'Título desconocido';
@@ -220,13 +231,14 @@ export function formatFullReference(source: Source, style: CitationStyle = 'APA_
 
     case 'CHICAGO_AUTHOR_DATE': {
       const authors = formatAuthorNamesAPA(source.authors).replace(/&/g, 'and');
+      const authorPart = ensurePeriod(authors);
       const pub = source.publication ? ` ${source.publication}` : '';
       const vol = source.volume ? ` ${source.volume}` : '';
       const iss = source.issue ? `, no. ${source.issue}` : '';
       const pgs = source.pages ? `: ${source.pages}` : '';
       const details = pub ? `${pub}${vol}${iss}${pgs}.` : '';
       const doiPart = url ? ` ${url}` : '';
-      return `${authors}. ${year}. "${ensurePeriod(title)}"${details}${doiPart}`.trim();
+      return collapseAccidentalDoublePeriods(`${authorPart} ${year}. "${ensurePeriod(title)}"${details}${doiPart}`).trim();
     }
 
     case 'CHICAGO_NOTES': {
@@ -250,15 +262,16 @@ export function formatFullReference(source: Source, style: CitationStyle = 'APA_
         authorStr = source.authors.map((a) => `${a.lastName} ${a.firstName ? a.firstName.charAt(0) : ''}`).join(', ');
       }
       const titleWithPeriod = ensurePeriod(title);
+      const doiPart = url ? ` ${url}` : '';
       if (source.type === 'JOURNAL_ARTICLE') {
         const pub = source.publication ? ` ${ensurePeriod(source.publication)}` : '';
         const vol = source.volume ? `;${source.volume}` : '';
         const iss = source.issue ? `(${source.issue})` : '';
         const pgs = source.pages ? `:${source.pages}` : '';
-        return `${authorStr}. ${titleWithPeriod}${pub} ${year}${vol}${iss}${pgs}.`.replace(/\s+/g, ' ').trim();
+        return `${authorStr}. ${titleWithPeriod}${pub} ${year}${vol}${iss}${pgs}.${doiPart}`.replace(/\s+/g, ' ').trim();
       } else {
         const pub = source.publication ? ` ${source.publication};` : '';
-        return `${authorStr}. ${titleWithPeriod}${pub} ${year}.`.replace(/\s+/g, ' ').trim();
+        return `${authorStr}. ${titleWithPeriod}${pub} ${year}.${doiPart}`.replace(/\s+/g, ' ').trim();
       }
     }
 
@@ -277,12 +290,21 @@ export function escapeHtml(str: string): string {
     .replace(/'/g, '&#039;');
 }
 
+function renderSafeLink(rawUrl?: string | null, linkText?: string): string {
+  if (!rawUrl) return '';
+  const trimmed = rawUrl.trim();
+  const text = escapeHtml(linkText || trimmed);
+  if (isSafeHttpUrl(trimmed)) {
+    return `<a href="${escapeHtml(trimmed)}">${text}</a>`;
+  }
+  return text;
+}
+
 export function formatFullReferenceHTML(source: Source, style: CitationStyle = 'APA_7'): string {
   const year = source.year || 's.f.';
   const title = escapeHtml(source.title || 'Título desconocido');
   const doi = source.doi ? (source.doi.startsWith('http') ? source.doi : `https://doi.org/${source.doi}`) : '';
   const rawUrl = source.url || doi;
-  const url = escapeHtml(rawUrl);
 
   const safeAuthors = (source.authors || []).map((a) => ({
     firstName: escapeHtml(a.firstName || ''),
@@ -305,20 +327,20 @@ export function formatFullReferenceHTML(source: Source, style: CitationStyle = '
         const iss = issEsc ? `(${issEsc})` : '';
         const pgs = pgsEsc ? `, ${pgsEsc}` : '';
         const articleDetails = pub ? `${pub}${vol}${iss}${pgs}.` : '';
-        const doiPart = url ? ` ${url}` : '';
+        const doiPart = rawUrl ? ` ${renderSafeLink(rawUrl)}` : '';
         return `${authors} (${year}). ${titleWithPeriod}${articleDetails}${doiPart}`.trim();
       } else if (source.type === 'BOOK_CHAPTER') {
         const book = pubEsc ? ` En <i>${pubEsc}</i>` : '';
         const pgs = pgsEsc ? ` (pp. ${pgsEsc})` : '';
         const chapterDetails = book ? `${book}${pgs}.` : '';
-        const doiPart = url ? ` <a href="${url}">${url}</a>` : '';
+        const doiPart = rawUrl ? ` ${renderSafeLink(rawUrl)}` : '';
         return `${authors} (${year}). ${titleWithPeriod}${chapterDetails}${doiPart}`.trim();
       } else {
         const hasTerminalPunctuation = /[.?!]$/.test(title.trim());
         const italicTitle = `<i>${title}</i>`;
         const titleDot = hasTerminalPunctuation ? '' : '.';
         const pub = pubEsc ? ` ${ensurePeriod(pubEsc)}` : '';
-        const doiPart = url ? ` ${url}` : '';
+        const doiPart = rawUrl ? ` ${renderSafeLink(rawUrl)}` : '';
         return `${authors} (${year}). ${italicTitle}${titleDot}${pub}${doiPart}`.trim();
       }
     }
@@ -338,7 +360,7 @@ export function formatFullReferenceHTML(source: Source, style: CitationStyle = '
       const vol = volEsc ? ` vol. ${volEsc},` : '';
       const iss = issEsc ? ` no. ${issEsc},` : '';
       const pgs = pgsEsc ? ` pp. ${pgsEsc},` : '';
-      const doiPart = url ? ` ${url}.` : '.';
+      const doiPart = rawUrl ? ` ${renderSafeLink(rawUrl)}.` : '.';
       return `${authorStr} "${ensurePeriod(title)}"${pub}${vol}${iss} ${year},${pgs}${doiPart}`.replace(/\s+/g, ' ').trim();
     }
 
@@ -352,29 +374,30 @@ export function formatFullReferenceHTML(source: Source, style: CitationStyle = '
         const vol = volEsc ? `, vol. ${volEsc}` : '';
         const iss = issEsc ? `, no. ${issEsc}` : '';
         const pgs = pgsEsc ? `, pp. ${pgsEsc}` : '';
-        const doiPart = url ? `, doi: <a href="${url}">${escapeHtml(source.doi || url)}</a>` : '';
+        const doiPart = rawUrl ? `, doi: ${renderSafeLink(rawUrl, source.doi || rawUrl)}` : '';
         return `${authorStr}, "${title}"${pub}${vol}${iss}${pgs}, ${year}${doiPart}.`.replace(/\s+/g, ' ').trim();
       } else if (source.type === 'BOOK_CHAPTER') {
         const pub = pubEsc ? ` en <i>${pubEsc}</i>` : '';
         const pgs = pgsEsc ? `, pp. ${pgsEsc}` : '';
-        const doiPart = url ? `, doi: <a href="${url}">${escapeHtml(source.doi || url)}</a>` : '';
+        const doiPart = rawUrl ? `, doi: ${renderSafeLink(rawUrl, source.doi || rawUrl)}` : '';
         return `${authorStr}, "${title}"${pub}${pgs}, ${year}${doiPart}.`.replace(/\s+/g, ' ').trim();
       } else {
         const pub = pubEsc ? `, ${pubEsc}` : '';
-        const doiPart = url ? `, <a href="${url}">${url}</a>` : '';
+        const doiPart = rawUrl ? `, ${renderSafeLink(rawUrl)}` : '';
         return `${authorStr}, <i>${title}</i>${pub}, ${year}${doiPart}.`.replace(/\s+/g, ' ').trim();
       }
     }
 
     case 'CHICAGO_AUTHOR_DATE': {
       const authors = formatAuthorNamesAPA(safeAuthors).replace(/&/g, 'and');
+      const authorPart = ensurePeriod(authors);
       const pub = pubEsc ? ` <i>${pubEsc}</i>` : '';
       const vol = volEsc ? ` ${volEsc}` : '';
       const iss = issEsc ? `, no. ${issEsc}` : '';
       const pgs = pgsEsc ? `: ${pgsEsc}` : '';
       const details = pub ? `${pub}${vol}${iss}${pgs}.` : '';
-      const doiPart = url ? ` ${url}` : '';
-      return `${authors}. ${year}. "${ensurePeriod(title)}"${details}${doiPart}`.trim();
+      const doiPart = rawUrl ? ` ${renderSafeLink(rawUrl)}` : '';
+      return collapseAccidentalDoublePeriods(`${authorPart} ${year}. "${ensurePeriod(title)}"${details}${doiPart}`).trim();
     }
 
     case 'CHICAGO_NOTES': {
@@ -388,8 +411,8 @@ export function formatFullReferenceHTML(source: Source, style: CitationStyle = '
       }
       const pub = pubEsc ? ` <i>${pubEsc}</i>` : '';
       const pgs = pgsEsc ? `, ${pgsEsc}` : '';
-      const doiPart = url ? ` <a href="${url}">${url}</a>` : '';
-      return `${authorStr} "${ensurePeriod(title)}"${pub} (${year})${pgs}.${doiPart}`.trim();
+      const doiPart = rawUrl ? ` ${renderSafeLink(rawUrl)}` : '';
+      return collapseAccidentalDoublePeriods(`${authorStr} "${ensurePeriod(title)}"${pub} (${year})${pgs}.${doiPart}`).trim();
     }
 
     case 'VANCOUVER': {
@@ -397,15 +420,18 @@ export function formatFullReferenceHTML(source: Source, style: CitationStyle = '
       if (safeAuthors && safeAuthors.length > 0) {
         authorStr = safeAuthors.map((a) => `${a.lastName} ${a.firstName ? a.firstName.charAt(0) : ''}`).join(', ');
       }
+      const doiPart = rawUrl ? ` ${renderSafeLink(rawUrl)}` : '';
       if (source.type === 'JOURNAL_ARTICLE') {
         const pub = pubEsc ? ` <i>${pubEsc}</i>.` : '';
         const vol = volEsc ? `;${volEsc}` : '';
         const iss = issEsc ? `(${issEsc})` : '';
         const pgs = pgsEsc ? `:${pgsEsc}` : '';
-        return `${authorStr}. ${ensurePeriod(title)}${pub} ${year}${vol}${iss}${pgs}.`.replace(/\s+/g, ' ').trim();
+        return collapseAccidentalDoublePeriods(`${authorStr}. ${ensurePeriod(title)}${pub} ${year}${vol}${iss}${pgs}.${doiPart}`).replace(/\s+/g, ' ').trim();
       } else {
+        const hasTerminalPunctuation = /[.?!]$/.test(title.trim());
+        const titleDot = hasTerminalPunctuation ? '' : '.';
         const pub = pubEsc ? ` ${pubEsc};` : '';
-        return `${authorStr}. <i>${title}</i>.${pub} ${year}.`.replace(/\s+/g, ' ').trim();
+        return collapseAccidentalDoublePeriods(`${authorStr}. <i>${title}</i>${titleDot}${pub} ${year}.${doiPart}`).replace(/\s+/g, ' ').trim();
       }
     }
 

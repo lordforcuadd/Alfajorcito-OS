@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Course, Work, Source, Idea, Paraphrase, Citation, Note, Concept, Task, InquiryToTeacher } from '../types';
+import { WORK_STATUSES } from '../types';
+import { WORK_STATUS_META } from '../components/common/Badge';
 
 describe('Backup and Restore Validation Suite', () => {
   // Replication of the validation logic from SettingsModal.tsx
@@ -87,5 +89,31 @@ describe('Backup and Restore Validation Suite', () => {
     expect(validateItems(fullBackupPayload.concepts, ['name'])).toHaveLength(1);
     expect(validateItems(fullBackupPayload.tasks, ['title'])).toHaveLength(1);
     expect(validateItems(fullBackupPayload.inquiries, ['topic'])).toHaveLength(1);
+  });
+
+  it('backup validator accepts every canonical WorkStatus (seed round-trip)', () => {
+    // Cross-check TWO real production sources: the canonical WORK_STATUSES list
+    // (types/index.ts, consumed by the SettingsModal validator) and WORK_STATUS_META
+    // (Badge.tsx, the UI status map). If a status exists in one but is rejected by
+    // the other, the seed backup round-trip breaks.
+    const allowedByValidator = WORK_STATUSES as readonly string[];
+    const uiStatuses = Object.keys(WORK_STATUS_META);
+
+    // 1. Every status the app can create must be accepted by the import validator
+    for (const st of uiStatuses) {
+      expect(allowedByValidator.includes(st)).toBe(true);
+    }
+    // 2. Every status the validator accepts must have a UI label (no ghost statuses)
+    for (const st of allowedByValidator) {
+      expect(uiStatuses.includes(st)).toBe(true);
+    }
+    // 3. Ghost value from the original bug must stay rejected
+    expect(allowedByValidator.includes('REVISION')).toBe(false);
+    expect(allowedByValidator.includes('EN_REVISION')).toBe(true);
+    // 4. Every status used by the seed must pass the validator
+    const seedStatuses = ['INVESTIGACION', 'REDACTANDO', 'PLANIFICACION', 'EN_REVISION', 'ENTREGADO', 'ARCHIVADO'];
+    for (const st of seedStatuses) {
+      expect(allowedByValidator.includes(st)).toBe(true);
+    }
   });
 });

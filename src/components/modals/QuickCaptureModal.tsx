@@ -58,9 +58,10 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
     return rec?.value as UserProfile | undefined;
   });
 
-  const defaultCyclePeriod = userProfile?.currentCycle
-    ? `2026-II (${userProfile.currentCycle})`
-    : '2026-II (Ciclo Actual)';
+  const cleanCycleStr = userProfile?.currentCycle
+    ? String(userProfile.currentCycle).replace(/\s*\(.*?\)/g, '')
+    : 'Ciclo Actual';
+  const defaultCyclePeriod = `2026-II (${cleanCycleStr})`;
 
   // 1. Note State
   const [noteTitle, setNoteTitle] = useState('');
@@ -93,7 +94,8 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
   // Sync coursePeriod when userProfile loads
   useEffect(() => {
     if (userProfile?.currentCycle) {
-      setCoursePeriod((prev) => (prev.includes('Ciclo Actual') ? `2026-II (${userProfile.currentCycle})` : prev));
+      const clean = String(userProfile.currentCycle).replace(/\s*\(.*?\)/g, '');
+      setCoursePeriod((prev) => (prev.includes('Ciclo Actual') ? `2026-II (${clean})` : prev));
     }
   }, [userProfile?.currentCycle]);
 
@@ -102,6 +104,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
   const [sourceTitle, setSourceTitle] = useState('');
   const [sourceAuthor, setSourceAuthor] = useState('');
   const [sourceYear, setSourceYear] = useState<number>(new Date().getFullYear());
+  const [sourceType, setSourceType] = useState<SourceType>('JOURNAL_ARTICLE');
   const [sourcePublication, setSourcePublication] = useState('');
   const [sourceWorkId, setSourceWorkId] = useState(initialWorkId || '');
   const [isResolvingDoi, setIsResolvingDoi] = useState(false);
@@ -112,6 +115,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
   const [inquiryTopic, setInquiryTopic] = useState('');
   const [inquiryRawQuestion, setInquiryRawQuestion] = useState('');
   const [inquiryFormalPreview, setInquiryFormalPreview] = useState('');
+  const [isFormalizingInquiry, setIsFormalizingInquiry] = useState(false);
 
   // 6. Task State
   const [taskTitle, setTaskTitle] = useState('');
@@ -149,6 +153,9 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         setSourceAuthor(authorStr);
         setSourceYear(result.year);
         setSourcePublication(result.publication || '');
+        if (result.type) {
+          setSourceType(result.type);
+        }
         showToast('Artículo encontrado', `Verificado en ${result.provider}`, 'success');
       } else {
         showToast('DOI no resuelto', 'Ingresa los datos manualmente o revisa el DOI.', 'warning');
@@ -162,14 +169,26 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
 
   // Inquiry AI Formalizer Helper
   const handleFormalizeInquiry = async () => {
-    if (!inquiryRawQuestion.trim()) return;
-    const course = courses.find(c => c.id === inquiryCourseId);
-    const formal = await formulateQuestionForTeacher(
-      inquiryRawQuestion,
-      course?.name || 'la asignatura',
-      course?.teacherName
-    );
-    setInquiryFormalPreview(formal);
+    if (!inquiryRawQuestion.trim()) {
+      showToast('Pregunta requerida', 'Ingresa tu duda en borrador antes de redactar con IA.', 'warning');
+      return;
+    }
+    setIsFormalizingInquiry(true);
+    try {
+      const course = courses.find(c => c.id === inquiryCourseId);
+      const formal = await formulateQuestionForTeacher(
+        inquiryRawQuestion,
+        course?.name || 'la asignatura',
+        course?.teacherName
+      );
+      setInquiryFormalPreview(formal);
+      showToast('Consulta formalizada', 'Redacción generada para el docente.', 'success');
+    } catch (err) {
+      console.error('Error formalizing inquiry:', err);
+      showToast('Error de IA', 'No se pudo generar la redacción formal con IA.', 'error');
+    } finally {
+      setIsFormalizingInquiry(false);
+    }
   };
 
   // Submit Handlers
@@ -342,6 +361,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       let finalAuthors = authors.length > 0 ? authors : [{ firstName: '', lastName: 'Autor' }];
       let finalYear = parsedYear;
       let finalPub = sourcePublication.trim() || undefined;
+      let finalType: SourceType = sourceType;
 
       if (extractedDoi) {
         try {
@@ -353,6 +373,10 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
             }
             if (resolved.year) finalYear = resolved.year;
             if (resolved.publication) finalPub = resolved.publication;
+            if (resolved.type) {
+              finalType = resolved.type;
+              setSourceType(resolved.type);
+            }
 
             const tempSource: Source = {
               id: 'temp',
@@ -360,7 +384,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
               title: finalTitle,
               authors: finalAuthors,
               year: finalYear,
-              type: 'JOURNAL_ARTICLE',
+              type: finalType,
               publication: finalPub,
               doi: extractedDoi,
               accessedAt: now,
@@ -385,7 +409,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         title: finalTitle,
         authors: finalAuthors,
         year: finalYear,
-        type: 'JOURNAL_ARTICLE',
+        type: finalType,
         publication: finalPub,
         doi: extractedDoi || undefined,
         accessedAt: now,
@@ -678,6 +702,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
               onChange={(e) => setWorkCitationStyle(e.target.value as CitationStyle)}
             >
               <option value="APA_7">Normas APA 7ma Edición (Psicología / Salud)</option>
+              <option value="MLA_9">MLA 9na Edición (Humanidades / Literatura)</option>
               <option value="VANCOUVER">Estilo Vancouver (Biomédicas)</option>
               <option value="IEEE">Estilo IEEE (Ingenierías)</option>
               <option value="CHICAGO_AUTHOR_DATE">Chicago 17th Ed. (Autor-Fecha)</option>
@@ -841,12 +866,29 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
             </div>
           </div>
 
-          <Input
-            label="Título de la Fuente o Libro *"
-            placeholder="e.g. Propiedades psicométricas de escalas de autorregulación..."
-            value={sourceTitle}
-            onChange={(e) => setSourceTitle(e.target.value)}
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="sm:col-span-2">
+              <Input
+                label="Título de la Fuente o Libro *"
+                placeholder="e.g. Propiedades psicométricas de escalas de autorregulación..."
+                value={sourceTitle}
+                onChange={(e) => setSourceTitle(e.target.value)}
+              />
+            </div>
+            <Select
+              label="Tipo de Fuente"
+              value={sourceType}
+              onChange={(e) => setSourceType(e.target.value as SourceType)}
+            >
+              <option value="JOURNAL_ARTICLE">Artículo Científico</option>
+              <option value="BOOK">Libro Completo</option>
+              <option value="BOOK_CHAPTER">Capítulo de Libro</option>
+              <option value="THESIS">Tesis de Grado</option>
+              <option value="CONFERENCE_PAPER">Ponencia / Conferencia</option>
+              <option value="REPORT">Informe Técnico</option>
+              <option value="WEBSITE">Página Web / Enlace</option>
+            </Select>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
@@ -955,6 +997,8 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
               size="sm"
               icon={<Sparkles className="w-3.5 h-3.5 text-[#8C3A32]" />}
               onClick={handleFormalizeInquiry}
+              isLoading={isFormalizingInquiry}
+              disabled={isFormalizingInquiry || !inquiryRawQuestion.trim()}
               className="w-full sm:w-auto"
             >
               Redactar Formalmente con IA

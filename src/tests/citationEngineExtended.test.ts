@@ -334,4 +334,54 @@ describe('Citation Engine Extended Suite — Strict Academic APA 7 & Multi-style
     expect(collection).toContain('@article{garcia2023ansiedad,');
     expect(collection).toContain('@article{garcia2023ansiedadb,');
   });
+
+  it('preserves legitimate ellipses in titles across Chicago and Vancouver styles', () => {
+    const ellipsisSource: Source = {
+      id: 'src-ellipsis',
+      workIds: [],
+      title: 'Memoria y cognición... un estudio empírico',
+      authors: [{ firstName: 'María', lastName: 'López' }],
+      year: 2024,
+      type: 'JOURNAL_ARTICLE',
+      publication: 'Revista de Neuropsicología',
+      accessedAt: Date.now(),
+      verificationStatus: 'VERIFIED',
+      verificationProvider: 'CROSSREF',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    const chicagoPlain = formatFullReference(ellipsisSource, 'CHICAGO_AUTHOR_DATE');
+    expect(chicagoPlain).toContain('...');
+
+    const chicagoHtml = formatFullReferenceHTML(ellipsisSource, 'CHICAGO_AUTHOR_DATE');
+    expect(chicagoHtml).toContain('...');
+
+    const chicagoNotesHtml = formatFullReferenceHTML(ellipsisSource, 'CHICAGO_NOTES');
+    expect(chicagoNotesHtml).toContain('...');
+
+    const vancouverHtml = formatFullReferenceHTML(ellipsisSource, 'VANCOUVER');
+    expect(vancouverHtml).toContain('...');
+  });
+
+  it('neutralizes malicious javascript: URLs preventing XSS injection in HTML citations', () => {
+    const xssSource: Source = {
+      id: 'src-xss',
+      workIds: [],
+      title: 'Valid Title',
+      authors: [{ firstName: 'Test', lastName: 'Author' }],
+      year: 2024,
+      type: 'WEBPAGE',
+      url: 'javascript:alert(document.domain)',
+      accessedAt: Date.now(),
+      verificationStatus: 'UNVERIFIED',
+      verificationProvider: 'MANUAL',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    const html = formatFullReferenceHTML(xssSource, 'APA_7');
+    expect(html).not.toContain('<a href="javascript:');
+    expect(html).not.toContain('<a href');
+  });
 });

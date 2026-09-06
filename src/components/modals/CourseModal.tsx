@@ -9,6 +9,7 @@ import { useToast } from '../common/Toast';
 import { generateId } from '../../utils/idHelper';
 import { sanitizeSafeUrl } from '../../utils/urlHelper';
 import { COURSE_PASTEL_PALETTE as PASTEL_COLORS } from '../../utils/themeTokens';
+import { deleteCourseCascade } from '../../utils/academicWorkUtils';
 import type { Course, UserProfile } from '../../types';
 
 export interface CourseModalProps {
@@ -115,12 +116,8 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   const handleDeleteCourse = async () => {
     if (!courseToEdit) return;
     try {
-      await db.transaction('rw', [db.courses, db.works, db.notes], async () => {
-        await db.works.where('courseId').equals(courseToEdit.id).modify({ courseId: undefined });
-        await db.notes.where('courseId').equals(courseToEdit.id).modify({ courseId: undefined });
-        await db.courses.delete(courseToEdit.id);
-      });
-      showToast('Curso eliminado', 'El curso se eliminó y sus trabajos y notas se desvincularon.', 'info');
+      await deleteCourseCascade(courseToEdit.id);
+      showToast('Curso eliminado', 'El curso se eliminó y sus trabajos, tareas, notas y dudas se desvincularon correctamente.', 'info');
       setIsConfirmDeleteOpen(false);
       onClose();
     } catch {

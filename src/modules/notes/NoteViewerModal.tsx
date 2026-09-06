@@ -262,7 +262,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
             {/* Tags Ribbon */}
             {currentNote.tags && currentNote.tags.length > 0 && (
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs text-[#8D99AE] font-semibold">Etiquetas:</span>
+                <span className="text-xs text-[#5A6275] font-semibold">Etiquetas:</span>
                 {currentNote.tags.map((t, idx) => (
                   <span
                     key={idx}
@@ -292,7 +292,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
                         <span className="font-bold text-xs text-[#2B2D42] block truncate group-hover:text-[#8C3A32]">
                           {bNote.title}
                         </span>
-                        <span className="text-[10px] text-[#8D99AE]">
+                        <span className="text-[10px] text-[#5A6275]">
                           {bNote.paraCategory === 'PROJECT' ? 'Trabajo' : 'Nota'}
                         </span>
                       </div>
@@ -388,7 +388,7 @@ export const NoteViewerModal: React.FC<NoteViewerModalProps> = ({
                 <label className="text-[11px] font-bold uppercase tracking-wider text-[#5A6275]">
                   Contenido en Markdown
                 </label>
-                <span className="text-[11px] text-[#8D99AE]">Usa [[enlace]] para conectar</span>
+                <span className="text-[11px] text-[#5A6275]">Usa [[enlace]] para conectar</span>
               </div>
 
               <div className="flex items-center gap-1.5 p-1.5 bg-[#F5F1EB] rounded-xl border border-[#EBE5DF] overflow-x-auto no-scrollbar">

@@ -137,7 +137,7 @@ export function computeDraftFormatting(
       const text = selected.replace(/^>\s*"?|"?$/g, '').trim() || 'Texto citado textualmente con más de 40 palabras...';
       const prefix = start > 0 && !currentText.substring(0, start).endsWith('\n\n') ? (currentText.substring(0, start).endsWith('\n') ? '\n' : '\n\n') : '';
       const suffix = !currentText.substring(end).startsWith('\n') ? '\n\n' : '\n';
-      replacement = `${prefix}> "${text}" (Autor, 2024, p. 15)${suffix}`;
+      replacement = `${prefix}> "${text}" (Apellido, Año, p. XX)${suffix}`;
       newCursorStart = start + prefix.length + 3;
       newCursorEnd = newCursorStart + text.length;
       break;

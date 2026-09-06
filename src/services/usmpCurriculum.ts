@@ -125,7 +125,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 3,
     credits: 4,
     type: 'OBLIGATORIO',
-    prerequisites: ['Procesos Cognitivos I'],
+    prerequisites: ['Procesos Cognitivos I (Atención, Percepción y Memoria)'],
     area: 'CLINICA',
     description: 'Razonamiento lógico, toma de decisiones, solución de problemas, psicolingüística y teorías contemporáneas de la inteligencia.',
     competencies: ['Diseñar protocolos de evaluación de funciones ejecutivas y razonamiento formal.']
@@ -147,7 +147,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 3,
     credits: 3,
     type: 'OBLIGATORIO',
-    prerequisites: ['Psicología del Desarrollo I'],
+    prerequisites: ['Psicología del Desarrollo I (Infancia y Niñez)'],
     area: 'EDUCATIVA',
     description: 'Desarrollo de la identidad adolescente, crisis vitales del adulto joven y maduro, duelo y procesos de envejecimiento activo.',
     competencies: ['Comprender la dinámica biopsicosocial del ciclo vital humano completo.']
@@ -158,7 +158,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 3,
     credits: 3,
     type: 'OBLIGATORIO',
-    prerequisites: ['Estadística Descriptiva'],
+    prerequisites: ['Estadística Descriptiva Aplicada a las Ciencias Sociales'],
     area: 'INVESTIGACION',
     description: 'Pruebas paramétricas (t de Student, ANOVA) y no paramétricas (Chi-cuadrado, Mann-Whitney), correlaciones de Pearson y Spearman.',
     competencies: ['Contrastar hipótesis científicas seleccionando la prueba estadística adecuada.']
@@ -182,7 +182,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 4,
     credits: 4,
     type: 'OBLIGATORIO',
-    prerequisites: ['Estadística Inferencial'],
+    prerequisites: ['Estadística Inferencial y Probabilidades en Psicología'],
     area: 'INVESTIGACION',
     description: 'Teoría Clásica de los Test (TCT), Teoría de Respuesta al Ítem (TRI), validez de contenido, constructo y criterio, y confiabilidad.',
     competencies: ['Calcular y analizar coeficientes de validez y fiabilidad psicométrica.']
@@ -193,7 +193,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 4,
     credits: 3,
     type: 'OBLIGATORIO',
-    prerequisites: ['Epistemología e Historia Crítica'],
+    prerequisites: ['Epistemología e Historia Crítica de la Psicología'],
     area: 'SALUD_PUBLICA',
     description: 'Actitudes, prejuicios, estereotipos, influencia social, dinámicas de grupo, apego social y conducta prosocial/agresiva.',
     competencies: ['Diseñar diagnósticos de fenómenos y tensiones psicosociales comunitarias.']
@@ -204,7 +204,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 4,
     credits: 3,
     type: 'OBLIGATORIO',
-    prerequisites: ['Procesos Cognitivos II'],
+    prerequisites: ['Procesos Cognitivos II (Pensamiento, Lenguaje e Inteligencia)'],
     area: 'CLINICA',
     description: 'Condicionamiento clásico y operante, aprendizaje vicario, programas de reforzamiento y técnicas de modificación conductual.',
     competencies: ['Elaborar programas conductuales de adquisición, incremento y reducción de conductas.']
@@ -239,7 +239,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 5,
     credits: 4,
     type: 'OBLIGATORIO',
-    prerequisites: ['Psicometría General'],
+    prerequisites: ['Psicometría General y Teoría de los Test'],
     area: 'INVESTIGACION',
     description: 'Diseño de reactivos, análisis factorial exploratorio y confirmatorio (AFE/AFC), adaptación transcultural y baremación en Perú.',
     competencies: ['Construir y validar instrumentos psicométricos con Coeficiente Omega y Alfa ordinal.']
@@ -250,7 +250,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 5,
     credits: 4,
     type: 'OBLIGATORIO',
-    prerequisites: ['Neurociencias del Comportamiento', 'Psicología de la Personalidad II'],
+    prerequisites: ['Neurociencias del Comportamiento y Neuropsicología Básica', 'Psicología de la Personalidad II (Modelos Rasguales y Factoriales)'],
     area: 'CLINICA',
     description: 'Semiología de las funciones psíquicas. Criterios diagnósticos DSM-5-TR y CIE-11 para depresión, ansiedad generalizada, TOC y TEPT.',
     competencies: ['Realizar diagnósticos diferenciales basados en manuales nosológicos internacionales.']
@@ -261,7 +261,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 5,
     credits: 3,
     type: 'OBLIGATORIO',
-    prerequisites: ['Psicología del Aprendizaje', 'Psicología del Desarrollo II'],
+    prerequisites: ['Psicología del Aprendizaje y Modificación de Conducta', 'Psicología del Desarrollo II (Adolescencia, Adultez y Senectud)'],
     area: 'EDUCATIVA',
     description: 'Teorías del aprendizaje escolar (Ausubel, Piaget, Vygotsky), motivación académica, clima de aula y orientación vocacional.',
     competencies: ['Diseñar proyectos de optimización del rendimiento y convivencia escolar.']
@@ -272,7 +272,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 5,
     credits: 3,
     type: 'OBLIGATORIO',
-    prerequisites: ['Psicología Social'],
+    prerequisites: ['Psicología Social y de las Relaciones Interpersonales'],
     area: 'ORGANIZACIONAL',
     description: 'Cultura y clima organizacional, motivación laboral, liderazgo transformacional, estrés laboral y comunicación interna.',
     competencies: ['Diagnosticar necesidades de intervención en organizaciones y empresas.']
@@ -283,7 +283,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 5,
     credits: 3,
     type: 'OBLIGATORIO',
-    prerequisites: ['Psicometría General'],
+    prerequisites: ['Psicometría General y Teoría de los Test'],
     area: 'CLINICA',
     description: 'Administración, calificación e interpretación de baterías de inteligencia: WAIS-IV, WISC-V, Matrices Progresivas de Raven y TONI-4.',
     competencies: ['Elaborar informes psicométricos de capacidad intelectual con perfil de fortalezas y debilidades.']
@@ -296,7 +296,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 6,
     credits: 4,
     type: 'INVESTIGACION',
-    prerequisites: ['Psicometría Aplicada'],
+    prerequisites: ['Psicometría Aplicada (Construcción y Adaptación de Escalas)'],
     area: 'INVESTIGACION',
     description: 'Diseños no experimentales (transversales, longitudinales, correlacionales) y experimentales. Formulación de problemas e hipótesis.',
     competencies: ['Diseñar matrices de consistencia metodológica bajo directrices APA 7 y USMP.']
@@ -307,7 +307,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 6,
     credits: 4,
     type: 'OBLIGATORIO',
-    prerequisites: ['Psicopatología I'],
+    prerequisites: ['Psicopatología I (Trastornos del Estado de Ánimo y Ansiedad)'],
     area: 'CLINICA',
     description: 'Esquizofrenia y espectro psicótico, trastornos graves de la personalidad (Cluster A, B, C), TEA, TDAH y adicciones.',
     competencies: ['Diagnosticar patologías complejas y estructurar planes de derivación e interconsulta.']
@@ -318,7 +318,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 6,
     credits: 3,
     type: 'OBLIGATORIO',
-    prerequisites: ['Psicología Educativa', 'Evaluación de la Inteligencia'],
+    prerequisites: ['Psicología Educativa y del Rendimiento Académico', 'Evaluación Psicométrica de la Inteligencia y Habilidades'],
     area: 'EDUCATIVA',
     description: 'Dificultades específicas de aprendizaje (dislexia, discalculia, disgrafía), adaptaciones curriculares y pruebas psicopedagógicas.',
     competencies: ['Emitir informes psicopedagógicos integrales para comités de inclusión educativa.']
@@ -329,7 +329,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 6,
     credits: 3,
     type: 'OBLIGATORIO',
-    prerequisites: ['Psicología de la Personalidad II', 'Psicometría Aplicada'],
+    prerequisites: ['Psicología de la Personalidad II (Modelos Rasguales y Factoriales)', 'Psicometría Aplicada (Construcción y Adaptación de Escalas)'],
     area: 'CLINICA',
     description: 'Administración e interpretación de inventarios objetivos de personalidad: MMPI-2, Millon (MCMI-IV), PAI y 16PF-5.',
     competencies: ['Integrar perfiles clínicos y rasgos patológicos de personalidad en informes formales.']
@@ -340,7 +340,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 6,
     credits: 3,
     type: 'OBLIGATORIO',
-    prerequisites: ['Psicología Social'],
+    prerequisites: ['Psicología Social y de las Relaciones Interpersonales'],
     area: 'SALUD_PUBLICA',
     description: 'Modelos de empoderamiento, investigación-acción participativa (IAP), redes comunitarias de soporte y Centros de Salud Mental Comunitaria.',
     competencies: ['Diseñar proyectos de prevención comunitaria del suicidio, violencia de género y consumo de drogas.']
@@ -353,7 +353,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 7,
     credits: 4,
     type: 'INVESTIGACION',
-    prerequisites: ['Metodología de la Investigación'],
+    prerequisites: ['Metodología de la Investigación Científica en Psicología'],
     area: 'INVESTIGACION',
     description: 'Planteamiento del problema de tesis, revisión sistemática de literatura indexada (Scopus, Web of Science, SciELO), justificación y marco teórico bajo APA 7.',
     competencies: [
@@ -367,7 +367,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 7,
     credits: 4,
     type: 'OBLIGATORIO',
-    prerequisites: ['Psicopatología II', 'Evaluación de la Personalidad'],
+    prerequisites: ['Psicopatología II (Psicosis, Trastornos de la Personalidad y Neurodesarrollo)', 'Evaluación Psicométrica de la Personalidad'],
     area: 'CLINICA',
     description: 'Integración multimétodo de pruebas psicométricas, entrevista, historia clínica y examen mental para la emisión del informe psicológico clínico.',
     competencies: ['Redactar informes psicológicos clínicos integrados con juicio diagnóstico y pronóstico.']
@@ -378,7 +378,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 7,
     credits: 3,
     type: 'OBLIGATORIO',
-    prerequisites: ['Psicología Social', 'Psicopatología I'],
+    prerequisites: ['Psicología Social y de las Relaciones Interpersonales', 'Psicopatología I (Trastornos del Estado de Ánimo y Ansiedad)'],
     area: 'CLINICA',
     description: 'Estructura familiar, ciclo vital de la familia, genogramas, doble vínculo, comunicación sistémica y modelos de terapia familiar estructural.',
     competencies: ['Elaborar genogramas familiares diagnósticos e identificar patrones transgeneracionales.']
@@ -389,7 +389,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 7,
     credits: 3,
     type: 'OBLIGATORIO',
-    prerequisites: ['Psicología Organizacional'],
+    prerequisites: ['Psicología Organizacional y del Trabajo'],
     area: 'ORGANIZACIONAL',
     description: 'Assessment Center, entrevistas por incidentes críticos (STAR), perfiles de puestos y pruebas psicométricas laborales.',
     competencies: ['Conducir procesos integrales de selección por competencias y emitir informes laborales.']
@@ -400,7 +400,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 7,
     credits: 3,
     type: 'OBLIGATORIO',
-    prerequisites: ['Evaluación Psicoeducativa'],
+    prerequisites: ['Evaluación y Diagnóstico Psicoeducativo'],
     area: 'EDUCATIVA',
     description: 'Programas de tutoría escolar, prevención del bullying y ciberacoso, escuela para padres y desarrollo socioemocional.',
     competencies: ['Implementar talleres psicoeducativos para docentes, padres y estudiantes.']
@@ -413,7 +413,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 8,
     credits: 4,
     type: 'INVESTIGACION',
-    prerequisites: ['Seminario de Investigación en Psicología I', 'Psicometría Aplicada'],
+    prerequisites: ['Seminario de Investigación en Psicología I (Marco Teórico y Estado del Arte)', 'Psicometría Aplicada (Construcción y Adaptación de Escalas)'],
     area: 'INVESTIGACION',
     description: 'Elaboración, sustentación y dictamen del Proyecto de Tesis para la obtención del Título Profesional de Licenciada en Psicología por la USMP. Delimitación del problema en el contexto peruano, formulación de objetivos e hipótesis, fundamentación teórica bajo normas APA 7, diseño metodológico cuantitativo/cualitativo, operacionalización de variables y selección de instrumentos psicométricos con validez de constructo y fiabilidad demostrada (Alfa de Cronbach y Coeficiente Omega de McDonald).',
     competencies: [
@@ -428,7 +428,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 8,
     credits: 4,
     type: 'OBLIGATORIO',
-    prerequisites: ['Psicopatología II', 'Evaluación y Diagnóstico Clínico Integral'],
+    prerequisites: ['Psicopatología II (Psicosis, Trastornos de la Personalidad y Neurodesarrollo)', 'Evaluación y Diagnóstico Clínico Integral'],
     area: 'CLINICA',
     description: 'Modelos teóricos y procedimientos aplicados de intervención clínica y de la salud. Formulación clínica cognitivo-conductual (TCC), terapias contextuales de tercera generación (ACT, Mindfulness), análisis funcional de la conducta (E-O-R-C), diseño de programas preventivo-promocionales y manejo del estrés y enfermedades crónicas.',
     competencies: [
@@ -458,7 +458,7 @@ export const USMP_PSYCHOLOGY_CURRICULUM: CurriculumCourse[] = [
     cycle: 8,
     credits: 3,
     type: 'OBLIGATORIO',
-    prerequisites: ['Selección y Evaluación del Talento Humano'],
+    prerequisites: ['Selección y Evaluación del Talento Humano por Competencias'],
     area: 'ORGANIZACIONAL',
     description: 'Gestión del capital humano en organizaciones peruanas: evaluación del desempeño por competencias, clima y cultura organizacional, diagnóstico de síndrome de burnout, bienestar laboral y diseño de programas de desarrollo del talento.',
     competencies: [

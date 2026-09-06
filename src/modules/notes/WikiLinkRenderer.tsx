@@ -27,7 +27,7 @@ export const FormattedNoteContent: React.FC<FormattedContentProps> = ({
   className = ''
 }) => {
   if (!content) {
-    return <p className="text-xs text-[#8D99AE] italic">Nota vacía.</p>;
+    return <p className="text-xs text-[#5A6275] italic">Nota vacía.</p>;
   }
 
   // Handle Wiki-Link Navigation with Alias and Target resolution

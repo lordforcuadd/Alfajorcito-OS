@@ -541,13 +541,11 @@ async function callGemini(
     }
   }
 
-  // 2. Build candidate list: User targetModel ALWAYS FIRST, then official stable fallbacks
   const candidateList = [
     targetModel,
     'gemini-2.5-flash',
-    'gemini-1.5-flash',
     'gemini-2.0-flash',
-    'gemini-1.5-pro'
+    'gemini-2.0-flash-lite'
   ].filter((m, idx, arr) => arr.indexOf(m) === idx);
 
   let lastError: Error | null = null;
@@ -874,7 +872,7 @@ NUEVO MENSAJE DE ${studentName.toUpperCase()}:
   if (listIntent && (wantsNotes || wantsConcepts || wantsCourses || wantsWorks)) {
     const sections: string[] = [];
     let totalCount = 0;
-    const isCountOnly = /^\s*(cuantas|cuántas|cuantos|cuántos)\b/i.test(userQuery);
+    const isCountOnly = /^[¿?\s]*(cuantas|cuántas|cuantos|cuántos)\b/i.test(userQuery);
     const wantedLabels = [
       wantsNotes ? 'notas' : '',
       wantsConcepts ? 'conceptos' : '',

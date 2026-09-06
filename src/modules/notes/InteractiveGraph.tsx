@@ -170,7 +170,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     if (filterTypes.work) {
       activeWorks.forEach((w) => {
         const existing = existingNodesMap.get(w.id);
-        const parentCourse = nodeMap.get(w.courseId);
+        const parentCourse = nodeMap.get(w.courseId ?? '');
         const baseX = parentCourse ? parentCourse.x + (Math.random() - 0.5) * 60 : 0;
         const baseY = parentCourse ? parentCourse.y + (Math.random() - 0.5) * 60 : 0;
         const node: GraphNode = {
@@ -257,7 +257,7 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
     // Works -> Courses
     activeWorks.forEach((w) => {
       const wNode = nodeMap.get(w.id);
-      const cNode = nodeMap.get(w.courseId);
+      const cNode = nodeMap.get(w.courseId ?? '');
       if (wNode && cNode) {
         newEdges.push({
           source: wNode,
@@ -321,14 +321,13 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
 
           const targetNorm = parsed.cleanTarget;
 
-          // Search matching node by title or label with strict matching guard
+          // Search matching node by title, label or slug with strict exact match
           const matchedTarget = newNodes.find((node) => {
             if (node.id === n.id) return false;
             const nodeNorm = normalizeWikiTarget(node.label);
             if (nodeNorm === targetNorm) return true;
-            if (targetNorm.length >= 4 && nodeNorm.length >= 4) {
-              const regex = new RegExp(`\\b${targetNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-              return regex.test(nodeNorm);
+            if ('slug' in node.rawItem && typeof node.rawItem.slug === 'string' && normalizeWikiTarget(node.rawItem.slug) === targetNorm) {
+              return true;
             }
             return false;
           });
@@ -721,14 +720,17 @@ export const InteractiveGraph: React.FC<InteractiveGraphProps> = ({
           if (isHighlight) {
             // Sleek white glass pill ONLY for selected/hovered/searched/course hubs
             ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+            const rx = node.x - textWidth / 2 - 6;
+            const ry = node.y + node.radius + 3;
+            const rw = textWidth + 12;
+            const rh = 16;
+            const rRad = 6;
             ctx.beginPath();
-            ctx.roundRect(
-              node.x - textWidth / 2 - 6,
-              node.y + node.radius + 3,
-              textWidth + 12,
-              16,
-              6
-            );
+            if (typeof ctx.roundRect === 'function') {
+              ctx.roundRect(rx, ry, rw, rh, rRad);
+            } else {
+              ctx.rect(rx, ry, rw, rh);
+            }
             ctx.fill();
             ctx.lineWidth = 1;
             ctx.strokeStyle = isSelected ? node.color : 'rgba(203, 213, 225, 0.9)';

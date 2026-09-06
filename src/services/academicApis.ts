@@ -17,6 +17,21 @@ export interface AcademicSearchResult {
 }
 
 /**
+ * Maps raw academic types from Crossref, OpenAlex, CSL to canonical SourceType.
+ */
+export function mapAcademicType(rawType?: string): SourceType {
+  if (!rawType) return 'JOURNAL_ARTICLE';
+  const norm = rawType.toLowerCase().trim();
+  if (norm.includes('book-chapter') || norm.includes('chapter') || norm.includes('section')) return 'BOOK_CHAPTER';
+  if (norm === 'book' || norm.includes('monograph') || norm.includes('edited-book')) return 'BOOK';
+  if (norm.includes('dissertation') || norm.includes('thesis') || norm.includes('doctoral')) return 'THESIS';
+  if (norm.includes('proceedings') || norm.includes('conference')) return 'CONFERENCE_PAPER';
+  if (norm.includes('report') || norm.includes('standard') || norm.includes('working-paper')) return 'REPORT';
+  if (norm.includes('web') || norm.includes('post') || norm.includes('online')) return 'WEBPAGE';
+  return 'JOURNAL_ARTICLE';
+}
+
+/**
  * Generates a direct search URL for Google Académico / Google Scholar.
  */
 export function getGoogleScholarSearchUrl(query: string): string {
@@ -149,7 +164,7 @@ function parseOpenAlexWork(item: OpenAlexWorkItem): AcademicSearchResult {
     title: item.title || item.display_name || 'Sin título',
     authors,
     year: item.publication_year || 0,
-    type: item.type === 'book' ? 'BOOK' : 'JOURNAL_ARTICLE',
+    type: mapAcademicType(item.type),
     publication: item.primary_location?.source?.display_name || '',
     volume: item.biblio?.volume,
     issue: item.biblio?.issue,
@@ -244,7 +259,7 @@ export async function resolveDOI(doiInput: string): Promise<AcademicSearchResult
           title: item.title?.[0] || 'Sin título',
           authors,
           year,
-          type: item.type === 'book' ? 'BOOK' : 'JOURNAL_ARTICLE',
+          type: mapAcademicType(item.type),
           publication: item['container-title']?.[0] || item.publisher || '',
           volume: item.volume,
           issue: item.issue,
@@ -282,7 +297,7 @@ export async function resolveDOI(doiInput: string): Promise<AcademicSearchResult
             return parseDisplayName(a.literal || '');
           }),
           year: csl.issued?.['date-parts']?.[0]?.[0] || 0,
-          type: csl.type === 'book' ? 'BOOK' : 'JOURNAL_ARTICLE',
+          type: mapAcademicType(csl.type),
           publication: csl['container-title'] || csl.publisher || '',
           volume: csl.volume ? String(csl.volume) : undefined,
           issue: csl.issue ? String(csl.issue) : undefined,
@@ -477,7 +492,7 @@ export async function searchCrossref(query: string, limit = 8): Promise<Academic
         title: item.title?.[0] || 'Sin título',
         authors,
         year,
-        type: item.type === 'book' ? 'BOOK' : 'JOURNAL_ARTICLE',
+        type: mapAcademicType(item.type),
         publication: item['container-title']?.[0] || item.publisher || 'Registro Crossref',
         volume: item.volume,
         issue: item.issue,

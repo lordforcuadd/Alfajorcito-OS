@@ -260,7 +260,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       />
                     </label>
                     <div className="min-w-0 flex-1">
-                      <p className={`text-xs font-semibold leading-snug break-words [overflow-wrap:anywhere] ${task.isCompleted ? 'line-through text-[#8D99AE]' : 'text-[#2B2D42]'}`}>
+                      <p className={`text-xs font-semibold leading-snug break-words [overflow-wrap:anywhere] ${task.isCompleted ? 'line-through text-[#5A6275]' : 'text-[#2B2D42]'}`}>
                         {task.title}
                       </p>
                       {task.priority === 'URGENT' && (
@@ -312,7 +312,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               ) : (
                 upcomingWorks.slice(0, 3).map((work) => {
                   const daysLeft = calculateDaysRemaining(work.deadline, now);
-                  const course = coursesMap.get(work.courseId);
+                  const course = coursesMap.get(work.courseId ?? '');
                   return (
                     <div
                       key={work.id}
@@ -459,11 +459,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="py-6 text-center space-y-1">
                   <Sparkles className="w-6 h-6 text-purple-400 mx-auto opacity-70" />
                   <p className="text-xs font-bold text-[#2B2D42]">Sin bloqueos</p>
-                  <p className="text-[11px] text-[#8D99AE]">No hay consultas docentes pendientes.</p>
+                  <p className="text-[11px] text-[#5A6275]">No hay consultas docentes pendientes.</p>
                 </div>
               ) : (
                 blockedInquiries.map((inq) => {
-                  const course = coursesMap.get(inq.courseId);
+                  const course = coursesMap.get(inq.courseId ?? '');
                   return (
                     <div
                       key={inq.id}
@@ -647,7 +647,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       className="p-2.5 rounded-xl bg-rose-50/70 border border-rose-200 text-xs flex items-center justify-between cursor-pointer hover:bg-rose-100/70 transition-colors gap-2"
                     >
                       <span className="text-[#2B2D42] truncate min-w-0 flex-1">{src.title}</span>
-                      <span className="text-[10px] text-rose-800 font-bold shrink-0">Sin DOI</span>
+                      <span className="text-[10px] text-rose-800 font-bold shrink-0">
+                        {src.doi ? 'Por verificar' : 'Sin DOI'}
+                      </span>
                     </div>
                   ))}
                 </>
@@ -711,7 +713,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[10px] font-bold text-[#8C3A32] uppercase truncate">{paraLabel}</span>
-                        <span className="text-[10px] text-[#8D99AE] font-mono shrink-0">[[wiki]]</span>
+                        <span className="text-[10px] text-[#5A6275] font-mono shrink-0">[[wiki]]</span>
                       </div>
                       <p className="text-xs font-semibold text-[#2B2D42] line-clamp-1 group-hover:text-[#8C3A32]">{note.title}</p>
                     </div>

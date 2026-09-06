@@ -12,6 +12,9 @@ export interface ModalProps {
   showCloseButton?: boolean;
 }
 
+// Global active modal stack to handle nested modals, Escape key and focus traps cleanly
+const activeModalStack: string[] = [];
+
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
@@ -23,6 +26,7 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const [mounted, setMounted] = useState(false);
   const titleId = useId();
+  const modalInstanceId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousActiveElementRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
@@ -35,6 +39,9 @@ export const Modal: React.FC<ModalProps> = ({
   // Manage Focus Trap & Keyboard Navigation (Only runs on open/close transitions)
   useEffect(() => {
     if (!isOpen) return;
+
+    // Push this modal to the top of the stack
+    activeModalStack.push(modalInstanceId);
 
     // Save previous active element to restore focus on close
     previousActiveElementRef.current = document.activeElement as HTMLElement | null;
@@ -70,8 +77,13 @@ export const Modal: React.FC<ModalProps> = ({
     }, 50);
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Only the topmost modal responds to Escape and Tab key navigation
+      const isTopModal = activeModalStack[activeModalStack.length - 1] === modalInstanceId;
+      if (!isTopModal) return;
+
       if (e.key === 'Escape') {
         e.stopPropagation();
+        e.preventDefault();
         onCloseRef.current();
         return;
       }
@@ -105,14 +117,20 @@ export const Modal: React.FC<ModalProps> = ({
 
     return () => {
       clearTimeout(timer);
-      document.body.style.overflow = '';
+      const idx = activeModalStack.lastIndexOf(modalInstanceId);
+      if (idx !== -1) {
+        activeModalStack.splice(idx, 1);
+      }
+      if (activeModalStack.length === 0) {
+        document.body.style.overflow = '';
+      }
       window.removeEventListener('keydown', handleKeyDown);
       // Restore focus to original element
       if (previousActiveElementRef.current && typeof previousActiveElementRef.current.focus === 'function') {
         previousActiveElementRef.current.focus();
       }
     };
-  }, [isOpen]);
+  }, [isOpen, modalInstanceId]);
 
   if (!isOpen || !mounted) return null;
 
@@ -159,7 +177,7 @@ export const Modal: React.FC<ModalProps> = ({
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="p-1.5 text-[#8D99AE] hover:text-[#2B2D42] hover:bg-[#F5F1EB] rounded-xl transition-colors cursor-pointer shrink-0 mt-0.5"
+                className="p-1.5 text-[#5A6275] hover:text-[#2B2D42] hover:bg-[#F5F1EB] rounded-xl transition-colors cursor-pointer shrink-0 mt-0.5"
                 aria-label="Cerrar ventana modal"
               >
                 <X className="w-4 h-4 sm:w-5 sm:h-5" />

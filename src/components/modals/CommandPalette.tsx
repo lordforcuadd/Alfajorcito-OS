@@ -90,7 +90,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
     const inquiryStatusSpanish: Record<string, string> = {
       DRAFT: 'Borrador',
       SENT: 'Enviada',
-      ANSWERED: 'Respondida'
+      ANSWERED: 'Respondida',
+      DISCARDED: 'Descartada'
     };
 
     // 1. Works
@@ -252,11 +253,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
       <div className="space-y-2.5 sm:space-y-3">
         {/* Search Header Input */}
         <div className="relative flex items-center border-b border-[#EBE5DF] pb-2 sm:pb-3">
-          <Search className="w-4 h-4 sm:w-5 sm:h-5 text-[#8D99AE] absolute left-1 shrink-0" />
+          <Search className="w-4 h-4 sm:w-5 sm:h-5 text-[#5A6275] absolute left-1 shrink-0" />
           <input
             ref={inputRef}
             type="text"
-            className="w-full bg-transparent pl-7 sm:pl-9 pr-7 sm:pr-8 text-xs sm:text-base text-[#2B2D42] placeholder:text-[#8D99AE] focus:outline-none"
+            className="w-full bg-transparent pl-7 sm:pl-9 pr-7 sm:pr-8 text-xs sm:text-base text-[#2B2D42] placeholder:text-[#5A6275] focus:outline-none"
             placeholder="Buscar por título, autor, DOI, concepto o nota..."
             value={searchQuery}
             onChange={(e) => {
@@ -268,7 +269,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="text-[#8D99AE] hover:text-[#2B2D42] p-1 cursor-pointer"
+              className="text-[#5A6275] hover:text-[#2B2D42] p-1 cursor-pointer"
               aria-label="Limpiar búsqueda"
             >
               <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -314,7 +315,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
         {/* Results List */}
         <div className="max-h-[55vh] sm:max-h-[50vh] overflow-y-auto space-y-1.5 pt-1 pr-1 overscroll-contain scroll-touch">
           {results.length === 0 ? (
-            <div className="py-10 text-center text-xs text-[#8D99AE]">
+            <div className="py-10 text-center text-xs text-[#5A6275]">
               No se encontraron coincidencias para "{searchQuery}".
             </div>
           ) : (
@@ -352,7 +353,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className={`w-4 h-4 shrink-0 transition-transform ${isSelected ? 'text-[#D98880] translate-x-0.5' : 'text-[#8D99AE]'}`} />
+                  <ArrowRight className={`w-4 h-4 shrink-0 transition-transform ${isSelected ? 'text-[#D98880] translate-x-0.5' : 'text-[#5A6275]'}`} />
                 </div>
               );
             })
@@ -360,7 +361,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
         </div>
 
         {/* Footer shortcuts */}
-        <div className="pt-2 border-t border-[#EBE5DF] flex items-center justify-between text-[10px] sm:text-[11px] text-[#8D99AE]">
+        <div className="pt-2 border-t border-[#EBE5DF] flex items-center justify-between text-[10px] sm:text-[11px] text-[#5A6275]">
           <span className="hidden sm:inline">Navegar con ↑ ↓</span>
           <span>Toca un elemento o presiona Enter para abrir</span>
           <span className="hidden sm:inline">Esc para cerrar</span>

@@ -61,7 +61,7 @@ describe('Draft Formatting Engine Suite', () => {
   it('wraps text into APA 7 blockquote', () => {
     const text = 'Esta es una cita textual con más de 40 palabras.';
     const quoted = computeDraftFormatting(text, 0, text.length, 'quote');
-    expect(quoted.updatedText).toContain('> "Esta es una cita textual con más de 40 palabras." (Autor, 2024, p. 15)');
+    expect(quoted.updatedText).toContain('> "Esta es una cita textual con más de 40 palabras." (Apellido, Año, p. XX)');
   });
 
   it('inserts an APA 7 table markdown skeleton', () => {

@@ -117,7 +117,6 @@ export function containsBacklinkTo(content: string, noteTitle: string, noteSlug?
 
     if (linkNorm === targetTitleNorm) return true;
     if (targetSlugNorm && linkNorm === targetSlugNorm) return true;
-    if (matchWikiEntity(linkNorm, targetTitleNorm)) return true;
   }
 
   return false;

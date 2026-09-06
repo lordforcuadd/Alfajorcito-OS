@@ -162,7 +162,7 @@ describe('Interactive Smoke & Integration Suite', () => {
 
     // 2. All works link to a valid course
     for (const w of works) {
-      expect(courseIds.has(w.courseId)).toBe(true);
+      expect(courseIds.has(w.courseId ?? '')).toBe(true);
     }
 
     // 3. All sources link to valid works
@@ -210,7 +210,7 @@ describe('Interactive Smoke & Integration Suite', () => {
     // 9. Inquiries link to valid works and courses
     for (const inq of inquiries) {
       expect(workIds.has(inq.workId)).toBe(true);
-      expect(courseIds.has(inq.courseId)).toBe(true);
+      expect(courseIds.has(inq.courseId ?? '')).toBe(true);
     }
   });
 

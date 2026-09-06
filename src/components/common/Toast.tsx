@@ -76,6 +76,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         {toasts.map((toast) => (
           <div
             key={toast.id}
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
             className={`pointer-events-auto w-full flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl border shadow-xl backdrop-blur-md transition-all animate-fade-in ${borderStyles[toast.type]}`}
           >
             <div className="shrink-0 mt-0.5">{icons[toast.type]}</div>

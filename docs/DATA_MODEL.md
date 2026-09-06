@@ -62,7 +62,7 @@
 - `updatedAt` (number, timestamp ms)
 - `isArchived` (boolean, default: false)
 
-*Índices Dexie*: `&id, name, period, isArchived, updatedAt`
+*Índices Dexie*: `&id, code, name, period, isArchived, updatedAt`
 
 ---
 
@@ -86,7 +86,7 @@
 - `updatedAt` (number, timestamp ms)
 - `isArchived` (boolean, default: false)
 
-*Índices Dexie*: `&id, courseId, status, deadline, isArchived, updatedAt`
+*Índices Dexie*: `&id, courseId, type, status, deadline, isArchived, updatedAt`
 
 ---
 
@@ -106,7 +106,7 @@
 - `createdAt` (number, timestamp ms)
 - `updatedAt` (number, timestamp ms)
 
-*Índices Dexie*: `&id, workId, courseId, status, updatedAt`
+*Índices Dexie*: `&id, courseId, workId, status, updatedAt`
 
 ---
 
@@ -135,7 +135,7 @@
 - `createdAt` (number, timestamp ms)
 - `updatedAt` (number, timestamp ms)
 
-*Índices Dexie*: `&id, *workIds, year, verificationStatus, doi, updatedAt`
+*Índices Dexie*: `&id, *workIds, type, year, verificationStatus, updatedAt`
 
 ---
 
@@ -203,7 +203,7 @@
 - `createdAt` (number, timestamp ms)
 - `updatedAt` (number, timestamp ms)
 
-*Índices Dexie*: `&id, slug, paraCategory, courseId, workId, *tags, *sourceIds, isPinned, updatedAt`
+*Índices Dexie*: `&id, slug, paraCategory, courseId, workId, *tags, isPinned, updatedAt`
 
 ---
 
@@ -215,7 +215,7 @@
 - `createdAt` (number, timestamp ms)
 - `updatedAt` (number, timestamp ms)
 
-*Índices Dexie*: `&id, &name, updatedAt`
+*Índices Dexie*: `&id, name, courseId, updatedAt`
 
 ---
 
@@ -242,4 +242,4 @@
 - `value` (object con configuraciones de IA, perfil académico de Saory USMP, tokens y flags locales)
 - `updatedAt` (number, timestamp ms)
 
-*Índices Dexie*: `&key`
+*Índices Dexie*: `&key, updatedAt`

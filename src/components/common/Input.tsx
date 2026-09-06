@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -19,7 +19,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
   id,
   ...props
 }, ref) => {
-  const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const generatedId = useId();
+  const inputId = id || (label ? `${label.toLowerCase().replace(/\s+/g, '-')}-${generatedId}` : generatedId);
 
   return (
     <div className="w-full space-y-1 sm:space-y-1.5">
@@ -30,7 +31,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
       )}
       <div className="relative flex items-center">
         {leftIcon && (
-          <div className="absolute left-3 sm:left-3.5 pointer-events-none text-[#8D99AE] flex items-center shrink-0">
+          <div className="absolute left-3 sm:left-3.5 pointer-events-none text-[#5A6275] flex items-center shrink-0">
             {leftIcon}
           </div>
         )}
@@ -39,13 +40,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
           id={inputId}
           className={`w-full bg-white border ${
             error ? 'border-[#EF9A9A] focus:ring-[#EF9A9A]' : 'border-[#EBE5DF] focus:border-[#E8A598] focus:ring-[#E8A598]/20'
-          } rounded-xl sm:rounded-2xl px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm text-[#2B2D42] placeholder:text-[#8D99AE] focus:outline-none focus:ring-2 sm:focus:ring-3 transition-all duration-150 shadow-2xs ${
+          } rounded-xl sm:rounded-2xl px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm text-[#2B2D42] placeholder:text-[#5A6275] focus:outline-none focus:ring-2 sm:focus:ring-3 transition-all duration-150 shadow-2xs ${
             leftIcon ? 'pl-9 sm:pl-10' : ''
           } ${rightIcon ? 'pr-9 sm:pr-10' : ''} ${className}`}
           {...props}
         />
         {rightIcon && (
-          <div className="absolute right-3 sm:right-3.5 text-[#8D99AE] flex items-center shrink-0">
+          <div className="absolute right-3 sm:right-3.5 text-[#5A6275] flex items-center shrink-0">
             {rightIcon}
           </div>
         )}
@@ -78,7 +79,8 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(({
   id,
   ...props
 }, ref) => {
-  const selectId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const generatedId = useId();
+  const selectId = id || (label ? `${label.toLowerCase().replace(/\s+/g, '-')}-${generatedId}` : generatedId);
 
   return (
     <div className="w-full space-y-1 sm:space-y-1.5">
@@ -89,7 +91,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(({
       )}
       <div className="relative flex items-center">
         {leftIcon && (
-          <div className="absolute left-3 sm:left-3.5 pointer-events-none text-[#8D99AE] flex items-center shrink-0">
+          <div className="absolute left-3 sm:left-3.5 pointer-events-none text-[#5A6275] flex items-center shrink-0">
             {leftIcon}
           </div>
         )}
@@ -106,7 +108,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(({
         >
           {children}
         </select>
-        <div className="absolute right-3 sm:right-3.5 pointer-events-none text-[#8D99AE] flex items-center shrink-0">
+        <div className="absolute right-3 sm:right-3.5 pointer-events-none text-[#5A6275] flex items-center shrink-0">
           <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </div>
       </div>
@@ -135,7 +137,8 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(({
   rows = 4,
   ...props
 }, ref) => {
-  const textareaId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const generatedId = useId();
+  const textareaId = id || (label ? `${label.toLowerCase().replace(/\s+/g, '-')}-${generatedId}` : generatedId);
 
   return (
     <div className="w-full space-y-1 sm:space-y-1.5">
@@ -150,7 +153,7 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(({
         rows={rows}
         className={`w-full bg-white border ${
           error ? 'border-[#EF9A9A] focus:ring-[#EF9A9A]' : 'border-[#EBE5DF] focus:border-[#E8A598] focus:ring-[#E8A598]/20'
-        } rounded-xl sm:rounded-2xl px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm text-[#2B2D42] placeholder:text-[#8D99AE] focus:outline-none focus:ring-2 sm:focus:ring-3 transition-all duration-150 resize-y shadow-2xs ${className}`}
+        } rounded-xl sm:rounded-2xl px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm text-[#2B2D42] placeholder:text-[#5A6275] focus:outline-none focus:ring-2 sm:focus:ring-3 transition-all duration-150 resize-y shadow-2xs ${className}`}
         {...props}
       />
       {error ? (

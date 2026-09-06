@@ -144,7 +144,7 @@ teacher: "${c.teacherName || ''}"
 
   // Add Works as Project MOCs
   works.forEach(w => {
-    const courseName = coursesMap.get(w.courseId)?.name || 'General';
+    const courseName = coursesMap.get(w.courseId ?? '')?.name || 'General';
     const workContent = `---
 id: "${w.id}"
 title: "${w.title}"
