@@ -61,7 +61,7 @@ export default defineConfig({
         description: 'Centro de Operaciones Académicas + Investigación + Segundo Cerebro',
         lang: 'es',
         dir: 'ltr',
-        theme_color: '#E8A598',
+        theme_color: '#FAF8F5',
         background_color: '#FAF8F5',
         display: 'standalone',
         orientation: 'any',
