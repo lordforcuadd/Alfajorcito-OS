@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { db } from '../../db';
 import { deleteSourceCascade } from '../../utils/academicWorkUtils';
+import { sanitizeSafeUrl } from '../../utils/urlHelper';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Input, TextArea, Select } from '../../components/common/Input';
@@ -336,7 +337,7 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
       issue: item.issue,
       pages: item.pages,
       doi: item.doi,
-      url: item.url,
+      url: sanitizeSafeUrl(item.url),
       abstract: item.abstract ? sanitizeAcademicText(item.abstract) : undefined,
       accessedAt: Date.now(),
       verificationStatus: audit.status,
