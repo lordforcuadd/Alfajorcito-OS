@@ -432,6 +432,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
 
       {/* Navigation Tabs */}
       <Tabs
+        panels={true}
         tabs={[
           { id: 'overview', label: 'Resumen', icon: <GraduationCap className="w-4 h-4" /> },
           { id: 'instructions', label: 'Indicaciones del Docente', icon: <FileText className="w-4 h-4" /> },

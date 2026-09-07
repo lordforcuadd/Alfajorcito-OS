@@ -13,6 +13,7 @@ export interface TabsProps<T extends string = string> {
   onChange: (tabId: T) => void;
   className?: string;
   ariaLabel?: string;
+  panels?: boolean;
 }
 
 export function Tabs<T extends string>({
@@ -20,7 +21,8 @@ export function Tabs<T extends string>({
   activeTab,
   onChange,
   className = '',
-  ariaLabel = 'Pestañas de navegación'
+  ariaLabel = 'Pestañas de navegación',
+  panels = false
 }: TabsProps<T>) {
   return (
     <div
@@ -38,10 +40,9 @@ export function Tabs<T extends string>({
         return (
           <button
             key={tab.id}
-            id={`tab-${tab.id}`}
+            {...(panels ? { id: `tab-${tab.id}`, 'aria-controls': `tabpanel-${tab.id}` } : {})}
             role="tab"
             aria-selected={isActive}
-            aria-controls={`tabpanel-${tab.id}`}
             onClick={() => onChange(tab.id)}
             className={`flex items-center gap-2 px-3.5 py-2.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 whitespace-nowrap cursor-pointer select-none shrink-0 active:scale-[0.98] ${
               isActive
