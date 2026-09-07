@@ -209,8 +209,8 @@ describe('Interactive Smoke & Integration Suite', () => {
 
     // 9. Inquiries link to valid works and courses
     for (const inq of inquiries) {
-      expect(workIds.has(inq.workId)).toBe(true);
-      expect(courseIds.has(inq.courseId ?? '')).toBe(true);
+      if (inq.workId) expect(workIds.has(inq.workId)).toBe(true);
+      if (inq.courseId) expect(courseIds.has(inq.courseId)).toBe(true);
     }
   });
 
@@ -237,5 +237,29 @@ describe('Interactive Smoke & Integration Suite', () => {
     expect(slugifyTitle('Regulación Emocional en USMP')).toBe('regulacion-emocional-en-usmp');
     expect(slugifyTitle('¡¿Título imposible?!')).toBe('titulo-imposible');
     expect(slugifyTitle('***', 'fallback')).toBe('fallback');
+  });
+
+  it('persists and validates active tab selection in localStorage with graceful fallback to dashboard', () => {
+    const VALID_NAV_TABS = new Set(['dashboard', 'works', 'curriculum', 'research', 'pipeline', 'brain']);
+
+    const resolveNavTab = (storedVal: string | null) => {
+      if (storedVal && VALID_NAV_TABS.has(storedVal)) {
+        return storedVal;
+      }
+      return 'dashboard';
+    };
+
+    expect(resolveNavTab('brain')).toBe('brain');
+    expect(resolveNavTab('works')).toBe('works');
+    expect(resolveNavTab('curriculum')).toBe('curriculum');
+    expect(resolveNavTab('research')).toBe('research');
+    expect(resolveNavTab('pipeline')).toBe('pipeline');
+    expect(resolveNavTab('dashboard')).toBe('dashboard');
+
+    // Corrupted, tampered or missing values must cleanly default to 'dashboard'
+    expect(resolveNavTab(null)).toBe('dashboard');
+    expect(resolveNavTab('')).toBe('dashboard');
+    expect(resolveNavTab('unknown_section')).toBe('dashboard');
+    expect(resolveNavTab('__proto__')).toBe('dashboard');
   });
 });

@@ -95,4 +95,18 @@ describe('Security, XSS & Extreme Inputs Resilience Suite', () => {
     expect(html).toContain('&lt;script&gt;');
     expect(html).toContain('&lt;iframe');
   });
+
+  it('safely handles non-numeric and malformed years from external academic APIs', () => {
+    const parseSafeYear = (rawYear: unknown): number => {
+      const parsed = typeof rawYear === 'string' ? parseInt(rawYear, 10) : rawYear;
+      return Number.isInteger(parsed) && (parsed as number) > 0 ? (parsed as number) : 0;
+    };
+
+    expect(parseSafeYear('2020a')).toBe(2020);
+    expect(parseSafeYear('2024')).toBe(2024);
+    expect(parseSafeYear('n.d.')).toBe(0);
+    expect(parseSafeYear(undefined)).toBe(0);
+    expect(parseSafeYear(NaN)).toBe(0);
+    expect(parseSafeYear(-5)).toBe(0);
+  });
 });

@@ -116,4 +116,25 @@ describe('Backup and Restore Validation Suite', () => {
       expect(allowedByValidator.includes(st)).toBe(true);
     }
   });
+
+  it('creates inquiry without workId omitting workId property entirely (clean foreign key semantics)', () => {
+    const inquiryWithoutWork: InquiryToTeacher = {
+      id: 'inq-general-1',
+      courseId: 'course-1',
+      topic: 'Duda sobre examen parcial',
+      rawQuestion: '¿Entrará la unidad 3?',
+      formalQuestion: 'Estimado docente, ¿la unidad 3 estará incluida en la evaluación?',
+      status: 'DRAFT',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    expect(inquiryWithoutWork.workId).toBeUndefined();
+    expect('workId' in inquiryWithoutWork).toBe(false);
+    expect(Object.keys(inquiryWithoutWork)).not.toContain('workId');
+
+    const validated = validateItems<InquiryToTeacher>([inquiryWithoutWork], ['topic']);
+    expect(validated).toHaveLength(1);
+    expect(validated[0].workId).toBeUndefined();
+  });
 });

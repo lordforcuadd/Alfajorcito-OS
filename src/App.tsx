@@ -32,14 +32,38 @@ interface QuickCaptureConfig {
   initialWorkId?: string;
 }
 
+const VALID_NAV_TABS = new Set<NavTab>(['dashboard', 'works', 'curriculum', 'research', 'pipeline', 'brain']);
+const ACTIVE_TAB_STORAGE_KEY = 'alfajorcito.active_tab';
+
+function getInitialNavTab(): NavTab {
+  try {
+    const saved = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
+    if (saved && VALID_NAV_TABS.has(saved as NavTab)) {
+      return saved as NavTab;
+    }
+  } catch {
+    // Fallback for restricted storage environments
+  }
+  return 'dashboard';
+}
+
 function MainApp() {
-  const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
+  const [currentTab, setCurrentTab] = useState<NavTab>(getInitialNavTab);
   const [quickCaptureConfig, setQuickCaptureConfig] = useState<QuickCaptureConfig>({
     isOpen: false,
     initialTab: 'note'
   });
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const handleTabChange = (tab: NavTab) => {
+    setCurrentTab(tab);
+    try {
+      localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab);
+    } catch {
+      // Fallback if localStorage is full or blocked
+    }
+  };
 
   // Selected item states for direct navigation
   const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
@@ -71,29 +95,29 @@ function MainApp() {
   const handleNavigateFromSearch = async (type: string, id: string) => {
     if (type === 'works') {
       setSelectedWorkId(id);
-      setCurrentTab('works');
+      handleTabChange('works');
     } else if (type === 'sources') {
       setSelectedSourceId(id);
-      setCurrentTab('research');
+      handleTabChange('research');
     } else if (type === 'notes') {
       setSelectedNoteId(id);
-      setCurrentTab('brain');
+      handleTabChange('brain');
     } else if (type === 'inquiries') {
       const inq = await db.inquiries.get(id);
       if (inq?.workId) {
         setSelectedWorkId(inq.workId);
       }
-      setCurrentTab('works');
+      handleTabChange('works');
     } else if (type === 'tasks') {
       const t = await db.tasks.get(id);
       if (t?.workId) {
         setSelectedWorkId(t.workId);
       }
-      setCurrentTab('works');
+      handleTabChange('works');
     } else if (type === 'concepts') {
-      setCurrentTab('brain');
+      handleTabChange('brain');
     } else {
-      setCurrentTab('dashboard');
+      handleTabChange('dashboard');
     }
   };
 
@@ -101,7 +125,7 @@ function MainApp() {
     <AppShell
       currentTab={currentTab}
       onTabChange={(tab) => {
-        setCurrentTab(tab);
+        handleTabChange(tab);
         if (tab === 'works') setSelectedWorkId(null);
       }}
       onOpenQuickCapture={() => handleOpenQuickCapture('note')}
@@ -115,17 +139,17 @@ function MainApp() {
             <DashboardView
               onOpenWork={(workId) => {
                 setSelectedWorkId(workId);
-                setCurrentTab('works');
+                handleTabChange('works');
               }}
               onOpenSource={(sourceId) => {
                 setSelectedSourceId(sourceId);
-                setCurrentTab('research');
+                handleTabChange('research');
               }}
               onOpenNote={(noteId) => {
                 setSelectedNoteId(noteId);
-                setCurrentTab('brain');
+                handleTabChange('brain');
               }}
-              onNavigateTab={(tab) => setCurrentTab(tab)}
+              onNavigateTab={(tab) => handleTabChange(tab)}
               onQuickCapture={(tab) => handleOpenQuickCapture(tab || 'note')}
             />
           )}
@@ -145,7 +169,7 @@ function MainApp() {
               onOpenQuickCapture={(tab = 'work', courseId?: string) => handleOpenQuickCapture(tab, courseId)}
               onOpenWork={(workId) => {
                 setSelectedWorkId(workId);
-                setCurrentTab('works');
+                handleTabChange('works');
               }}
             />
           )}
@@ -170,7 +194,7 @@ function MainApp() {
               onSelectNote={setSelectedNoteId}
               onOpenWork={(workId) => {
                 setSelectedWorkId(workId);
-                setCurrentTab('works');
+                handleTabChange('works');
               }}
             />
           )}
@@ -186,22 +210,31 @@ function MainApp() {
         onClose={() => setQuickCaptureConfig((prev) => ({ ...prev, isOpen: false }))}
       />
 
-      <Suspense fallback={null}>
-        {isSearchOpen && (
-          <CommandPalette
-            isOpen={isSearchOpen}
-            onClose={() => setIsSearchOpen(false)}
-            onNavigate={handleNavigateFromSearch}
-          />
-        )}
+      <ErrorBoundary
+        variant="modal"
+        fallbackTitle="Error al abrir la herramienta"
+        onClose={() => {
+          setIsSearchOpen(false);
+          setIsSettingsOpen(false);
+        }}
+      >
+        <Suspense fallback={null}>
+          {isSearchOpen && (
+            <CommandPalette
+              isOpen={isSearchOpen}
+              onClose={() => setIsSearchOpen(false)}
+              onNavigate={handleNavigateFromSearch}
+            />
+          )}
 
-        {isSettingsOpen && (
-          <SettingsModal
-            isOpen={isSettingsOpen}
-            onClose={() => setIsSettingsOpen(false)}
-          />
-        )}
-      </Suspense>
+          {isSettingsOpen && (
+            <SettingsModal
+              isOpen={isSettingsOpen}
+              onClose={() => setIsSettingsOpen(false)}
+            />
+          )}
+        </Suspense>
+      </ErrorBoundary>
     </AppShell>
   );
 }

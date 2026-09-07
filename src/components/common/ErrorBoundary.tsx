@@ -6,6 +6,8 @@ import { Card } from './Card';
 interface Props {
   children: ReactNode;
   fallbackTitle?: string;
+  variant?: 'default' | 'modal';
+  onClose?: () => void;
 }
 
 interface State {
@@ -36,6 +38,59 @@ export class ErrorBoundary extends Component<Props, State> {
         this.state.error?.message?.includes('dynamically imported module') ||
         this.state.error?.message?.includes('Failed to fetch') ||
         this.state.error?.message?.includes('Loading chunk');
+
+      if (this.props.variant === 'modal') {
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2D42]/40 backdrop-blur-xs animate-fade-in">
+            <Card variant="elevated" className="text-center space-y-3 p-5 max-w-sm w-full border-rose-200 bg-white rounded-3xl shadow-xl">
+              <div className="w-10 h-10 rounded-xl bg-[#FDF2F0] text-[#D98880] flex items-center justify-center mx-auto">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-sm text-[#2B2D42]">
+                  {this.props.fallbackTitle || 'Error al abrir la herramienta'}
+                </h4>
+                <p className="text-xs text-[#5A6275] mt-1">
+                  {isChunkError
+                    ? 'Hay una actualización pendiente. Recarga para continuar.'
+                    : 'No se pudo cargar este componente. Por favor, reintenta.'}
+                </p>
+              </div>
+              <div className="pt-2 flex justify-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    this.handleReset();
+                    this.props.onClose?.();
+                  }}
+                >
+                  Cerrar
+                </Button>
+                {isChunkError ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => window.location.reload()}
+                    icon={<RefreshCw className="w-3.5 h-3.5" />}
+                  >
+                    Recargar
+                  </Button>
+                ) : (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={this.handleReset}
+                    icon={<RefreshCw className="w-3.5 h-3.5" />}
+                  >
+                    Reintentar
+                  </Button>
+                )}
+              </div>
+            </Card>
+          </div>
+        );
+      }
 
       return (
         <div className="p-6 max-w-lg mx-auto my-12 animate-fade-in">

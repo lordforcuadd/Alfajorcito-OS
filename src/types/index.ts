@@ -148,7 +148,7 @@ export interface Work {
 
 export interface InquiryToTeacher {
   id: string;
-  workId: string;
+  workId?: string;
   courseId?: string;
   topic: string;
   rawQuestion: string;

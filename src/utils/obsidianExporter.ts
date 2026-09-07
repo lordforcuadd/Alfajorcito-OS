@@ -2,6 +2,16 @@ import type { Note, Source, Work, Course, Concept } from '../types';
 import { formatFullReference } from './citationEngine';
 import { formatLocalDateForInput } from './dateHelper';
 
+export function escapeYamlString(s?: string | null): string {
+  if (!s) return '';
+  return s
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/\t/g, ' ')
+    .trim();
+}
+
 export function sanitizeSlug(title: string): string {
   return (
     title
@@ -31,13 +41,13 @@ export function generateNoteMarkdown(
   const frontmatter = [
     '---',
     `id: "${note.id}"`,
-    `title: "${note.title.replace(/"/g, '\\"')}"`,
+    `title: "${escapeYamlString(note.title)}"`,
     `para_category: "${note.paraCategory}"`,
-    course ? `course: "[[${course}]]"` : null,
-    work ? `work: "[[${work}]]"` : null,
-    sources.length > 0 ? `sources:\n${sources.map(s => `  - "[[${s}]]"`).join('\n')}` : null,
-    concepts.length > 0 ? `concepts:\n${concepts.map(c => `  - "[[${c}]]"`).join('\n')}` : null,
-    note.tags.length > 0 ? `tags:\n${note.tags.map(t => `  - "${t.replace(/^#+/, '')}"`).join('\n')}` : null,
+    course ? `course: "[[${escapeYamlString(course)}]]"` : null,
+    work ? `work: "[[${escapeYamlString(work)}]]"` : null,
+    sources.length > 0 ? `sources:\n${sources.map(s => `  - "[[${escapeYamlString(s)}]]"`).join('\n')}` : null,
+    concepts.length > 0 ? `concepts:\n${concepts.map(c => `  - "[[${escapeYamlString(c)}]]"`).join('\n')}` : null,
+    note.tags.length > 0 ? `tags:\n${note.tags.map(t => `  - "${escapeYamlString(t.replace(/^#+/, ''))}"`).join('\n')}` : null,
     `created: "${formatLocalDateForInput(note.createdAt)}"`,
     `updated: "${formatLocalDateForInput(note.updatedAt)}"`,
     '---',
@@ -53,12 +63,12 @@ export function generateSourceMarkdown(source: Source): string {
 
   return `---
 id: "${source.id}"
-title: "${source.title.replace(/"/g, '\\"')}"
+title: "${escapeYamlString(source.title)}"
 type: "${source.type}"
-authors: "${authorsStr}"
+authors: "${escapeYamlString(authorsStr)}"
 year: ${source.year || 'null'}
-doi: "${source.doi || ''}"
-url: "${source.url || ''}"
+doi: "${escapeYamlString(source.doi || '')}"
+url: "${escapeYamlString(source.url || '')}"
 verification_status: "${source.verificationStatus}"
 created: "${formatLocalDateForInput(source.createdAt)}"
 ---
@@ -128,10 +138,10 @@ export async function exportVaultZip(
   courses.forEach(c => {
     const courseContent = `---
 id: "${c.id}"
-title: "${c.name}"
-code: "${c.code || ''}"
-period: "${c.period}"
-teacher: "${c.teacherName || ''}"
+title: "${escapeYamlString(c.name)}"
+code: "${escapeYamlString(c.code || '')}"
+period: "${escapeYamlString(c.period)}"
+teacher: "${escapeYamlString(c.teacherName || '')}"
 ---
 
 # ${c.name} (${c.period})
@@ -147,11 +157,11 @@ teacher: "${c.teacherName || ''}"
     const courseName = coursesMap.get(w.courseId ?? '')?.name || 'General';
     const workContent = `---
 id: "${w.id}"
-title: "${w.title}"
+title: "${escapeYamlString(w.title)}"
 type: "${w.type}"
 status: "${w.status}"
 deadline: "${formatLocalDateForInput(w.deadline)}"
-course: "[[${courseName}]]"
+course: "[[${escapeYamlString(courseName)}]]"
 citation_style: "${w.citationStyle}"
 ---
 

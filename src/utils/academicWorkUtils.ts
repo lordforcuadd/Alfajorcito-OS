@@ -89,6 +89,28 @@ export function parseAcademicCycle(cycleStr?: string): number {
   return 8;
 }
 
+/**
+ * Formats a 1-based cycle/grade number into standard Spanish academic ordinal notation:
+ * 1 -> '1ro', 2 -> '2do', 3 -> '3ro', 4 -> '4to', 5 -> '5to',
+ * 6 -> '6to', 7 -> '7mo', 8 -> '8vo', 9 -> '9no', 10 -> '10mo'.
+ * Falls back to `${n}º` for numbers outside 1-10.
+ */
+export function ordinalEs(n: number): string {
+  const ordinals: Record<number, string> = {
+    1: '1ro',
+    2: '2do',
+    3: '3ro',
+    4: '4to',
+    5: '5to',
+    6: '6to',
+    7: '7mo',
+    8: '8vo',
+    9: '9no',
+    10: '10mo'
+  };
+  return ordinals[n] || `${n}º`;
+}
+
 export function filterTodayTasks<T extends { isCompleted: boolean; dueDate?: number }>(
   tasks: T[],
   startOfToday: number,

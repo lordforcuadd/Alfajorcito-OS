@@ -121,4 +121,19 @@ describe('Exporters Suite', () => {
     expect(md).toContain('updated: "2026-08-28"');
     expect(md).not.toContain('created: "2026-08-29"');
   });
+
+  it('escapes newlines and quotes in Obsidian YAML frontmatter to prevent invalid YAML parsing', () => {
+    const multilineNote: Note = {
+      ...sampleNote,
+      title: 'Línea 1\nLínea 2 con "comillas"\r\ny tab\t!'
+    };
+    const md = generateNoteMarkdown(multilineNote, new Map(), new Map(), new Map(), new Map());
+    expect(md).toContain('title: "Línea 1 Línea 2 con \\"comillas\\" y tab !"');
+    // Ensure title is strictly on a single line in frontmatter
+    const titleLine = md.split('\n').find(line => line.startsWith('title:'));
+    expect(titleLine).toBeDefined();
+    expect(titleLine).not.toContain('\r');
+    expect(titleLine).toContain('Línea 1 Línea 2 con \\"comillas\\" y tab !');
+  });
 });
+

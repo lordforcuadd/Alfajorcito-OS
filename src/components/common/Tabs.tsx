@@ -12,17 +12,20 @@ export interface TabsProps<T extends string = string> {
   activeTab: T;
   onChange: (tabId: T) => void;
   className?: string;
+  ariaLabel?: string;
 }
 
 export function Tabs<T extends string>({
   tabs,
   activeTab,
   onChange,
-  className = ''
+  className = '',
+  ariaLabel = 'Pestañas de navegación'
 }: TabsProps<T>) {
   return (
     <div
       role="tablist"
+      aria-label={ariaLabel}
       onWheel={(e) => {
         if (e.deltaY !== 0) {
           e.currentTarget.scrollLeft += e.deltaY;
@@ -35,8 +38,10 @@ export function Tabs<T extends string>({
         return (
           <button
             key={tab.id}
+            id={`tab-${tab.id}`}
             role="tab"
             aria-selected={isActive}
+            aria-controls={`tabpanel-${tab.id}`}
             onClick={() => onChange(tab.id)}
             className={`flex items-center gap-2 px-3.5 py-2.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 whitespace-nowrap cursor-pointer select-none shrink-0 active:scale-[0.98] ${
               isActive

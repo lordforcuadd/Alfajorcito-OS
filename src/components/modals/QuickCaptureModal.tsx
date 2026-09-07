@@ -463,7 +463,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       await db.inquiries.add({
         id: generateId('inq'),
         courseId: inquiryCourseId,
-        workId: inquiryWorkId || '',
+        ...(inquiryWorkId ? { workId: inquiryWorkId } : {}),
         topic: inquiryTopic.trim(),
         rawQuestion: inquiryRawQuestion.trim(),
         formalQuestion: inquiryFormalPreview.trim() || inquiryRawQuestion.trim(),

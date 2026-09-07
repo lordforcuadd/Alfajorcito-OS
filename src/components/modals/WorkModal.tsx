@@ -435,11 +435,10 @@ export const WorkModal: React.FC<WorkModalProps> = ({
                 Cancelar
               </Button>
               <Button
-                variant="primary"
+                variant="danger"
                 size="sm"
                 onClick={handleDeleteWork}
                 isLoading={isSubmitting}
-                className="bg-[#C62828] hover:bg-[#B71C1C] text-white font-bold"
               >
                 Confirmar y Eliminar
               </Button>

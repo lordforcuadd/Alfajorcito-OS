@@ -106,6 +106,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
   const [draftText, setDraftText] = useState<string>('');
   const [hasUnsavedDraft, setHasUnsavedDraft] = useState(false);
   const draftTextareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const autosaveErrorToastShownRef = React.useRef<boolean>(false);
 
   // New task input state
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -170,23 +171,28 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
       try {
         await db.works.update(workId, { draftContent: draftText, updatedAt: Date.now() });
         setHasUnsavedDraft(false);
+        autosaveErrorToastShownRef.current = false;
       } catch {
-        // Silent retry on next debounce
+        if (!autosaveErrorToastShownRef.current) {
+          showToast('Error al guardar borrador', 'Se reintentará automáticamente.', 'error');
+          autosaveErrorToastShownRef.current = true;
+        }
       }
     }, 1500);
     return () => clearTimeout(timer);
-  }, [draftText, hasUnsavedDraft, workId]);
+  }, [draftText, hasUnsavedDraft, workId, showToast]);
 
-  // Browser beforeunload guard for unsaved draft
+  // Browser beforeunload guard for unsaved draft with best-effort defensive save
   useEffect(() => {
     if (!hasUnsavedDraft) return;
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      void db.works.update(workId, { draftContent: draftText, updatedAt: Date.now() });
       e.preventDefault();
       e.returnValue = '';
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedDraft]);
+  }, [hasUnsavedDraft, workId, draftText]);
 
   // Smart Formatting for Draft Textarea (Bold, Italic, Headings, Lists, Blockquotes, APA Tables)
   const applyDraftFormatting = (type: DraftFormattingType) => {
@@ -341,7 +347,7 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
   return (
     <div className="space-y-5 sm:space-y-6 animate-fade-in pb-12">
       {/* Top Header Cockpit */}
-      <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/40 shadow-xs space-y-3">
+      <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/40 shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-start sm:items-center gap-3">
             <button
@@ -442,7 +448,12 @@ export const WorkWorkspace: React.FC<WorkWorkspaceProps> = ({ workId, onBack, on
       {/* Main Workspace Layout (Supports Split-View on Tablet/Desktop) */}
       <div className={`grid gap-5 ${splitMode ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
         {/* LEFT PANEL / MAIN VIEW */}
-        <div className="space-y-5">
+        <div
+          role="tabpanel"
+          id={`tabpanel-${activeTab}`}
+          aria-labelledby={`tab-${activeTab}`}
+          className="space-y-5"
+        >
           {/* 1. OVERVIEW TAB */}
           {activeTab === 'overview' && (
             <div className="space-y-5">

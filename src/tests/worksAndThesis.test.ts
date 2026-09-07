@@ -9,7 +9,8 @@ import {
   dissociateWorkIdFromSources,
   isWorkUpcoming,
   isWorkOverdue,
-  WORK_DELETION_CONSEQUENCES
+  WORK_DELETION_CONSEQUENCES,
+  ordinalEs
 } from '../utils/academicWorkUtils';
 
 describe('Works and Thesis Management Suite', () => {
@@ -216,5 +217,19 @@ describe('Works and Thesis Management Suite', () => {
     expect(DEFAULT_USER_PROFILE.specialty).toBe('CLINICA');
     expect(DEFAULT_USER_PROFILE.thesisTitle).toBe('');
     expect(DEFAULT_USER_PROFILE.internshipSite).toBe('');
+  });
+
+  it('formats Spanish academic cycle ordinals accurately without inventing incorrect suffixes', () => {
+    expect(ordinalEs(1)).toBe('1ro');
+    expect(ordinalEs(2)).toBe('2do');
+    expect(ordinalEs(3)).toBe('3ro');
+    expect(ordinalEs(4)).toBe('4to');
+    expect(ordinalEs(5)).toBe('5to');
+    expect(ordinalEs(6)).toBe('6to');
+    expect(ordinalEs(7)).toBe('7mo');
+    expect(ordinalEs(8)).toBe('8vo');
+    expect(ordinalEs(9)).toBe('9no');
+    expect(ordinalEs(10)).toBe('10mo');
+    expect(ordinalEs(11)).toBe('11º');
   });
 });

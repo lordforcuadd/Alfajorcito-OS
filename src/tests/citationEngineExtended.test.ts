@@ -6,7 +6,8 @@ import {
   formatInTextNarrative,
   formatAuthorNamesAPA,
   generateBibTeX,
-  generateBibTeXCollection
+  generateBibTeXCollection,
+  escapeBibTeX
 } from '../utils/citationEngine';
 import type { Source } from '../types';
 
@@ -383,5 +384,39 @@ describe('Citation Engine Extended Suite — Strict Academic APA 7 & Multi-style
     const html = formatFullReferenceHTML(xssSource, 'APA_7');
     expect(html).not.toContain('<a href="javascript:');
     expect(html).not.toContain('<a href');
+  });
+
+  it('escapes LaTeX special characters in BibTeX titles, authors, and publications while preserving DOIs and URLs', () => {
+    expect(escapeBibTeX('Efectos del estrés & ansiedad (50% casos) #1 _test_ {hola} ~world^')).toBe(
+      'Efectos del estrés \\& ansiedad (50\\% casos) \\#1 \\_test\\_ \\{hola\\} \\textasciitilde{}world\\textasciicircum{}'
+    );
+
+    const latexSource: Source = {
+      id: 'src-latex',
+      workIds: [],
+      title: 'Estrés & Ansiedad: 100% de efectividad en modelos #1 _clínicos_',
+      authors: [{ firstName: 'M&M', lastName: 'O\'Connor_Smith' }],
+      year: 2024,
+      type: 'JOURNAL_ARTICLE',
+      publication: 'Revista de I&D % Investigación',
+      volume: '10',
+      issue: '2',
+      pages: '100-110',
+      doi: '10.1000/182_raw_doi&100%',
+      url: 'https://example.com/test?a=1&b=2',
+      accessedAt: Date.now(),
+      verificationStatus: 'VERIFIED',
+      verificationProvider: 'CROSSREF',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    const bib = generateBibTeX(latexSource);
+    expect(bib).toContain('title = {Estrés \\& Ansiedad: 100\\% de efectividad en modelos \\#1 \\_clínicos\\_}');
+    expect(bib).toContain('journal = {Revista de I\\&D \\% Investigación}');
+    expect(bib).toContain('author = {O\'Connor\\_Smith, M\\&M}');
+    // DOIs and URLs must remain untouched
+    expect(bib).toContain('doi = {10.1000/182_raw_doi&100%}');
+    expect(bib).not.toContain('doi = {10.1000/182\\_raw');
   });
 });

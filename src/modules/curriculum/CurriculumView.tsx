@@ -16,7 +16,7 @@ import { USMP_PSYCHOLOGY_CURRICULUM } from '../../services/usmpCurriculum';
 import { db } from '../../db';
 import { useToast } from '../../components/common/Toast';
 import { generateId } from '../../utils/idHelper';
-import { parseAcademicCycle, deleteCourseCascade } from '../../utils/academicWorkUtils';
+import { parseAcademicCycle, deleteCourseCascade, ordinalEs } from '../../utils/academicWorkUtils';
 import { getRandomCourseColor } from '../../utils/themeTokens';
 import type { CurriculumCourse, Course, Work, UserProfile } from '../../types';
 import { DEFAULT_ACADEMIC_PERIOD } from '../../types';
@@ -26,13 +26,7 @@ export interface CurriculumViewProps {
   onOpenWork?: (workId: string) => void;
 }
 
-const formatCycleOrdinal = (cycle: number): string => {
-  const ordinals: Record<number, string> = {
-    1: '1er', 2: '2do', 3: '3er', 4: '4to', 5: '5to',
-    6: '6to', 7: '7mo', 8: '8vo', 9: '9no', 10: '10mo'
-  };
-  return ordinals[cycle] ? `${ordinals[cycle]} Ciclo` : `${cycle}° Ciclo`;
-};
+const formatCycleOrdinal = (cycle: number): string => `${ordinalEs(cycle)} Ciclo`;
 
 export const CurriculumView: React.FC<CurriculumViewProps> = ({
   onOpenQuickCapture,
@@ -123,7 +117,7 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header Banner */}
-      <div className="p-4 sm:p-6 rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/40 shadow-xs space-y-3">
+      <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/40 shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-[#8C3A32]">
@@ -135,7 +129,7 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
                 {userProfile?.faculty || 'FCCTP'}
               </span>
               <span className="inline-flex items-center bg-[#E8A598]/20 text-[#8C3A32] px-2.5 py-1 rounded-lg border border-[#E8A598]/40 font-bold">
-                Ciclo Actual: {userProfile?.currentCycle || '8vo Ciclo'}
+                Ciclo Actual: {userProfile?.currentCycle || `${ordinalEs(8)} Ciclo`}
               </span>
             </div>
             <div>
@@ -231,7 +225,7 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
           { cycle: 10, roman: 'X', label: 'X Ciclo (Internado II & Tesis)' }
         ].map((item) => {
           const isActual = item.cycle === userCycleNum;
-          const displayLabel = isActual ? `${item.roman} Ciclo (${item.cycle}vo - Actual)` : item.label;
+          const displayLabel = isActual ? `${item.roman} Ciclo (${ordinalEs(item.cycle)} - Actual)` : item.label;
 
           return (
             <button
@@ -333,7 +327,7 @@ export const CurriculumView: React.FC<CurriculumViewProps> = ({
           isOpen={!!inspectedCourse}
           onClose={() => setInspectedCourse(null)}
           title={`${inspectedCourse.code} • ${inspectedCourse.name}`}
-          subtitle={`Facultad de Ciencias de la Comunicación, Turismo y Psicología - USMP • ${inspectedCourse.cycle}vo Ciclo • ${inspectedCourse.credits} Créditos`}
+          subtitle={`Facultad de Ciencias de la Comunicación, Turismo y Psicología - USMP • ${ordinalEs(inspectedCourse.cycle)} Ciclo • ${inspectedCourse.credits} Créditos`}
           maxWidth="xl"
         >
           <div className="space-y-4">

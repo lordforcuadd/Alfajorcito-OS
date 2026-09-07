@@ -436,7 +436,10 @@ export async function searchDOAJ(query: string, limit = 8): Promise<AcademicSear
       return {
         title: bib.title || 'Sin título',
         authors,
-        year: bib.year ? Number(bib.year) : 0,
+        year: (() => {
+          const parsed = typeof bib.year === 'string' ? parseInt(bib.year, 10) : bib.year;
+          return Number.isInteger(parsed) && (parsed as number) > 0 ? (parsed as number) : 0;
+        })(),
         type: 'JOURNAL_ARTICLE' as SourceType,
         publication: bib.journal?.title || bib.journal?.publisher || 'Revista Indexada DOAJ',
         volume: bib.journal?.volume,

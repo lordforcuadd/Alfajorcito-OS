@@ -443,6 +443,20 @@ export function formatFullReferenceHTML(source: Source, style: CitationStyle = '
 export { copyRichReference } from './clipboardHelper';
 
 /**
+ * Escapes special LaTeX characters for BibTeX field values, preventing
+ * syntax compilation errors in LaTeX/BibTeX processors (Overleaf, pdfLaTeX).
+ * Does not alter raw URLs or DOIs.
+ */
+export function escapeBibTeX(text?: string | null): string {
+  if (!text) return '';
+  return text
+    .replace(/\\/g, '\\textbackslash{}')
+    .replace(/([&%$#{}_])/g, '\\$1')
+    .replace(/~/g, '\\textasciitilde{}')
+    .replace(/\^/g, '\\textasciicircum{}');
+}
+
+/**
  * Generates clean, standard BibTeX output with full type mapping,
  * ASCII-sanitized, collision-resistant citeKeys (author + year + title keyword),
  * and non-empty conditional fields. Supports existingKeys for strict mathematical uniqueness in batches.
@@ -479,7 +493,7 @@ export function generateBibTeX(source: Source, existingKeys?: Set<string>): stri
   }
 
   const authorsStr = (source.authors || [])
-    .map((a) => `${a.lastName}, ${a.firstName}`)
+    .map((a) => `${escapeBibTeX(a.lastName)}, ${escapeBibTeX(a.firstName)}`)
     .join(' and ');
 
   const typeMap: Record<string, string> = {
@@ -496,39 +510,39 @@ export function generateBibTeX(source: Source, existingKeys?: Set<string>): stri
   const entryType = typeMap[source.type] || 'article';
   const fields: string[] = [];
 
-  if (source.title) fields.push(`  title = {${source.title}}`);
+  if (source.title) fields.push(`  title = {${escapeBibTeX(source.title)}}`);
   if (authorsStr) fields.push(`  author = {${authorsStr}}`);
   if (source.year) fields.push(`  year = {${source.year}}`);
 
   if (entryType === 'article') {
-    if (source.publication) fields.push(`  journal = {${source.publication}}`);
-    if (source.volume) fields.push(`  volume = {${source.volume}}`);
-    if (source.issue) fields.push(`  number = {${source.issue}}`);
-    if (source.pages) fields.push(`  pages = {${source.pages}}`);
+    if (source.publication) fields.push(`  journal = {${escapeBibTeX(source.publication)}}`);
+    if (source.volume) fields.push(`  volume = {${escapeBibTeX(source.volume)}}`);
+    if (source.issue) fields.push(`  number = {${escapeBibTeX(source.issue)}}`);
+    if (source.pages) fields.push(`  pages = {${escapeBibTeX(source.pages)}}`);
     if (source.doi) fields.push(`  doi = {${source.doi}}`);
     if (source.url && !source.doi) fields.push(`  url = {${source.url}}`);
   } else if (entryType === 'book') {
-    if (source.publication) fields.push(`  publisher = {${source.publication}}`);
+    if (source.publication) fields.push(`  publisher = {${escapeBibTeX(source.publication)}}`);
     if (source.doi) fields.push(`  doi = {${source.doi}}`);
     if (source.url && !source.doi) fields.push(`  url = {${source.url}}`);
   } else if (entryType === 'incollection') {
-    if (source.publication) fields.push(`  booktitle = {${source.publication}}`);
-    if (source.pages) fields.push(`  pages = {${source.pages}}`);
+    if (source.publication) fields.push(`  booktitle = {${escapeBibTeX(source.publication)}}`);
+    if (source.pages) fields.push(`  pages = {${escapeBibTeX(source.pages)}}`);
     if (source.doi) fields.push(`  doi = {${source.doi}}`);
   } else if (entryType === 'inproceedings') {
-    if (source.publication) fields.push(`  booktitle = {${source.publication}}`);
+    if (source.publication) fields.push(`  booktitle = {${escapeBibTeX(source.publication)}}`);
     if (source.doi) fields.push(`  doi = {${source.doi}}`);
   } else if (entryType === 'phdthesis') {
-    if (source.publication) fields.push(`  school = {${source.publication}}`);
+    if (source.publication) fields.push(`  school = {${escapeBibTeX(source.publication)}}`);
     if (source.doi) fields.push(`  doi = {${source.doi}}`);
     if (source.url && !source.doi) fields.push(`  url = {${source.url}}`);
   } else if (entryType === 'techreport') {
-    if (source.publication) fields.push(`  institution = {${source.publication}}`);
+    if (source.publication) fields.push(`  institution = {${escapeBibTeX(source.publication)}}`);
     if (source.doi) fields.push(`  doi = {${source.doi}}`);
     if (source.url && !source.doi) fields.push(`  url = {${source.url}}`);
   } else {
     // misc
-    if (source.publication) fields.push(`  howpublished = {${source.publication}}`);
+    if (source.publication) fields.push(`  howpublished = {${escapeBibTeX(source.publication)}}`);
     if (source.url) fields.push(`  url = {${source.url}}`);
   }
 

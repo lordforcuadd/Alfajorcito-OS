@@ -19,6 +19,7 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge, VerificationBadge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
+import { EmptyState } from '../../components/common/EmptyState';
 import { TextArea } from '../../components/common/Input';
 import { useToast } from '../../components/common/Toast';
 import { checkParaphraseFidelity } from '../../services/aiService';
@@ -186,10 +187,12 @@ export const PipelineView: React.FC = () => {
     }
 
     return true;
-  });  return (
+  });
+
+  return (
     <div className="space-y-5 animate-fade-in">
       {/* Header Banner */}
-      <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/40 shadow-xs space-y-3">
+      <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#FDF2F0] via-white to-[#F3E5F5] border border-[#E8A598]/40 shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#8C3A32] uppercase tracking-wider bg-[#FDF2F0] px-2.5 py-0.5 rounded-lg border border-[#E8A598]/50">
@@ -338,13 +341,11 @@ export const PipelineView: React.FC = () => {
       {/* Traceability Records List */}
       <div className="space-y-4">
         {filteredParaphrases.length === 0 ? (
-          <Card variant="subtle" className="text-center py-12 px-4 space-y-2">
-            <BookMarked className="w-8 h-8 text-[#D98880] mx-auto opacity-70" />
-            <h4 className="font-bold text-sm text-[#2B2D42]">No hay citas registradas</h4>
-            <p className="text-xs text-[#5A6275] max-w-md mx-auto">
-              Ve a la sección <strong>"Fuentes & Papers"</strong> para registrar un artículo científico, extraer citas textuales y generar paráfrasis automáticas.
-            </p>
-          </Card>
+          <EmptyState
+            icon={<BookMarked className="w-7 h-7 text-[#8C3A32]" />}
+            title="No hay citas registradas"
+            description="Ve a la sección 'Fuentes & Papers' para registrar un artículo científico, extraer citas textuales y generar paráfrasis automáticas."
+          />
         ) : (
           filteredParaphrases.map((para) => {
             const idea = ideasMap.get(para.ideaId);
