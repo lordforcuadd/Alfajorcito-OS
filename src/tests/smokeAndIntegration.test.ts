@@ -5,6 +5,7 @@ import { sanitizeSlug } from '../utils/obsidianExporter';
 import { parseAcademicCycle, filterTodayTasks, filterOverdueTasks, getDeadlineUrgencyMeta } from '../utils/academicWorkUtils';
 import { slugifyTitle, generateUniqueSlug } from '../utils/idHelper';
 import { formatNotePreview } from '../utils/notePreview';
+import { getInitialNavTab, ACTIVE_TAB_STORAGE_KEY } from '../App';
 import type { Work, Source, UserProfile } from '../types';
 
 describe('Interactive Smoke & Integration Suite', () => {
@@ -239,27 +240,40 @@ describe('Interactive Smoke & Integration Suite', () => {
     expect(slugifyTitle('***', 'fallback')).toBe('fallback');
   });
 
-  it('persists and validates active tab selection in localStorage with graceful fallback to dashboard', () => {
-    const VALID_NAV_TABS = new Set(['dashboard', 'works', 'curriculum', 'research', 'pipeline', 'brain']);
-
-    const resolveNavTab = (storedVal: string | null) => {
-      if (storedVal && VALID_NAV_TABS.has(storedVal)) {
-        return storedVal;
-      }
-      return 'dashboard';
+  if (typeof globalThis.localStorage === 'undefined') {
+    const memoryStore = new Map<string, string>();
+    (globalThis as any).localStorage = {
+      getItem: (k: string) => memoryStore.get(k) ?? null,
+      setItem: (k: string, v: string) => { memoryStore.set(k, String(v)); },
+      removeItem: (k: string) => { memoryStore.delete(k); },
+      clear: () => { memoryStore.clear(); },
+      get length() { return memoryStore.size; },
+      key: (idx: number) => Array.from(memoryStore.keys())[idx] ?? null
     };
+  }
 
-    expect(resolveNavTab('brain')).toBe('brain');
-    expect(resolveNavTab('works')).toBe('works');
-    expect(resolveNavTab('curriculum')).toBe('curriculum');
-    expect(resolveNavTab('research')).toBe('research');
-    expect(resolveNavTab('pipeline')).toBe('pipeline');
-    expect(resolveNavTab('dashboard')).toBe('dashboard');
+  it('persists and validates active tab selection in localStorage with graceful fallback to dashboard', () => {
+    localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, 'brain');
+    expect(getInitialNavTab()).toBe('brain');
+    localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, 'works');
+    expect(getInitialNavTab()).toBe('works');
+    localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, 'curriculum');
+    expect(getInitialNavTab()).toBe('curriculum');
+    localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, 'research');
+    expect(getInitialNavTab()).toBe('research');
+    localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, 'pipeline');
+    expect(getInitialNavTab()).toBe('pipeline');
+    localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, 'dashboard');
+    expect(getInitialNavTab()).toBe('dashboard');
 
     // Corrupted, tampered or missing values must cleanly default to 'dashboard'
-    expect(resolveNavTab(null)).toBe('dashboard');
-    expect(resolveNavTab('')).toBe('dashboard');
-    expect(resolveNavTab('unknown_section')).toBe('dashboard');
-    expect(resolveNavTab('__proto__')).toBe('dashboard');
+    localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, 'invalid_junk');
+    expect(getInitialNavTab()).toBe('dashboard');
+    localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, '__proto__');
+    expect(getInitialNavTab()).toBe('dashboard');
+    localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, '');
+    expect(getInitialNavTab()).toBe('dashboard');
+    localStorage.removeItem(ACTIVE_TAB_STORAGE_KEY);
+    expect(getInitialNavTab()).toBe('dashboard');
   });
 });

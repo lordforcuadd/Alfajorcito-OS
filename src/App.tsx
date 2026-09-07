@@ -32,10 +32,10 @@ interface QuickCaptureConfig {
   initialWorkId?: string;
 }
 
-const VALID_NAV_TABS = new Set<NavTab>(['dashboard', 'works', 'curriculum', 'research', 'pipeline', 'brain']);
-const ACTIVE_TAB_STORAGE_KEY = 'alfajorcito.active_tab';
+export const VALID_NAV_TABS = new Set<NavTab>(['dashboard', 'works', 'curriculum', 'research', 'pipeline', 'brain']);
+export const ACTIVE_TAB_STORAGE_KEY = 'alfajorcito.active_tab';
 
-function getInitialNavTab(): NavTab {
+export function getInitialNavTab(): NavTab {
   try {
     const saved = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
     if (saved && VALID_NAV_TABS.has(saved as NavTab)) {
