@@ -116,6 +116,17 @@ export function parseDisplayName(rawName: string): Author {
   };
 }
 
+/**
+ * Safely parses and validates publication year from external academic metadata,
+ * strictly rejecting non-numeric characters/suffixes (e.g. '2020a', 'n.d.', null, NaN)
+ * and non-positive numbers.
+ */
+export function parseSafeYear(yearVal: unknown): number {
+  if (typeof yearVal !== 'string' && typeof yearVal !== 'number') return 0;
+  const n = typeof yearVal === 'string' ? Number(yearVal.trim()) : yearVal;
+  return Number.isInteger(n) && n > 0 ? n : 0;
+}
+
 interface OpenAlexAuthorship {
   author?: {
     display_name?: string;
@@ -436,10 +447,7 @@ export async function searchDOAJ(query: string, limit = 8): Promise<AcademicSear
       return {
         title: bib.title || 'Sin título',
         authors,
-        year: (() => {
-          const parsed = typeof bib.year === 'string' ? parseInt(bib.year, 10) : bib.year;
-          return Number.isInteger(parsed) && (parsed as number) > 0 ? (parsed as number) : 0;
-        })(),
+        year: parseSafeYear(bib.year),
         type: 'JOURNAL_ARTICLE' as SourceType,
         publication: bib.journal?.title || bib.journal?.publisher || 'Revista Indexada DOAJ',
         volume: bib.journal?.volume,

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { sanitizeAcademicText } from '../utils/antiHallucination';
 import { generateGoogleDocsRichHTML } from '../utils/googleExporter';
+import { parseSafeYear } from '../services/academicApis';
 import type { Work, Source } from '../types';
 
 describe('Security, XSS & Extreme Inputs Resilience Suite', () => {
@@ -97,16 +98,12 @@ describe('Security, XSS & Extreme Inputs Resilience Suite', () => {
   });
 
   it('safely handles non-numeric and malformed years from external academic APIs', () => {
-    const parseSafeYear = (rawYear: unknown): number => {
-      const parsed = typeof rawYear === 'string' ? parseInt(rawYear, 10) : rawYear;
-      return Number.isInteger(parsed) && (parsed as number) > 0 ? (parsed as number) : 0;
-    };
-
-    expect(parseSafeYear('2020a')).toBe(2020);
+    expect(parseSafeYear('2020a')).toBe(0); // strictly rejects non-numeric suffixes
     expect(parseSafeYear('2024')).toBe(2024);
     expect(parseSafeYear('n.d.')).toBe(0);
     expect(parseSafeYear(undefined)).toBe(0);
     expect(parseSafeYear(NaN)).toBe(0);
     expect(parseSafeYear(-5)).toBe(0);
+    expect(parseSafeYear(2025)).toBe(2025);
   });
 });
