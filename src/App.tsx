@@ -13,6 +13,7 @@ const CurriculumView = lazyWithRetry(() => import('./modules/curriculum/Curricul
 const ResearchView = lazyWithRetry(() => import('./modules/research/ResearchView').then((m) => ({ default: m.ResearchView })), 'ResearchView');
 const PipelineView = lazyWithRetry(() => import('./modules/citations/PipelineView').then((m) => ({ default: m.PipelineView })), 'PipelineView');
 const BrainView = lazyWithRetry(() => import('./modules/notes/BrainView').then((m) => ({ default: m.BrainView })), 'BrainView');
+const TextLabView = lazyWithRetry(() => import('./modules/textlab/TextLabView').then((m) => ({ default: m.TextLabView })), 'TextLabView');
 const SettingsModal = lazyWithRetry(() => import('./components/modals/SettingsModal').then((m) => ({ default: m.SettingsModal })), 'SettingsModal');
 const CommandPalette = lazyWithRetry(() => import('./components/modals/CommandPalette').then((m) => ({ default: m.CommandPalette })), 'CommandPalette');
 
@@ -32,7 +33,7 @@ interface QuickCaptureConfig {
   initialWorkId?: string;
 }
 
-export const VALID_NAV_TABS = new Set<NavTab>(['dashboard', 'works', 'curriculum', 'research', 'pipeline', 'brain']);
+export const VALID_NAV_TABS = new Set<NavTab>(['dashboard', 'works', 'curriculum', 'research', 'pipeline', 'brain', 'textlab']);
 export const ACTIVE_TAB_STORAGE_KEY = 'alfajorcito.active_tab';
 
 export function getInitialNavTab(): NavTab {
@@ -102,16 +103,17 @@ function MainApp() {
     } else if (type === 'notes') {
       setSelectedNoteId(id);
       handleTabChange('brain');
-    } else if (type === 'inquiries') {
-      const inq = await db.inquiries.get(id);
-      if (inq?.workId) {
-        setSelectedWorkId(inq.workId);
-      }
-      handleTabChange('works');
-    } else if (type === 'tasks') {
-      const t = await db.tasks.get(id);
-      if (t?.workId) {
-        setSelectedWorkId(t.workId);
+    } else if (type === 'inquiries' || type === 'tasks') {
+      // A failed lookup must not break navigation: fall back to the
+      // dashboard-safe state (no selected work) instead of throwing.
+      try {
+        const linkedWorkId =
+          type === 'inquiries'
+            ? (await db.inquiries.get(id))?.workId
+            : (await db.tasks.get(id))?.workId;
+        if (linkedWorkId) setSelectedWorkId(linkedWorkId);
+      } catch (err) {
+        console.warn('Could not resolve linked work from search result:', err);
       }
       handleTabChange('works');
     } else if (type === 'concepts') {
@@ -198,6 +200,9 @@ function MainApp() {
               }}
             />
           )}
+
+          {/* 7. Text Lab Tab */}
+          {currentTab === 'textlab' && <TextLabView />}
         </Suspense>
       </ErrorBoundary>
 

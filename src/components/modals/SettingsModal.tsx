@@ -183,45 +183,67 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   // Export JSON Backup
   const handleExportJsonBackup = async () => {
-    const rawSettings = await db.settings.toArray();
-    // Security: Sanitize sensitive API keys before exporting backup JSON
-    const sanitizedSettings = rawSettings.map((s) => {
-      if (s.key === 'ai_settings' && s.value && typeof s.value === 'object') {
-        return {
-          ...s,
-          value: {
-            ...(s.value as Record<string, unknown>),
-            apiKey: '' // Never export plaintext private credentials
-          }
-        };
-      }
-      return s;
-    });
+    try {
+      // Single Promise.all read: if IndexedDB fails (quota, corrupted DB,
+      // private mode), we surface ONE clear error instead of dying mid-way
+      // with an unhandled rejection and no download.
+      const [rawSettings, courses, works, sources, ideas, paraphrases, citations, notes, concepts, tasks, inquiries] =
+        await Promise.all([
+          db.settings.toArray(),
+          db.courses.toArray(),
+          db.works.toArray(),
+          db.sources.toArray(),
+          db.ideas.toArray(),
+          db.paraphrases.toArray(),
+          db.citations.toArray(),
+          db.notes.toArray(),
+          db.concepts.toArray(),
+          db.tasks.toArray(),
+          db.inquiries.toArray()
+        ]);
 
-    const backup = {
-      version: '1.0',
-      exportedAt: new Date().toISOString(),
-      courses: await db.courses.toArray(),
-      works: await db.works.toArray(),
-      sources: await db.sources.toArray(),
-      ideas: await db.ideas.toArray(),
-      paraphrases: await db.paraphrases.toArray(),
-      citations: await db.citations.toArray(),
-      notes: await db.notes.toArray(),
-      concepts: await db.concepts.toArray(),
-      tasks: await db.tasks.toArray(),
-      inquiries: await db.inquiries.toArray(),
-      settings: sanitizedSettings
-    };
+      // Security: Sanitize sensitive API keys before exporting backup JSON
+      const sanitizedSettings = rawSettings.map((s) => {
+        if (s.key === 'ai_settings' && s.value && typeof s.value === 'object') {
+          return {
+            ...s,
+            value: {
+              ...(s.value as Record<string, unknown>),
+              apiKey: '' // Sanitized: never export plaintext credentials
+            }
+          };
+        }
+        return s;
+      });
 
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Alfajorcito_Backup_${formatLocalDateForInput(new Date())}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Copia generada', 'Archivo JSON descargado exitosamente.', 'success');
+      const backup = {
+        version: '1.0',
+        exportedAt: new Date().toISOString(),
+        courses,
+        works,
+        sources,
+        ideas,
+        paraphrases,
+        citations,
+        notes,
+        concepts,
+        tasks,
+        inquiries,
+        settings: sanitizedSettings
+      };
+
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Alfajorcito_Backup_${formatLocalDateForInput(new Date())}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Copia generada', 'Archivo JSON descargado exitosamente.', 'success');
+    } catch (err) {
+      console.error('Error al exportar backup JSON:', err);
+      showToast('Error al exportar', 'No se pudieron leer los datos para generar la copia. Intenta de nuevo.', 'error');
+    }
   };
 
   // Import JSON Backup with Strict Schema Validation & Atomic Transaction

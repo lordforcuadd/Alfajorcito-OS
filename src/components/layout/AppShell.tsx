@@ -10,13 +10,14 @@ import {
   Settings,
   WifiOff,
   GitFork,
-  Award
+  Award,
+  FlaskConical
 } from 'lucide-react';
 import { Button } from '../common/Button';
 import { db } from '../../db';
 import type { UserProfile } from '../../types';
 
-export type NavTab = 'dashboard' | 'works' | 'curriculum' | 'research' | 'brain' | 'pipeline';
+export type NavTab = 'dashboard' | 'works' | 'curriculum' | 'research' | 'brain' | 'pipeline' | 'textlab';
 
 export interface AppShellProps {
   currentTab: NavTab;
@@ -257,7 +258,8 @@ export const AppShell: React.FC<AppShellProps> = ({
     { id: 'curriculum' as NavTab, label: profile.institution?.includes('USMP') ? 'Malla USMP' : 'Malla Curricular', mobileLabel: 'Malla', icon: Award },
     { id: 'research' as NavTab, label: 'Fuentes & Papers', mobileLabel: 'Fuentes', icon: BookOpen },
     { id: 'pipeline' as NavTab, label: 'Citas & Referencias', mobileLabel: 'Citas', icon: GitFork },
-    { id: 'brain' as NavTab, label: 'Segundo Cerebro', mobileLabel: 'Cerebro', icon: Brain }
+    { id: 'brain' as NavTab, label: 'Segundo Cerebro', mobileLabel: 'Cerebro', icon: Brain },
+    { id: 'textlab' as NavTab, label: 'Laboratorio de Texto', mobileLabel: 'Lab Texto', icon: FlaskConical }
   ];
 
   return (
@@ -443,6 +445,9 @@ export const AppShell: React.FC<AppShellProps> = ({
         style={{ paddingBottom: 'max(0.375rem, env(safe-area-inset-bottom))' }}
       >
         <div className="flex items-center justify-between gap-0.5 max-w-md mx-auto">
+          {/* Left group: first 3 tabs. Right group below swaps its 3rd slot for
+              the ACTIVE tab when it overflows the bar (7 tabs + center button),
+              so no section is ever unreachable on mobile (audit 2026-09-08). */}
           {navItems.slice(0, 3).map((item) => {
             const Icon = item.icon;
             const isActive = currentTab === item.id;
@@ -472,7 +477,16 @@ export const AppShell: React.FC<AppShellProps> = ({
             <Plus className="w-5 h-5 stroke-[2.5]" />
           </button>
 
-          {navItems.slice(3, 6).map((item) => {
+          {(() => {
+            // Right group: pipeline, brain, textlab normally. If the ACTIVE tab
+            // (e.g. "research") is not among them, it replaces the last slot.
+            const base = navItems.slice(3, 6);
+            const active = navItems.find((i) => i.id === currentTab);
+            const right =
+              active && !base.some((i) => i.id === active.id) && !navItems.slice(0, 3).some((i) => i.id === active.id)
+                ? [...base.slice(0, 2), active]
+                : base;
+            return right.map((item) => {
             const Icon = item.icon;
             const isActive = currentTab === item.id;
             return (
@@ -489,7 +503,8 @@ export const AppShell: React.FC<AppShellProps> = ({
                 <span className="text-[9px] truncate max-w-full leading-tight">{item.mobileLabel}</span>
               </button>
             );
-          })}
+            });
+          })()}
         </div>
       </div>
     </div>

@@ -114,7 +114,13 @@ export default defineConfig({
             id.includes('src/services/academicApis') ||
             id.includes('src\\services\\academicApis') ||
             id.includes('src/utils/citationEngine') ||
-            id.includes('src\\utils\\citationEngine')
+            id.includes('src\\utils\\citationEngine') ||
+            id.includes('src/modules/textlab') ||
+            id.includes('src\\modules\\textlab') ||
+            id.includes('src/services/textLabService') ||
+            id.includes('src\\services\\textLabService') ||
+            id.includes('src/utils/textLabEngine') ||
+            id.includes('src\\utils\\textLabEngine')
           ) {
             return 'feature-academic-core';
           }

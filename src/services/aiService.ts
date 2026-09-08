@@ -34,8 +34,9 @@ export interface ParaphraseFidelityResult {
   modelUsed?: string;
 }
 
-// Helper to get active AI settings from IndexedDB if not explicitly passed
-async function getEffectiveAISettings(passedSettings?: AISettings): Promise<AISettings> {
+// Public plumbing for sibling services (Text Lab): settings resolution +
+// the low-level multi-provider LLM caller. Behavior unchanged.
+export async function getEffectiveAISettings(passedSettings?: AISettings): Promise<AISettings> {
   if (passedSettings) return passedSettings;
   try {
     const record = await db.settings.get('ai_settings');
@@ -506,7 +507,8 @@ async function callGemini(
   prompt: string,
   key: string,
   requestedModel?: string,
-  temperature = 0.2
+  temperature = 0.2,
+  timeoutMs = 10000
 ): Promise<{ text: string; modelUsed: string } | null> {
   const cleanModel = (requestedModel || '').trim().replace(/^models\//, '');
   const targetModel = cleanModel || 'gemini-2.5-flash';
@@ -527,7 +529,7 @@ async function callGemini(
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { temperature }
         }),
-        signal: AbortSignal.timeout(10000)
+        signal: AbortSignal.timeout(timeoutMs)
       });
       if (res.ok) {
         const data = await res.json();
@@ -564,7 +566,7 @@ async function callGemini(
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { temperature }
         }),
-        signal: AbortSignal.timeout(10000)
+        signal: AbortSignal.timeout(timeoutMs)
       });
 
       if (res.ok) {
@@ -607,15 +609,23 @@ export interface LLMCallResult {
   providerUsed: AIProvider;
 }
 
-// Low-level LLM caller supporting Gemini, OpenAI, OpenRouter, and Ollama
-async function callLLM(prompt: string, settings: AISettings): Promise<LLMCallResult | null> {
+// Low-level LLM caller supporting Gemini, OpenAI, OpenRouter, and Ollama.
+// Exported for sibling services (Text Lab). Behavior unchanged for existing
+// callers; opts.timeoutMs lets long-form callers (humanizer loop) extend the
+// default 10s — a full-text rewrite on a reasoning model can exceed it.
+export async function callLLM(
+  prompt: string,
+  settings: AISettings,
+  opts?: { timeoutMs?: number }
+): Promise<LLMCallResult | null> {
   const { provider, apiKey, modelName, ollamaEndpoint } = settings;
+  const timeoutMs = opts?.timeoutMs ?? 10000;
 
   let resultText: string | null = null;
   let resolvedModel = modelName || '';
 
   if (provider === 'gemini') {
-    const geminiRes = await callGemini(prompt, apiKey || '', modelName, settings.temperature ?? 0.2);
+    const geminiRes = await callGemini(prompt, apiKey || '', modelName, settings.temperature ?? 0.2, timeoutMs);
     if (geminiRes) {
       resultText = geminiRes.text;
       resolvedModel = geminiRes.modelUsed;

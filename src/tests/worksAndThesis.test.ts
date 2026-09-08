@@ -220,9 +220,9 @@ describe('Works and Thesis Management Suite', () => {
   });
 
   it('formats Spanish academic cycle ordinals accurately without inventing incorrect suffixes', () => {
-    expect(ordinalEs(1)).toBe('1ro');
+    expect(ordinalEs(1)).toBe('1er');
     expect(ordinalEs(2)).toBe('2do');
-    expect(ordinalEs(3)).toBe('3ro');
+    expect(ordinalEs(3)).toBe('3er');
     expect(ordinalEs(4)).toBe('4to');
     expect(ordinalEs(5)).toBe('5to');
     expect(ordinalEs(6)).toBe('6to');

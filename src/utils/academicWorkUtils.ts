@@ -83,7 +83,7 @@ export function parseAcademicCycle(cycleStr?: string): number {
   if (/\b(VI|6TO|SEXTO)\b/i.test(str) || /\b6\b/.test(str)) return 6;
   if (/\b(IV|4TO|CUARTO)\b/i.test(str) || /\b4\b/.test(str)) return 4;
   if (/\b(V|5TO|QUINTO)\b/i.test(str) || /\b5\b/.test(str)) return 5;
-  if (/\b(III|3RO|TERCERO)\b/i.test(str) || /\b3\b/.test(str)) return 3;
+  if (/\b(III|3ER|3RO|TERCERO)\b/i.test(str) || /\b3\b/.test(str)) return 3;
   if (/\b(II|2DO|SEGUNDO)\b/i.test(str) || /\b2\b/.test(str)) return 2;
   if (/\b(I|1ER|1RO|PRIMER|PRIMERO)\b/i.test(str) || /\b1\b/.test(str)) return 1;
   return 8;
@@ -91,15 +91,15 @@ export function parseAcademicCycle(cycleStr?: string): number {
 
 /**
  * Formats a 1-based cycle/grade number into standard Spanish academic ordinal notation:
- * 1 -> '1ro', 2 -> '2do', 3 -> '3ro', 4 -> '4to', 5 -> '5to',
+ * 1 -> '1er', 2 -> '2do', 3 -> '3er', 4 -> '4to', 5 -> '5to',
  * 6 -> '6to', 7 -> '7mo', 8 -> '8vo', 9 -> '9no', 10 -> '10mo'.
  * Falls back to `${n}º` for numbers outside 1-10.
  */
 export function ordinalEs(n: number): string {
   const ordinals: Record<number, string> = {
-    1: '1ro',
+    1: '1er',
     2: '2do',
-    3: '3ro',
+    3: '3er',
     4: '4to',
     5: '5to',
     6: '6to',
