@@ -110,8 +110,9 @@ Busca:
 - Oraciones que conservan cadencia uniforme (misma longitud, mismo patrón).
 - Restos de vocabulario de ensayo ("por lo tanto", "asimismo", "en este sentido", "cabe destacar", "es importante señalar").
 - Nominalizaciones de informe ("se procedió a") en textos casuales.
-- Párrafos que aún repiten la misma fórmula de entrada.
-- Cierres circulares que repiten el tema del párrafo.
+- Párrafos que aún repiten la misma fórmula de entrada (etiqueta geográfica o de nivel: "A nivel internacional...", "En Latinoamérica...", "En el contexto peruano..." — si DOS párrafos abren sus estudios igual, es plantilla).
+- CIERRES CIRCULARES que resumen el párrafo: "Estos antecedentes...", "En conjunto...", "La información anterior...", "Así, tales resultados...", "Por lo anterior...", "Todo esto...". Un párrafo humano cierra con el hallazgo del último estudio, no con un resumen del párrafo.
+- SIMETRÍA SOSPECHOSA: si cada párrafo tiene exactamente la misma estructura (3 estudios en el mismo orden geográfico + cierre), señálalo aunque las oraciones suenen naturales.
 
 Devuelve EXACTAMENTE este JSON:
 {
@@ -140,7 +141,7 @@ ${candidate}
 ORACIONES A CORREGIR (y por qué):
 ${problems.map((p, i) => `${i + 1}. "${p}"`).join('\n')}
 
-CORRECCIÓN: cada oración listada debe sonar a persona real — cadencia variada, vocabulario natural, sin conectores de ensayo. Las demás oraciones NO SE TOCAN.
+CORRECCIÓN: cada oración listada debe sonar a persona real — cadencia variada, vocabulario natural, sin conectores de ensayo. Las demás oraciones NO SE TOCAN. Si una oración listada es un CIERRE CIRCULAR de párrafo ("Estos antecedentes...", "En conjunto...", "Por lo anterior..."), reemplázala por el HALLAZGO CONCRETO del último estudio del párrafo (dato, cifra, población), o ELIMÍNALA y termina el párrafo en la oración anterior. Si una oración listada es una ENTRADA de estudio con etiqueta geográfica repetida ("A nivel internacional, X analizó..."), reescribe la entrada por el hallazgo, la cifra o el detalle concreto del estudio ("Con 4.396 estudiantes, Zhang et al. (2026) halló...").
 
 Devuelve EXACTAMENTE este JSON:
 {
@@ -191,27 +192,45 @@ export async function detectAIAuthorship(
     (settings.apiKey || settings.provider === 'ollama');
 
   if (canUseLLM) {
-    const prompt = `Actúa como un detector académico de texto generado por IA (estilo GPTZero / Pangram / Turnitin AI), especializado en español académico universitario.
+    // Detector prompt recalibrated against how real detectors work (research
+    // 2026-09-08): GPTZero v4+ is a deep-learning classifier (perplexity/
+    // burstiness are only UI indicators now), Pangram 4 is a MoE tokenwise
+    // classifier that spots authorship by token-level distribution. Neither
+    // flags "weird words" — they flag: (a) structural templates, (b) uniform
+    // cadence, (c) LLM-typical connective tissue, (d) list-like completeness.
+    // The local heuristic result is given to the model as PRIOR EVIDENCE.
+    const prompt = `Actúa como un detector de IA de nueva generación (estilo Pangram 4 / GPTZero v4), especializado en español académico universitario. Estos detectores NO buscan "palabras raras": clasifican la DISTRIBUCIÓN de la escritura completa (estructura, cadencia, conectores, completitud).
 
-Analiza el siguiente texto y evalúa la probabilidad de que haya sido redactado por una IA (ChatGPT, Gemini, Claude, etc.) o por un estudiante humano.
+EVIDENCIA PREVIA del análisis local (úsala como pista, no como veredicto):
+- Score local de patrones: ${Math.round(heuristic.aiScore * 100)}/100 (banda: ${heuristic.band})
+- Patrones locales encontrados: ${heuristic.issues.length === 0 ? 'ninguno' : heuristic.issues.map((i) => `${i.label} (${i.occurrences}x)`).join('; ')}
+- Ritmo de oraciones (variación de longitud, CV): ${heuristic.metrics.burstinessIndex.toFixed(2)} — humano típico > 0.35, IA típica < 0.25
+
+Analiza el texto con estos criterios (en orden de peso):
+
+1. PLANTILLA ESTRUCTURAL ENTRE PÁRRAFOS (el tell #1): ¿varios párrafos introducen estudios/ideas con la MISMA fórmula (etiqueta geográfica + autor + verbo: "A nivel internacional, X et al. analizó... En Latinoamérica, Y estudió... En Perú, Z abordó...")? Los detectores neuronales puntúan esto como IA aunque las palabras individuales suenen naturales.
+2. CIERRES CIRCULARES: ¿el último enunciado de cada párrafo resume lo que el párrafo ya dijo ("En conjunto, estos estudios muestran que...")? Es la firma de párrafo generado.
+3. CADENCIA: ¿las oraciones tienen longitud uniforme (misma complejidad, mismo patrón sujeto-verbo-complemento) o varían de verdad (una de 40 palabras, luego una de 8)?
+4. CONECTIVO DE ENSAYO: "En este sentido", "Asimismo", "Cabe destacar", "Por lo tanto", "además" al inicio de oración.
+5. COMPLETITUD DE LISTA SOSPECHOSA: cada párrafo cubre exactamente los mismos slots (estudio extranjero + estudio latinoamericano + estudio peruano) con el mismo balance — una estructura demasiado perfecta.
+6. VOZ: ¿hay decisiones idiosincráticas (énfasis inesperado, orden de ideas propio, una valoración del autor) o solo reporte neutral uniforme?
+
+CALIBRACIÓN HONESTA:
+- Escritura académica formal ES uniforme por naturaleza: no penalices el registro formal en sí, ni la ausencia de jerga.
+- Escritores no-nativos y académicos cuidadosos dan falsos positivos frecuentes en detectores reales: sé MÁS cuidadoso antes de decir IA.
+- Texto humano académico típico: plantillas rotas (cada estudio entra distinto), alguna asimetría entre párrafos, algún conectivo ausente donde se esperaba.
 
 Texto a analizar:
 """
 ${text}
 """
 
-Criterios de análisis:
-1. Perplejidad aparente: variabilidad léxica, uso de palabras inesperadas, regionalismos, términos específicos concretos.
-2. Ráfaga (burstiness): variación de longitud y estructura de oraciones.
-3. Patrones léxicos típicos de IA: "en resumen", "cabe destacar", "además", "es importante señalar que", comillas tipográficas, rayas (—), regla de tres, paralelismos negativos.
-4. Uniformidad estructural: párrafos con longitud y estructura homogéneas.
-5. Voz personal: presencia de primera persona, opiniones matizadas, imperfecciones naturales.
-
 Devuelve EXACTAMENTE un objeto JSON válido con esta estructura (sin texto adicional):
 {
   "verdict": "HUMANO" | "MIXTO" | "IA",
   "confidence": 0 a 100,
-  "reasons": ["motivo 1", "motivo 2", "motivo 3"]
+  "reasons": ["motivo 1", "motivo 2", "motivo 3"],
+  "structuralFindings": ["plantilla estructural encontrada, si la hay, citando un ejemplo"]
 }`;
 
     const res = await runLLM(prompt, settings, 0.1);
@@ -634,7 +653,7 @@ Devuelve EXACTAMENTE este JSON:
       return chunks;
     };
 
-    const rewriteChunkPrompt = (chunk: string, chunkIdx: number, totalChunks: number, auditQuotes: string[]) => `Eres el mismo autor peruano del texto, reescribiendo su propio borrador para que suene a persona real, no a ChatGPT. ${registerBrief}
+    const rewriteChunkPrompt = (chunk: string, chunkIdx: number, totalChunks: number, auditQuotes: string[], structureNote?: string) => `Eres el mismo autor peruano del texto, reescribiendo su propio borrador para que suene a persona real, no a ChatGPT. ${registerBrief}
 
 FRAGMENTO ${chunkIdx + 1} de ${totalChunks}. Reescribe SOLO este fragmento:
 
@@ -644,14 +663,16 @@ ${chunk}
 
 ${fragmentExamples}
 
-${auditQuotes.length > 0 ? `ORACIONES DE ESTE TIPO DE TEXTO QUE UN AUDIT PREVIO MARCÓ COMO IA (aplícales el arreglo primero):\n${auditQuotes.map((q) => `- "${q}"`).join('\n')}\n` : ''}${registerForbid}
+${structureNote ? `PROBLEMA ESTRUCTURAL DETECTADO EN EL DOCUMENTO (aplica el arreglo EN ESTE fragmento): ${structureNote}\n\nSi este fragmento introduce estudios con la misma fórmula (etiqueta geográfica + autor + verbo), VARÍA la entrada de cada uno: por el hallazgo ("Con 4.396 estudiantes, Zhang..."), por el lugar concreto ("En Arequipa, Apaza..."), por la cifra, por la controversia. NINGÚN estudio puede entrar con la misma fórmula que el anterior.\n` : ''}${auditQuotes.length > 0 ? `ORACIONES DE ESTE FRAGMENTO MARCADAS POR EL AUDIT (aplícales el arreglo primero):\n${auditQuotes.map((q) => `- "${q}"`).join('\n')}\n` : ''}${registerForbid}
 
 CÓMO REESCRIBIR (procedimiento, no resultado):
 1. Lee el fragmento. Identifica las 2-3 oraciones más "planas" (uniformes, sin fricción, conectores de ensayo).
-2. Reescríbelas como las escribiría el autor real: cadencia variada (una larga, una corta seca), vocabulario del registro (${register}), opino si el registro lo permite.
+2. Reescríbelas como las escribiría el autor real: cadencia variada (una larga, una corta seca), vocabulario del registro (${register}), opina si el registro lo permite.
 3. Deja pasar UNA imperfección leve (tangente breve, redundancia) si el registro es casual.
 4. NO toques citas académicas "(Autor, año)", cifras ni nombres propios.
 5. NO agregues ni quites información.
+6. LONGITUD: el fragmento reescrito debe tener ENTRE 90% Y 110% de las palabras del original. NO resumas, NO comprimas, NO expandas. ${register === 'FORMAL' ? 'Un antecedente de tesis no se acorta: cada hallazgo citado sobrevive con su detalle.' : ''}
+7. ${register === 'FORMAL' ? `CIERRES DE PÁRRAFO — PROHIBIDO ABSOLUTO: el ÚLTIMO enunciado del fragmento NO puede empezar con ninguna de estas fórmulas: "Estos antecedentes", "En conjunto", "La información anterior", "Así, tales resultados", "Por lo anterior", "Con esto", "Todo esto", "En este sentido". Tampoco puede RESUMIR lo que el párrafo ya dijo. Cierra con el HALLAZGO CONCRETO del último estudio citado (su dato, su cifra, su población), punto final. Ejemplo: en vez de "Estos antecedentes permiten aseverar que la regulación emocional se vincula con las relaciones", cierra con "En Arequipa, Apaza (2025) encontró diferencias por género en 277 estudiantes" — el hecho, no el resumen.` : ''}
 
 Devuelve EXACTAMENTE este JSON:
 {
@@ -698,34 +719,54 @@ Devuelve EXACTAMENTE este JSON:
     const chunks = paragraphChunks(text);
     const rewrittenChunks: string[] = [];
     const chunkChanges: string[] = [];
+    let lastFrag: string | null = null;
 
     for (let ci = 0; ci < chunks.length; ci++) {
       // Quotes relevantes a ESTE chunk (los que aparecen dentro del fragmento)
       const relevant = auditQuotes.filter((q) => chunkIncludes(chunks[ci], q));
-      const res = await runLLM(
-        rewriteChunkPrompt(chunks[ci], ci, chunks.length, relevant),
-        settings,
-        0.85,
-        90000,
-        { topP: 0.98, seed: Math.floor(Math.random() * 2 ** 30) }
-      );
-      if (!res || !res.text) {
-        // Fallo de API en un chunk: conservar el original de ese chunk.
-        rewrittenChunks.push(chunks[ci]);
-        continue;
-      }
-      if (!modelUsed) modelUsed = res.modelUsed;
-      const parsed = extractJSON<{ rewrittenFragment?: string; changes?: string[] }>(res.text);
-      if (parsed && typeof parsed.rewrittenFragment === 'string' && parsed.rewrittenFragment.trim()) {
-        rewrittenChunks.push(parsed.rewrittenFragment.trim());
-        if (Array.isArray(parsed.changes)) {
-          chunkChanges.push(...parsed.changes.filter((c) => typeof c === 'string').slice(0, 4));
+      const originalWords = chunks[ci].split(/\s+/).length;
+      let done = false;
+      // Guard anti-compresión (2026-09-08, caso real): el modelo comprimía
+      // 938→686 palabras (-27%) "resumiendo" la tesis. Un chunk válido
+      // preserva ≥85% de las palabras del original; si comprime, se reintenta
+      // una vez con advertencia explícita; si persiste, se conserva el original.
+      for (let attempt = 0; attempt < 2 && !done; attempt++) {
+        const prevRatio = attempt === 1 && lastFrag ? ` (tu intento anterior: ${originalWords} palabras → ${lastFrag.split(/\s+/).length} palabras)` : '';
+        const warning = attempt === 1 ? `\n\nADVERTENCIA CRÍTICA: tu intento anterior comprimió el fragmento${prevRatio}. La compresión NO es humanización: cada hallazgo, cifra y detalle del original DEBE sobrevivir. Reescribe de nuevo MANTENIENDO TODO EL CONTENIDO, solo cambiando la forma de decirlo.` : '';
+        const prompt = rewriteChunkPrompt(chunks[ci], ci, chunks.length, relevant, auditStructure || undefined) + warning;
+        const res = await runLLM(
+          prompt,
+          settings,
+          0.85,
+          90000,
+          { topP: 0.98, seed: Math.floor(Math.random() * 2 ** 30) }
+        );
+        if (!res || !res.text) break; // API fail: conservar original del chunk
+        if (!modelUsed) modelUsed = res.modelUsed;
+        const parsed = extractJSON<{ rewrittenFragment?: string; changes?: string[] }>(res.text);
+        let frag: string | null = null;
+        if (parsed && typeof parsed.rewrittenFragment === 'string' && parsed.rewrittenFragment.trim()) {
+          frag = parsed.rewrittenFragment.trim();
+          if (Array.isArray(parsed.changes)) {
+            chunkChanges.push(...parsed.changes.filter((c) => typeof c === 'string').slice(0, 4));
+          }
+        } else if (res.text.trim().length > chunks[ci].length * 0.5) {
+          frag = res.text.trim();
         }
-      } else if (res.text.trim().length > chunks[ci].length * 0.5) {
-        rewrittenChunks.push(res.text.trim());
-      } else {
-        rewrittenChunks.push(chunks[ci]);
+        if (!frag) break; // sin texto útil: conservar original del chunk
+        const ratio = frag.split(/\s+/).length / Math.max(1, originalWords);
+        if (ratio >= 0.85 && ratio <= 1.15) {
+          rewrittenChunks.push(frag);
+          done = true;
+        } else if (attempt === 0) {
+          lastFrag = frag; // retry con advertencia
+        } else {
+          // Persistió la compresión tras retry: conservar original del chunk
+          rewrittenChunks.push(chunks[ci]);
+          done = true;
+        }
       }
+      if (!done) rewrittenChunks.push(chunks[ci]); // API fail path
     }
 
     const candidate = detourLLMUniformity(rewrittenChunks.join('\n\n'));
@@ -781,8 +822,30 @@ Devuelve EXACTAMENTE este JSON:
     const isCleanBaseline = baseline.band === 'HUMANO' && baseline.issues.length === 0;
     const fingerprintRefresh =
       isCleanBaseline && verify.issues.length <= baseline.issues.length && !collapsesStructure;
+    // Structural refresh (2026-09-08, caso real de tesis): the input carried
+    // local patterns the rewrite could not fully eliminate in one pass (the
+    // model broke SOME of the template but the local detector still counts
+    // the same issue categories). If the rewrite meaningfully re-sampled the
+    // text (>=25% word-level change) without collapsing paragraphs and the
+    // local score is not WORSE, it still moves the two things neural detectors
+    // actually measure (token distribution + skeleton). Shipping the original
+    // because the local issue-count didn't drop is the "no hace nada" bug.
+    const wordOverlap = (() => {
+      const a = new Set(text.toLowerCase().match(/[a-záéíóúñü]+/g) || []);
+      const b = new Set(finalText.toLowerCase().match(/[a-záéíóúñü]+/g) || []);
+      if (a.size === 0) return 0;
+      let shared = 0;
+      for (const w of a) if (b.has(w)) shared++;
+      return shared / a.size;
+    })();
+    const structuralRefresh =
+      !isCleanBaseline &&
+      verify.issues.length <= baseline.issues.length &&
+      candidateScore <= baselineScore + 0.05 &&
+      wordOverlap < 0.75 &&
+      !collapsesStructure;
 
-    if (!collapsesStructure && (improvesPatterns || improvesScore || fingerprintRefresh)) {
+    if (!collapsesStructure && (improvesPatterns || improvesScore || fingerprintRefresh || structuralRefresh)) {
       bestText = finalText;
       bestStrategies = finalStrategies;
       bestRisks = [];
