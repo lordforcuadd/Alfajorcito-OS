@@ -30,6 +30,124 @@ import { callLLM, getEffectiveAISettings, type LLMCallResult } from './aiService
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+/**
+ * Fuzzy containment: does `haystack` contain `needle` ignoring whitespace
+ * differences? Audit quotes come back slightly re-formatted by the model, so
+ * an exact includes() would miss most of them.
+ */
+export function chunkIncludes(haystack: string, needle: string): boolean {
+  const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+  const h = norm(haystack);
+  const n = norm(needle);
+  if (!n || n.length < 8) return false;
+  return h.includes(n);
+}
+
+/**
+ * Deterministic de-uniformization: applied to every candidate BEFORE scoring.
+ * Breaks the statistical uniformity LLM rewrites leave behind (straight
+ * quotes, em dash → comma, merge of staccato fragments). Per-paragraph so
+ * paragraph structure is untouched (the collapse guard must not see damage
+ * that isn't the model's doing).
+ */
+export function detourLLMUniformity(input: string): string {
+  const detourPara = (para: string): string => {
+    let out = para
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/\s*\u2014\s*/g, ', ')
+      .replace(/\u2026/g, '...')
+      .trim();
+    // Atomic decimal protection: swap "4.396"-style numbers for
+    // placeholders BEFORE splitting sentences (a regex alternation can't
+    // protect them — [^.!?]+ eats the leading digits), then restore after
+    // the merge. E2E caught "4. 396" corruption, 2026-09-08.
+    const numPlaceholders: string[] = [];
+    out = out.replace(/\d+[.]\d+/g, (m) => {
+      numPlaceholders.push(m);
+      return `\u0000${numPlaceholders.length - 1}\u0000`;
+    });
+    const sentences = out.match(/[^.!?]+[.!?]+/g) || [];
+    if (sentences.length >= 4) {
+      const merged: string[] = [];
+      for (const raw of sentences) {
+        const s = raw.trim();
+        const short = s.split(/\s+/).length < 7;
+        const startsConj = /^(y|pero|aunque|porque|as[ií] que|o sea)\b/i.test(s);
+        if (merged.length > 0 && short && startsConj) {
+          merged[merged.length - 1] = merged[merged.length - 1].replace(/[.!?]+$/, '');
+          merged.push(s.charAt(0).toLowerCase() + s.slice(1));
+        } else {
+          merged.push(s);
+        }
+      }
+      out = merged.join(' ').replace(/ {2,}/g, ' ');
+    }
+    // Restore the decimal numbers the split protected.
+    out = out.replace(/\u0000(\d+)\u0000/g, (_m, i) => numPlaceholders[Number(i)] ?? '');
+    return out;
+  };
+  return input
+    .replace(/\r\n/g, '\n')
+    .split(/\n\s*\n/)
+    .map((p) => (p.trim() ? detourPara(p) : p))
+    .join('\n\n');
+}
+
+/**
+ * Phase-3 self-audit prompt: the chat procedure's "what still reads as AI?"
+ * applied to the REWRITTEN candidate.
+ */
+function selfAuditPrompt(candidate: string): string {
+  return `Eres un detector de IA experto en español. El siguiente texto fue reescrito para sonar humano. Tu trabajo es encontrar LO QUE AÚN SUENA A IA. Sé despiadado, pero honesto: no inventes problemas.
+
+TEXTO REESCRITO A AUDITAR:
+"""
+${candidate}
+"""
+
+Busca:
+- Oraciones que conservan cadencia uniforme (misma longitud, mismo patrón).
+- Restos de vocabulario de ensayo ("por lo tanto", "asimismo", "en este sentido", "cabe destacar", "es importante señalar").
+- Nominalizaciones de informe ("se procedió a") en textos casuales.
+- Párrafos que aún repiten la misma fórmula de entrada.
+- Cierres circulares que repiten el tema del párrafo.
+
+Devuelve EXACTAMENTE este JSON:
+{
+  "problems": [
+    {
+      "quote": "oración exacta del texto reescrito que aún suena a IA",
+      "fixHint": "cómo corregirla, en una frase concreta"
+    }
+  ]
+}
+Si el texto ya suena natural en todo, devuelve problems: [].`;
+}
+
+/**
+ * Phase-4 fix prompt: correct ONLY the self-audit quotes, keep everything
+ * else untouched (surgical fix, not another full rewrite).
+ */
+function fixPrompt(candidate: string, problems: string[]): string {
+  return `Eres un editor peruano. Corrige SOLO las oraciones listadas abajo. El resto del texto queda EXACTAMENTE IGUAL, palabra por palabra. No reescribas nada más.
+
+TEXTO:
+"""
+${candidate}
+"""
+
+ORACIONES A CORREGIR (y por qué):
+${problems.map((p, i) => `${i + 1}. "${p}"`).join('\n')}
+
+CORRECCIÓN: cada oración listada debe sonar a persona real — cadencia variada, vocabulario natural, sin conectores de ensayo. Las demás oraciones NO SE TOCAN.
+
+Devuelve EXACTAMENTE este JSON:
+{
+  "correctedText": "el texto completo con SOLO las oraciones listadas corregidas"
+}`;
+}
+
 function extractJSON<T>(raw: string): T | null {
   const match = raw.match(/\{[\s\S]*\}/);
   if (!match) return null;
@@ -44,13 +162,14 @@ async function runLLM(
   prompt: string,
   settings: AISettings,
   temperature?: number,
-  timeoutMs = 10000
+  timeoutMs = 10000,
+  samplingOpts?: { topP?: number; seed?: number }
 ): Promise<LLMCallResult | null> {
   try {
     return await callLLM(
       prompt,
       temperature !== undefined ? { ...settings, temperature } : settings,
-      { timeoutMs }
+      { timeoutMs, ...samplingOpts }
     );
   } catch (err) {
     console.warn('TextLab LLM call failed, falling back offline:', err);
@@ -408,19 +527,15 @@ export async function humanizeText(
     (settings.apiKey || settings.provider === 'ollama');
 
   if (canUseLLM) {
-    // ── Register-locked iterative rewrite-verify loop ───────────────────────
-    // Failure modes fixed here (measured on real usage, 2026-09-08):
-    //   (a) A domain-locked "academic editor" prompt turned a casual diary
-    //       into a bureaucratic incident report ("se procedió a la ebullición
-    //       de agua"). QuillBot: 100% human input → 90% AI output.
-    //   (b) The loop never compared candidates against the ORIGINAL text:
-    //       a 5%-AI input was "humanized" into a 45%-AI output because the
-    //       best of 3 bad candidates still shipped.
-    //   (c) Local verification couldn't see register-shift damage because
-    //       the detector had no rules for bureaucratic register.
-    // Fixes: register detection BEFORE rewriting (voice is locked), the
-    // original's score is the baseline every candidate must beat, and the
-    // detector now flags bureaucratic register-shift.
+    // ── Chat-procedure pipeline (2026-09-08, "como lo hicimos en el chat") ──
+    // The single mega-prompt failed on small models (gemini-3.5-flash-lite
+    // ignored 8 abstract strategies at once — measured: 100% AI on Pangram
+    // after "humanizing"). The chat procedure that produced 0% AI texts works
+    // because it DECOMPOSES: (1) find what still reads AI, citing the actual
+    // sentences, (2) rewrite small fragments with concrete before/after
+    // examples, (3) self-audit the rewrite against the same list, (4) fix.
+    // Phases below mirror that. Small models follow concrete, narrow
+    // instructions; they ignore walls of abstract rules.
     const register = detectRegister(text);
     const registerBrief = {
       CASUAL:
@@ -440,155 +555,249 @@ export async function humanizeText(
         'PROHIBICIONES DE REGISTRO (formal): NO elevar aún más el tono (ya es formal). PROHIBIDO ABSOLUTAMENTE jerga juvenil o regional ("cachar", "caleta", "pucha", "chamba", "vaina", "compas", "chavos", "penca", "chancho", "apechugar", "brax") — un texto académico humanizado se lee natural-formal: variado, concreto, con voz propia, NUNCA caricaturesco. Este es el error más grave posible: detectores como GPTZero leen 98% IA un texto de tesis disfrazado de jerga, porque la plantilla estructural sigue intacta y la jerga es una máscara transparente.'
     }[register];
 
-    const buildPrompt = (input: string, focusPatterns: string[], pass: number) => `Eres un editor peruano de textos en español. Objetivo: reescribir para que NO dispare detectores de IA (Pangram, GPTZero, Turnitin AI, QuillBot), manteniendo el significado EXACTO.
+    // FASE 1 — AUDIT con cita de oraciones exactas (el "¿qué suena a IA?" del chat)
+    const auditPrompt = `Eres un detector de IA experto en español. Analiza el texto y lista SOLO lo que suena a generado por IA (ChatGPT/Gemini/GPT), CITANDO LAS ORACIONES EXACTAS. Sé el interrogador de un texto que intenta pasar por humano.
 
 ${registerBrief}
 
-${pass > 1 ? `ATENCIÓN — PASADA DE CORRECCIÓN ${pass}: el intento anterior dejó patrones de IA. ELIMINA OBLIGATORIAMENTE:\n${focusPatterns.map((p) => `- ${p}`).join('\n')}\n` : ''}
-TEXTO ${pass > 1 ? 'A CORREGIR (ya reescrito una vez, aún con restos de IA)' : 'DE ENTRADA'}:
+INSTRUCCIONES DE AUDIT:
+- Oraciones suaves y uniformes (misma longitud, mismo patrón) → cítaolas.
+- Conectores de ensayo ("por lo tanto", "asimismo", "en este sentido", "cabe destacar") → cítaolas.
+- Nominalizaciones de informe ("se procedió a", "se efectuó") si el registro es casual → cítaolas.
+- Estructura de plantilla entre párrafos (misma fórmula de entrada estudio tras estudio) → descríbela.
+- Vocabulario genérico de IA ("delve", "landscape", "testament" en inglés; "inflado de relevancia" en español: "cobra especial importancia", "juega un papel fundamental") → cítaolas.
+- Perfección sospechosa (sin tangentes, sin opiniones, sin redundancias leves) → señálalo.
+- NO inventes problemas si el texto ya suena natural. Un audit limpio es un resultado válido.
+
+TEXTO A AUDITAR:
 """
-${input}
+${text}
 """
 
-REGLAS DE ORO (inviolables):
-1. Conserva TODAS las citas académicas EXACTAS si las hay: (Autor, año), "et al. (2023)", cifras, nombres propios.
-2. No cambies el significado de ninguna oración. No agregues ni quites información.
-3. Mantén el registro (${register}) del original. ${registerForbid}
-4. Mantén la persona gramatical del original (si habla de "yo" o "me", sigue así).
-
-ESTRATEGIAS VALIDADAS (aplica las que apliquen al registro ${register}):
-
-A. ROMPE EL ESQUELETO: si varios párrafos repiten una plantilla, varía cómo entra cada idea (por el autor, por el hallazgo, por el detalle concreto). No anuncies la escalera; consérvala sin letreros. Las etiquetas geográficas idénticas ("Afuera,", "En Latinoamérica,", "En el Perú,", "En el terreno peruano,") como aperturas de estudios son la firma estructural #1 de GPTZero: NINGÚN estudio puede entrar con la misma fórmula que el anterior. Entradas variadas: por el hallazgo ("Con 4.396 estudiantes, Zhang..."), por el lugar concreto ("En Arequipa, Apaza..."), por la cifra, por la controversia.
-
-B. MATA CIERRES CIRCULARES Y META-COMENTARIO: "los antecedentes permiten aseverar que...", "observando que", "resaltando" → síntesis con contenido real, hallazgos sin adorno.
-
-C. ELIMINA INFLADO DE RELEVANCIA: "cobra especial importancia" → "importa"; "juega un papel fundamental" → "importa".
-
-D. VARÍA LA CADENCIA: alterna oraciones cortas y largas. Una oración corta seca de vez en cuando baja el score más que sustituir sinónimos. ${register === 'CASUAL' ? 'En registro casual: oraciones incompletas, arranques abruptos ("Y luego nada."), puntuación floja de vez en cuando.' : ''}
-
-E. COPULAS SIMPLES: "representa/constituye un papel clave" → "es clave".
-
-F. HIGIENE TIPOGRÁFICA: comillas tipográficas (â€œâ€) → rectas; rayas (â€”) → coma; sin "..." decorativos.
-
-G. PROHIBICIONES ABSOLUTAS DE VOCABULARIO IA: "por lo tanto", "en conclusión", "asimismo", "en este sentido", "cabe destacar", "es importante señalar", "resulta esencial", "además" al inicio de oración, "diversos estudios han demostrado", "en definitiva", "desde una perspectiva integral". Si necesitas transición, intégrala en la oración misma o corta: oración nueva sin conector.
-
-H. ${register === 'CASUAL' ? 'IMPERFECCIONES NATURALES: deja pasar una redundancia leve, una tangente breve, una opinión sin justificar. La perfección estructural es la firma de la máquina.' : 'PRECISIÓN CONCRETA: nombres propios, lugares, cifras exactas, fechas, referencias con detalle.'}
-
-Devuelve EXACTAMENTE un objeto JSON válido:
+Devuelve EXACTAMENTE este JSON:
 {
-  "humanizedText": "texto reescrito completo",
-  "appliedStrategies": ["cuáles aplicaste, brevemente"],
-  "remainingRisks": ["riesgos residuales, si detectas alguno"]
+  "readsAI": true|false (¿en conjunto suena a IA?),
+  "problems": [
+    {
+      "quote": "oración exacta del texto que suena a IA",
+      "why": "por qué suena a IA, en una frase",
+      "fixHint": "cómo se arreglaría, en una frase concreta"
+    }
+  ],
+  "structureProblem": "si hay plantilla entre párrafos, descríbela; si no, cadena vacía"
 }`;
 
-    // Baseline: the ORIGINAL text is the candidate to beat. A humanizer that
-    // returns a WORSE-AI-reading rewrite than its input must return the input.
+
+    // FASE 2 — REESCRITURA POR FRAGMENTOS con ejemplos before/after concretos.
+    // El chat funcionaba porque cada instrucción venía con su ejemplo: "así no /
+    // así sí". Los modelos chicos siguen ejemplos, no abstracciones.
+    const fragmentExamples = {
+      CASUAL: `EJEMPLOS CONCRETOS (casual) — así NO (IA) / así SÍ (humano):
+- "La escasa motivación matutina derivó de las bajas temperaturas ambientales." NO → "La verdad, no quería salir de la cama porque hacía un frío de aquellos." SÍ
+- "Se procedió a la preparación de café concentrado." NO → "Me armé un café bien cargado." SÍ
+- "El texto presenta una estructura coherente y equilibrada." NO → "Se entiende, no es nada del otro mundo." SÍ
+- La cadencia casual humana: oración larga, luego CORTA. "Y nada. Así nomás." No todas las oraciones parejas.`,
+      NEUTRAL: `EJEMPLOS CONCRETOS (neutral) — así NO (IA) / así SÍ (humano):
+- "Cabe destacar que este aspecto cobra especial importancia." NO → "Este punto importa." SÍ
+- "Asimismo, es importante señalar que..." NO → "Además, ..." (integrado, no al inicio) o cortar la oración. SÍ
+- "representa un papel fundamental en" NO → "es clave en" SÍ`,
+      FORMAL: `EJEMPLOS CONCRETOS (formal) — así NO (IA) / así SÍ (humano):
+- "En este sentido, estos antecedentes permiten aseverar que..." NO → "Estos antecedentes muestran que..." SÍ
+- "Afuera, Zhang et al. (2026) analizaron... En Latinoamérica, Moysén... En el Perú, Valencia..." (misma fórmula geográfica) NO → "Con 4.396 estudiantes, Zhang et al. (2026) halló...; la muestra mexicana de Moysén (2025)..." / "En Arequipa, Apaza (2025)..." SÍ
+- "cobra especial importancia" NO → "importa" SÍ
+- "juega un papel fundamental" NO → "es decisivo" SÍ
+- El academic humano VARÍA la entrada de cada estudio y cierra párrafos con hallazgos, no con resúmenes circulares.`
+    }[register];
+
+    // Chunking: párrafos agrupados en fragmentos de ≤2 párrafos (~120-300 palabras).
+    // Los modelos chicos reescriben MEJOR fragmentos cortos que textos enteros.
+    const paragraphChunks = (input: string): string[] => {
+      const paras = input
+        .replace(/\r\n/g, '\n')
+        .split(/\n\s*\n/)
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0);
+      const chunks: string[] = [];
+      let buf: string[] = [];
+      let words = 0;
+      for (const p of paras) {
+        const pw = p.split(/\s+/).length;
+        if (buf.length > 0 && words + pw > 300) {
+          chunks.push(buf.join('\n\n'));
+          buf = [];
+          words = 0;
+        }
+        buf.push(p);
+        words += pw;
+      }
+      if (buf.length > 0) chunks.push(buf.join('\n\n'));
+      return chunks;
+    };
+
+    const rewriteChunkPrompt = (chunk: string, chunkIdx: number, totalChunks: number, auditQuotes: string[]) => `Eres el mismo autor peruano del texto, reescribiendo su propio borrador para que suene a persona real, no a ChatGPT. ${registerBrief}
+
+FRAGMENTO ${chunkIdx + 1} de ${totalChunks}. Reescribe SOLO este fragmento:
+
+"""
+${chunk}
+"""
+
+${fragmentExamples}
+
+${auditQuotes.length > 0 ? `ORACIONES DE ESTE TIPO DE TEXTO QUE UN AUDIT PREVIO MARCÓ COMO IA (aplícales el arreglo primero):\n${auditQuotes.map((q) => `- "${q}"`).join('\n')}\n` : ''}${registerForbid}
+
+CÓMO REESCRIBIR (procedimiento, no resultado):
+1. Lee el fragmento. Identifica las 2-3 oraciones más "planas" (uniformes, sin fricción, conectores de ensayo).
+2. Reescríbelas como las escribiría el autor real: cadencia variada (una larga, una corta seca), vocabulario del registro (${register}), opino si el registro lo permite.
+3. Deja pasar UNA imperfección leve (tangente breve, redundancia) si el registro es casual.
+4. NO toques citas académicas "(Autor, año)", cifras ni nombres propios.
+5. NO agregues ni quites información.
+
+Devuelve EXACTAMENTE este JSON:
+{
+  "rewrittenFragment": "el fragmento reescrito completo",
+  "changes": ["qué cambiaste y por qué, 1 línea cada una (máx 4)"]
+}`;
+
+    // ══ FASE 1: AUDIT — el modelo cita exactamente qué suena a IA ═══════════
     const baseline = detectAIText(text);
     const baselineScore = baseline.aiScore + baseline.issues.length * 0.05;
 
-    let bestScore = baselineScore;
     let bestText: string | null = null; // null = keep original
     let bestStrategies: string[] = [];
     let bestRisks: string[] = [];
     let modelUsed = '';
-    let lastAppliedStrategies: string[] = [];
-    let current = text;
-    // Issues in the text being rewritten this pass. A candidate that removes
-    // patterns is accepted even if the statistical score stays similar.
-    let currentIssues = baseline.issues.length;
-    // Epsilon for pass 1 when the original is already clean: an equally-clean
-    // rewrite still changes the stylometric fingerprint (the point when a
-    // NEURAL detector flags a locally-clean text).
-    const improveEpsilon =
-      baseline.band === 'HUMANO' && baseline.issues.length === 0 ? 0.05 : 0;
+    let auditQuotes: string[] = [];
+    let auditStructure = '';
 
-    const MAX_PASSES = 3;
-    for (let pass = 1; pass <= MAX_PASSES; pass++) {
-      let focusPatterns: string[] = [];
-      if (pass > 1) {
-        const check = detectAIText(current);
-        if (check.band === 'HUMANO' && check.issues.length === 0) break;
-        focusPatterns = check.issues
-          .slice(0, 6)
-          .map((i) => `${i.label} — ejemplos: ${i.examples.slice(0, 2).join(' / ')}`);
+    const auditRes = await runLLM(auditPrompt, settings, 0.3, 90000, {
+      topP: 0.95,
+      seed: Math.floor(Math.random() * 2 ** 30)
+    });
+    if (auditRes && auditRes.text) {
+      modelUsed = auditRes.modelUsed;
+      const audit = extractJSON<{
+        readsAI?: boolean;
+        problems?: Array<{ quote?: string; why?: string; fixHint?: string }>;
+        structureProblem?: string;
+      }>(auditRes.text);
+      if (audit) {
+        auditQuotes = (audit.problems || [])
+          .filter((p) => typeof (p as { quote?: unknown }).quote === 'string' && ((p as { quote?: string }).quote || '').trim().length > 8)
+          .map((p) => ((p as { quote?: string }).quote || '').trim())
+          .slice(0, 10);
+        auditStructure = typeof audit.structureProblem === 'string' ? audit.structureProblem : '';
       }
-
-      const res = await runLLM(buildPrompt(current, focusPatterns, pass), settings, 0.85, 90000);
-      if (!res || !res.text) break;
-      modelUsed = res.modelUsed;
-
-      const parsed = extractJSON<{
-        humanizedText?: string;
-        appliedStrategies?: string[];
-        remainingRisks?: string[];
-      }>(res.text);
-      let candidate: string;
-      let candidateStrategies: string[] = [];
-      let candidateRisks: string[] = [];
-      if (parsed && typeof parsed.humanizedText === 'string' && parsed.humanizedText.trim()) {
-        candidate = parsed.humanizedText.trim();
-        candidateStrategies = Array.isArray(parsed.appliedStrategies) ? parsed.appliedStrategies.slice(0, 12) : [];
-        candidateRisks = Array.isArray(parsed.remainingRisks) ? parsed.remainingRisks.slice(0, 8) : [];
-      } else if (res.text.trim().length > text.length * 0.5) {
-        candidate = res.text.trim();
-      } else {
-        break;
-      }
-
-      const verify = detectAIText(candidate);
-      const candidateScore = verify.aiScore + verify.issues.length * 0.05;
-
-      // ── Structure preservation guard (2026-09-08, model comparison) ───────
-      // Measured on gemini-3.5-flash-lite: it merged a 3-paragraph input into
-      // one 202-word block. A rewrite that collapses paragraphs is a defect
-      // even when its pattern score improves — reject it outright.
-      const paraCount = (s: string) => s.split(/\n\s*\n|\r\n\s*\r\n/).filter((p) => p.trim().length > 40).length;
-      const inputParas = paraCount(current);
-      const candidateParas = paraCount(candidate);
-      const collapsesStructure =
-        inputParas >= 2 && candidateParas < Math.max(1, Math.round(inputParas * 0.6));
-      if (collapsesStructure) {
-        // Discard this candidate entirely; do not feed it to the next pass.
-        continue;
-      }
-
-      // ── Acceptance, two criteria (2026-09-08 round 4) ─────────────────────
-      // (1) Total score better than the best so far (guard anti-daño), OR
-      // (2) PATTERN REDUCTION: the candidate removes detected AI patterns vs
-      //     the current text even when the statistical score is similar —
-      //     structural rewrites (geo-template broken, closings removed) can
-      //     keep similar rhythm scores while removing the actual tells. The
-      //     E2E on a MIXTO input showed candidates rejected only on score
-      //     even though they removed 3 patterns.
-      const removesPatterns =
-        currentIssues > 0 && verify.issues.length < currentIssues;
-      if (removesPatterns) {
-        bestScore = candidateScore; // adopt the pattern-reducer as the new bar
-        bestText = candidate;
-        bestStrategies = candidateStrategies;
-        bestRisks = candidateRisks;
-        currentIssues = verify.issues.length;
-      } else if (candidateScore < bestScore + improveEpsilon) {
-        bestScore = Math.min(bestScore, candidateScore);
-        bestText = candidate;
-        bestStrategies = candidateStrategies;
-        bestRisks = candidateRisks;
-      }
-      lastAppliedStrategies = candidateStrategies;
-
-      if (verify.band === 'HUMANO' && verify.issues.length === 0) break;
-
-      // No measurable improvement over the best so far → stop iterating.
-      if (!removesPatterns && candidateScore >= bestScore + 0.02 && pass >= 2) break;
-
-      current = candidate;
     }
 
-    // No candidate beat the ORIGINAL text → return the original untouched,
-    // explaining why. Shipping a register-shifted, worse-reading rewrite is
-    // the bug this guards against. Two distinct messages: clean original
-    // (neural-detector case — the local engine sees nothing to fix) vs
-    // patterned original the model failed to improve.
+    // ══ FASE 2: REESCRITURA POR FRAGMENTOS (≤2 párrafos por llamada) ═══════
+    // Un audit limpio + texto limpio localmente = no hay nada que reescribir
+    // (romperlo sería dañarlo). Un audit con problemas PERO texto localmente
+    // limpio = huella estilométrica: la reescritura por fragmentos es
+    // exactamente lo que la mueve (cada fragmento re-muestreado con entropía).
+    const chunks = paragraphChunks(text);
+    const rewrittenChunks: string[] = [];
+    const chunkChanges: string[] = [];
+
+    for (let ci = 0; ci < chunks.length; ci++) {
+      // Quotes relevantes a ESTE chunk (los que aparecen dentro del fragmento)
+      const relevant = auditQuotes.filter((q) => chunkIncludes(chunks[ci], q));
+      const res = await runLLM(
+        rewriteChunkPrompt(chunks[ci], ci, chunks.length, relevant),
+        settings,
+        0.85,
+        90000,
+        { topP: 0.98, seed: Math.floor(Math.random() * 2 ** 30) }
+      );
+      if (!res || !res.text) {
+        // Fallo de API en un chunk: conservar el original de ese chunk.
+        rewrittenChunks.push(chunks[ci]);
+        continue;
+      }
+      if (!modelUsed) modelUsed = res.modelUsed;
+      const parsed = extractJSON<{ rewrittenFragment?: string; changes?: string[] }>(res.text);
+      if (parsed && typeof parsed.rewrittenFragment === 'string' && parsed.rewrittenFragment.trim()) {
+        rewrittenChunks.push(parsed.rewrittenFragment.trim());
+        if (Array.isArray(parsed.changes)) {
+          chunkChanges.push(...parsed.changes.filter((c) => typeof c === 'string').slice(0, 4));
+        }
+      } else if (res.text.trim().length > chunks[ci].length * 0.5) {
+        rewrittenChunks.push(res.text.trim());
+      } else {
+        rewrittenChunks.push(chunks[ci]);
+      }
+    }
+
+    const candidate = detourLLMUniformity(rewrittenChunks.join('\n\n'));
+
+    // ══ FASE 3: AUTO-CRITICA del candidato (el chat: "¿qué aún suena a IA?") ═
+    let selfAuditProblems: string[] = [];
+    const selfAuditRes = await runLLM(selfAuditPrompt(candidate), settings, 0.3, 90000, {
+      topP: 0.95,
+      seed: Math.floor(Math.random() * 2 ** 30)
+    });
+    if (selfAuditRes && selfAuditRes.text) {
+      const selfAudit = extractJSON<{ problems?: Array<{ quote?: string; fixHint?: string }> }>(selfAuditRes.text);
+      selfAuditProblems = (selfAudit?.problems || [])
+        .filter((p) => typeof (p as { quote?: unknown }).quote === 'string' && ((p as { quote?: string }).quote || '').trim().length > 8)
+        .map((p) => ((p as { quote?: string }).quote || '').trim())
+        .slice(0, 8);
+    }
+
+    // ══ FASE 4: CORRECCIÓN de los puntos que la auto-critica encontró ═══════
+    let finalText = candidate;
+    let finalStrategies = chunkChanges;
+    if (selfAuditProblems.length > 0) {
+      const fixRes = await runLLM(fixPrompt(candidate, selfAuditProblems), settings, 0.8, 90000, {
+        topP: 0.98,
+        seed: Math.floor(Math.random() * 2 ** 30)
+      });
+      if (fixRes && fixRes.text) {
+        const fixed = extractJSON<{ correctedText?: string }>(fixRes.text);
+        if (fixed && typeof fixed.correctedText === 'string' && fixed.correctedText.trim()) {
+          finalText = detourLLMUniformity(fixed.correctedText.trim());
+          finalStrategies = [...chunkChanges, ...selfAuditProblems.map((q) => `Auto-critica: corregido "${q.slice(0, 60)}..."`)];
+        }
+      }
+    }
+
+    // ══ ACEPTACIÓN FINAL: el candidato debe superar al original ═════════════
+    const verify = detectAIText(finalText);
+    const candidateScore = verify.aiScore + verify.issues.length * 0.05;
+    const paraCount = (s: string) => s.split(/\n\s*\n|\r\n\s*\r\n/).filter((p) => p.trim().length > 40).length;
+    const inputParas = paraCount(text);
+    const candidateParas = paraCount(finalText);
+    const collapsesStructure =
+      inputParas >= 2 && candidateParas < Math.max(1, Math.round(inputParas * 0.6));
+
+    const improvesPatterns = verify.issues.length < baseline.issues.length;
+    const improvesScore = candidateScore < baselineScore + (baseline.band === 'HUMANO' && baseline.issues.length === 0 ? 0.05 : 0);
+    // Clean-baseline (estilométrico): the original is already locally clean but
+    // a NEURAL detector flags it — the point is not a better local score (it
+    // is already at floor), it is RE-SAMPLING every fragment so the token
+    // distribution changes. Accept a candidate that preserves structure and
+    // introduces NO new local patterns, even if the statistical score moves
+    // slightly up: the local score does not measure what Pangram measures.
+    const isCleanBaseline = baseline.band === 'HUMANO' && baseline.issues.length === 0;
+    const fingerprintRefresh =
+      isCleanBaseline && verify.issues.length <= baseline.issues.length && !collapsesStructure;
+
+    if (!collapsesStructure && (improvesPatterns || improvesScore || fingerprintRefresh)) {
+      bestText = finalText;
+      bestStrategies = finalStrategies;
+      bestRisks = [];
+      if (verify.band !== 'HUMANO' || verify.issues.length > 0) {
+        bestRisks.push(
+          `Verificación local: quedan ${verify.issues.length} patrón(es) de IA (${verify.issues.map((i) => i.label).slice(0, 3).join(', ')}). Puedes volver a humanizar el fragmento problemático.`
+        );
+      }
+    } else if (collapsesStructure) {
+      bestRisks = [
+        'La reescritura colapsó la estructura de párrafos del original; se descartó para no dañar el texto.'
+      ];
+    }
+
+    // ══ ENTREGA ═════════════════════════════════════════════════════════════
     if (bestText === null) {
       const cleanBaseline = baseline.issues.length === 0;
       return {
@@ -597,7 +806,7 @@ Devuelve EXACTAMENTE un objeto JSON válido:
         changes: [],
         remainingRisks: cleanBaseline
           ? [
-              `El texto original ya lee como humano (${Math.round((1 - baseline.aiScore) * 100)}% humano en verificación local, 0 patrones de IA). Si un detector neuronal (Pangram, GPTZero) lo marca, la huella es estilométrica (nivel token), no de patrones: reescribirlo con IA probablemente la exacerbe. Se entrega sin cambios.`
+              `El texto original ya lee como humano (${Math.round((1 - baseline.aiScore) * 100)}% humano en verificación local, 0 patrones de IA). Si un detector neuronal (Pangram, GPTZero) lo marca igual, la huella is estilométrica (nivel token): la reescritura por fragmentos ya se aplicó y no bastó para mover la huella de muestreo del modelo. Opciones reales: (1) reescríbelo tú con tus palabras — 10 min de trabajo manual rompen la huella de verdad; (2) pásalo por otro modelo de otra familia (no Gemini si el original salió de Gemini); (3) acepta el riesgo si el destinatario no usa detectores. Se entrega sin cambios.`
             ]
           : [
               `Ninguna candidata superó al original (${baseline.issues.length} patrón(es) de IA aún presentes: ${baseline.issues.map((i) => i.label).slice(0, 3).join(', ')}). Se entrega sin cambios para no dañar el texto. Consejo: reescribe manualmente las oraciones marcadas por el Detector y vuelve a humanizar el resultado.`
@@ -607,23 +816,21 @@ Devuelve EXACTAMENTE un objeto JSON válido:
       };
     }
 
-    if (bestText) {
-      const finalCheck = detectAIText(bestText);
-      const risks = [...bestRisks];
-      if (finalCheck.band !== 'HUMANO' || finalCheck.issues.length > 0) {
-        risks.push(
-          `Verificación local: quedan ${finalCheck.issues.length} patrón(es) de IA (${finalCheck.issues.map((i) => i.label).slice(0, 3).join(', ')}). Pasa el resultado por el Detector de IA y vuelve a humanizar el fragmento problemático.`
-        );
-      }
-      return {
-        text: bestText,
-        appliedStrategies: bestStrategies.length > 0 ? bestStrategies : lastAppliedStrategies,
-        changes: [],
-        remainingRisks: risks.slice(0, 8),
-        modelUsed: modelUsed || 'Gemini (Gemini API)',
-        isOfflineHeuristic: false
-      };
+    const finalCheck = detectAIText(bestText);
+    const risks = [...bestRisks];
+    if (finalCheck.band !== 'HUMANO' || finalCheck.issues.length > 0) {
+      risks.push(
+        `Verificación local: quedan ${finalCheck.issues.length} patrón(es) de IA (${finalCheck.issues.map((i) => i.label).slice(0, 3).join(', ')}). Pasa el resultado por el Detector de IA y vuelve a humanizar el fragmento problemático.`
+      );
     }
+    return {
+      text: bestText,
+      appliedStrategies: bestStrategies.length > 0 ? bestStrategies : ['Reescritura por fragmentos con audit + auto-crítica'],
+      changes: [],
+      remainingRisks: risks.slice(0, 8),
+      modelUsed: modelUsed || 'Gemini (Gemini API)',
+      isOfflineHeuristic: false
+    };
   }
 
   // Offline deterministic fallback

@@ -508,11 +508,19 @@ async function callGemini(
   key: string,
   requestedModel?: string,
   temperature = 0.2,
-  timeoutMs = 10000
+  timeoutMs = 10000,
+  samplingOpts?: { topP?: number; seed?: number }
 ): Promise<{ text: string; modelUsed: string } | null> {
   const cleanModel = (requestedModel || '').trim().replace(/^models\//, '');
   const targetModel = cleanModel || 'gemini-2.5-flash';
   const cacheKey = `${key}:${targetModel}`;
+
+  // Entropy injection (2026-09-08): the humanizer asks for high topP + random
+  // seed so token sampling leaves the model's default "most likely" band —
+  // neural detectors partially fingerprint exactly that distribution.
+  const generationConfig: Record<string, unknown> = { temperature };
+  if (samplingOpts?.topP !== undefined) generationConfig.topP = samplingOpts.topP;
+  if (samplingOpts?.seed !== undefined) generationConfig.seed = samplingOpts.seed;
 
   // 1. Try cached verified model first (instant, 0 errors!)
   const cachedModel = verifiedGeminiModelCache.get(cacheKey);
@@ -527,7 +535,7 @@ async function callGemini(
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature }
+          generationConfig
         }),
         signal: AbortSignal.timeout(timeoutMs)
       });
@@ -564,7 +572,7 @@ async function callGemini(
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature }
+          generationConfig
         }),
         signal: AbortSignal.timeout(timeoutMs)
       });
@@ -616,7 +624,7 @@ export interface LLMCallResult {
 export async function callLLM(
   prompt: string,
   settings: AISettings,
-  opts?: { timeoutMs?: number }
+  opts?: { timeoutMs?: number; topP?: number; seed?: number }
 ): Promise<LLMCallResult | null> {
   const { provider, apiKey, modelName, ollamaEndpoint } = settings;
   const timeoutMs = opts?.timeoutMs ?? 10000;
@@ -625,7 +633,16 @@ export async function callLLM(
   let resolvedModel = modelName || '';
 
   if (provider === 'gemini') {
-    const geminiRes = await callGemini(prompt, apiKey || '', modelName, settings.temperature ?? 0.2, timeoutMs);
+    const geminiRes = await callGemini(
+      prompt,
+      apiKey || '',
+      modelName,
+      settings.temperature ?? 0.2,
+      timeoutMs,
+      opts?.topP !== undefined || opts?.seed !== undefined
+        ? { topP: opts?.topP, seed: opts?.seed }
+        : undefined
+    );
     if (geminiRes) {
       resultText = geminiRes.text;
       resolvedModel = geminiRes.modelUsed;
