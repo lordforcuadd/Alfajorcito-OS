@@ -374,9 +374,10 @@ export async function checkPlagiarism(
 
   if (canUseLLM && local.matches.length > 0 && local.overallScore > 0.02) {
     // Ask the LLM to triage the top candidates. Fetch their real text content
-    // so the model judges actual overlap, not just titles.
+    // so the model judges actual overlap, not just titles. The corpus was
+    // already read above (line 368) — reusing it instead of a second
+    // buildLocalCorpus() call (audit 2026-09-09: duplicate IndexedDB reads).
     const top = local.matches.slice(0, 5);
-    const corpus = await buildLocalCorpus();
     const topWithText = top
       .map((m) => {
         const candidate = corpus.find((c) => c.id === m.sourceId);
@@ -891,7 +892,7 @@ Devuelve EXACTAMENTE este JSON:
       appliedStrategies: bestStrategies.length > 0 ? bestStrategies : ['Reescritura por fragmentos con audit + auto-crítica'],
       changes: [],
       remainingRisks: risks.slice(0, 8),
-      modelUsed: modelUsed || 'Gemini (Gemini API)',
+      modelUsed: modelUsed || `${settings.provider} (${settings.modelName || 'modelo configurado'})`,
       isOfflineHeuristic: false
     };
   }

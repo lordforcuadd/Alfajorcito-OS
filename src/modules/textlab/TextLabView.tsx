@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import {
   FlaskConical,
   ScanText,
@@ -130,6 +130,15 @@ export const TextLabView: React.FC<TextLabViewProps> = ({ initialTool = 'detecto
       showToast('Error', 'No se pudo copiar el texto.', 'error');
     }
   };
+
+  // Audit 2026-09-09: clear the pending "copied" reset timer on unmount —
+  // the component previously had no useEffect at all, so leaving the tab
+  // within 2s of copying fired setCopied on an unmounted component.
+  useEffect(() => {
+    return () => {
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+    };
+  }, []);
 
   const resetResults = () => {
     setAiResult(null);
@@ -752,7 +761,12 @@ export const TextLabView: React.FC<TextLabViewProps> = ({ initialTool = 'detecto
                     key={m.sourceId}
                     className="flex items-center justify-between gap-2 bg-[#FAF8F5] border border-[#EBE5DF] rounded-xl px-3 py-2"
                   >
-                    <p className="text-xs font-bold text-[#2B2D42] truncate min-w-0">{m.sourceTitle}</p>
+                    <p
+                      className="text-xs font-bold text-[#2B2D42] truncate min-w-0"
+                      title={m.sourceTitle}
+                    >
+                      {m.sourceTitle}
+                    </p>
                     <Badge
                       variant={
                         m.score > 0.4

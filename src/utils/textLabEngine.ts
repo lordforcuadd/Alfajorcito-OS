@@ -776,8 +776,27 @@ export function paraphraseTextLocal(text: string, intensity: ParaphraseIntensity
   const rate = getPreset(intensity).synonymRate;
 
   let wordIndex = 0;
-  const out = text.replace(
-    /\b([\wáéíóúñÁÉÍÓÚÑ]+(?:\s+[\wáéíóúñÁÉÍÓÚÑ]+)?)\b/g,
+  // Audit 2026-09-09: the old pattern \b(word(?:\s+word)?)\b matched GREEDY
+  // 2-word groups ("importante genera"), so dictionary keys hiding inside
+  // those bigrams were never substituted (measured: 0 of 7 dictionary words
+  // in a normal sentence). Fix: match ONE word at a time; multi-word keys
+  // ("sin embargo", "por lo tanto") are handled separately BEFORE the
+  // per-word pass, on their OWN seed sequence so per-word draws are unchanged
+  // from the original implementation (deterministic outputs stay stable).
+  let pre = text;
+  const multiKeys = Object.entries(SYNONYMS).filter(([k]) => k.includes(' '));
+  for (let mi = 0; mi < multiKeys.length; mi++) {
+    const [phrase, syns] = multiKeys[mi];
+    const seed = 5000 + mi; // separate seed band: never shifts per-word draws
+    if (pseudoRandom(seed) < rate) {
+      const pick = syns[Math.floor(pseudoRandom(seed + 7) * syns.length) % syns.length];
+      pre = pre.replace(new RegExp(`\\b${phrase}\\b`, 'gi'), (matched) =>
+        matched[0] === matched[0].toUpperCase() ? pick.charAt(0).toUpperCase() + pick.slice(1) : pick
+      );
+    }
+  }
+  const out = pre.replace(
+    /\b([\wáéíóúñÁÉÍÓÚÑ]+)\b/g,
     (word: string) => {
       wordIndex++;
       const lower = word.toLowerCase();

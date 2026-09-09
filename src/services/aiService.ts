@@ -665,7 +665,7 @@ export async function callLLM(
         messages: [{ role: 'user', content: prompt }],
         temperature: settings.temperature ?? 0.2
       }),
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(timeoutMs)
     });
     if (!res.ok) {
       const errText = await res.text();
@@ -684,7 +684,7 @@ export async function callLLM(
         prompt,
         stream: false
       }),
-      signal: AbortSignal.timeout(12000)
+      signal: AbortSignal.timeout(Math.max(timeoutMs, 12000))
     });
     if (!res.ok) {
       const errText = await res.text();

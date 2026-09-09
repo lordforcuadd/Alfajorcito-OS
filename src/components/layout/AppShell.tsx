@@ -478,14 +478,20 @@ export const AppShell: React.FC<AppShellProps> = ({
           </button>
 
           {(() => {
-            // Right group: pipeline, brain, textlab normally. If the ACTIVE tab
-            // (e.g. "research") is not among them, it replaces the last slot.
-            const base = navItems.slice(3, 6);
+            // Right group: research, pipeline, brain — plus the ACTIVE tab if
+            // it overflows. Audit 2026-09-09: the previous slice(3,6) made the
+            // 7th tab (textlab) UNREACHABLE on mobile — it was never in the
+            // base group and the active-swap only fires once you're already
+            // there (chicken-and-egg). New rule: the overflow slot (7th) is
+            // the active tab when it lives beyond position 6; otherwise the
+            // textlab tab takes the last slot by default so it is always
+            // reachable by tap.
+            const base = navItems.slice(3, 6); // research, pipeline, brain
             const active = navItems.find((i) => i.id === currentTab);
-            const right =
-              active && !base.some((i) => i.id === active.id) && !navItems.slice(0, 3).some((i) => i.id === active.id)
-                ? [...base.slice(0, 2), active]
-                : base;
+            const baseHasActive = active ? base.some((i) => i.id === active.id) : false;
+            const leftHasActive = active ? navItems.slice(0, 3).some((i) => i.id === active.id) : false;
+            const overflow = active && !baseHasActive && !leftHasActive ? active : navItems[6];
+            const right = overflow && !base.some((i) => i.id === overflow.id) ? [...base, overflow] : base;
             return right.map((item) => {
             const Icon = item.icon;
             const isActive = currentTab === item.id;
