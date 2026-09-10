@@ -569,12 +569,35 @@ export interface PlagiarismMatch {
   score: number;
   matchedShingles: number;
   totalShingles: number;
+  /** True when the suspect text explicitly cites this source (author + year). */
+  cited?: boolean;
 }
 
 export interface PlagiarismCandidate {
   id: string;
   title: string;
   text: string;
+  /** First-author last names + year, used to detect explicit citations in the suspect text. */
+  citationHints?: { lastName: string; year: number }[];
+}
+
+/**
+ * True when the suspect text explicitly cites the candidate source,
+ * APA-style (narrative "Goagoses et al. (2023)" or parenthetical
+ * "(Goagoses et al., 2023)"). We require the last name as a whole word
+ * AND the year as a standalone token nearby.
+ */
+function isExplicitlyCited(suspectText: string, hints: { lastName: string; year: number }[] | undefined): boolean {
+  if (!hints || hints.length === 0) return false;
+  const lower = suspectText.toLowerCase();
+  for (const h of hints) {
+    if (!h.lastName || !/^[a-z\u00C0-\u017F' -]{2,}$/i.test(h.lastName)) continue;
+    const escaped = h.lastName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const nameRe = new RegExp(`\\b${escaped}\\b`, 'i');
+    const yearRe = new RegExp(`(?:\\(|,|;|\\s)${h.year}\\b`);
+    if (nameRe.test(lower) && yearRe.test(suspectText)) return true;
+  }
+  return false;
 }
 
 /**
@@ -592,7 +615,13 @@ export function scanPlagiarismLocal(
 
   for (const candidate of corpus) {
     const candShingles = buildShingles(candidate.text, shingleSize);
-    const score = jaccardSimilarity(suspectShingles, candShingles);
+    const cited = isExplicitlyCited(suspectText, candidate.citationHints);
+    const rawScore = jaccardSimilarity(suspectShingles, candShingles);
+    // Cited sources overlap legitimately (quotes + paraphrases with APA
+    // attribution). Discount instead of zeroing: a text can cite a source
+    // AND copy it verbatim beyond the quoted fragments — keep a floor of
+    // 40% of the raw similarity so heavy verbatim overlap still surfaces.
+    const score = cited ? Math.max(rawScore * 0.4, rawScore > 0.6 ? rawScore * 0.7 : 0) : rawScore;
     let matched = 0;
     const [small, large] =
       suspectShingles.size <= candShingles.size
@@ -605,7 +634,8 @@ export function scanPlagiarismLocal(
       sourceTitle: candidate.title,
       score,
       matchedShingles: matched,
-      totalShingles: candShingles.size
+      totalShingles: candShingles.size,
+      cited
     });
     fragments.push({ score, matchedShingles: matched, totalShingles: candShingles.size });
   }

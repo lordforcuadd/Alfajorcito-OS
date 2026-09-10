@@ -287,6 +287,12 @@ export async function paraphraseText(
     (settings.apiKey || settings.provider === 'ollama');
 
   if (canUseLLM) {
+    const passthrough = {
+      LIGHT: 'Cambios mínimos: solo sustituir vocabulario marcado y conectores redundantes. Mantén oraciones prácticamente iguales.',
+      BALANCED: 'Reformula oraciones manteniendo cada dato literal: citas, cifras, nombres, resultados. Ajusta conectores, no el contenido.',
+      DEEP: 'Reestructura completamente la sintaxis manteniendo cada cita, cifra y concepto técnico intactos. Cambia el ORDEN de las ideas dentro del párrafo, sin comprometer el flujo lógico.'
+    }[preset.id];
+
     const prompt = `Eres un editor académico experto en Psicología y redacción científica en español (normas APA 7ma edición). Tu tarea es parafrasear un fragmento académico con total fidelidad al significado original.
 
 Texto original:
@@ -294,10 +300,8 @@ Texto original:
 ${text}
 """
 
-Nivel de reformulación solicitado: ${preset.label} (${preset.id}).
-- ${preset.description}
-- Tasa de sustitución léxica objetivo: ~${Math.round(preset.synonymRate * 100)}%.
-- Tasa de reestructura sintáctica objetivo: ~${Math.round(preset.structureRate * 100)}%.
+Nivel de reformulación: ${preset.label} (${preset.id}).
+${passthrough}
 
 Reglas obligatorias:
 1. Conserva TODOS los datos, cifras, nombres propios, conceptos técnicos psicológicos y el sentido exacto del original. Nada se agrega, nada se omite.
@@ -305,11 +309,12 @@ Reglas obligatorias:
 3. NO uses comillas tipográficas ni rayas (—). Usa puntuación simple.
 4. Varía la longitud de las oraciones de forma natural (alterna oraciones cortas y largas).
 5. NO agregues introducciones, conclusiones, comentarios ni disculpas. Devuelve SOLO el texto parafraseado.
-6. Mantén un registro académico riguroso pero con voz natural de estudiante universitario peruano, sin first-person forzado.
+6. Mantén un registro académico riguroso pero con voz natural de estudiante universitario, sin first-person forzado.
 
 Responde con el texto parafraseado únicamente, sin prefijos ni explicaciones.`;
 
-    const res = await runLLM(prompt, settings, 0.7);
+    const paraphraseTemperature = { LIGHT: 0.4, BALANCED: 0.6, DEEP: 0.8 }[preset.id];
+    const res = await runLLM(prompt, settings, paraphraseTemperature, 90000);
     if (res && res.text.trim()) {
       return {
         text: res.text.trim(),
@@ -335,6 +340,8 @@ export interface PlagiarismScanReport {
   matches: PlagiarismMatch[];
   modelUsed: string;
   isOfflineHeuristic: boolean;
+  /** Warning shown when the local corpus is too small for a "0%" to mean anything. */
+  corpusWarning?: string;
 }
 
 /** Builds the local corpus from stored sources (abstracts + user content). */
@@ -346,7 +353,15 @@ export async function buildLocalCorpus(): Promise<PlagiarismCandidate[]> {
     for (const s of sources) {
       const text = s.abstract || s.bibtex || `${s.title} ${s.authors.map((a) => `${a.firstName} ${a.lastName}`).join(' ')}`;
       if (text.trim().length > 40) {
-        corpus.push({ id: s.id, title: s.title, text });
+        corpus.push({
+          id: s.id,
+          title: s.title,
+          text,
+          citationHints: s.authors
+            .slice(0, 3)
+            .filter((a) => (a.lastName || '').trim().length >= 3)
+            .map((a) => ({ lastName: a.lastName.trim(), year: s.year }))
+        });
       }
     }
     for (const n of notes) {
@@ -371,6 +386,11 @@ export async function checkPlagiarism(
   const canUseLLM =
     settings.provider !== 'offline_heuristics' &&
     (settings.apiKey || settings.provider === 'ollama');
+
+  const corpusWarning =
+    corpus.length < 5
+      ? `Corpus local pequeño (${corpus.length} documento${corpus.length === 1 ? '' : 's'}). Este porcentaje solo compara contra TU biblioteca local, no contra internet. Un resultado bajo NO es certificado de originalidad.`
+      : undefined;
 
   if (canUseLLM && local.matches.length > 0 && local.overallScore > 0.02) {
     // Ask the LLM to triage the top candidates. Fetch their real text content
@@ -410,7 +430,7 @@ Devuelve EXACTAMENTE un objeto JSON válido:
 }
 Incluye solo matches con score >= 20.`;
 
-      const res = await runLLM(prompt, settings, 0.1);
+      const res = await runLLM(prompt, settings, 0.1, 90000);
       if (res && res.text) {
         const parsed = extractJSON<{
           overallScore?: number;
@@ -440,7 +460,8 @@ Incluye solo matches con score >= 20.`;
             overallScore: Math.max(0, Math.min(1, parsed.overallScore / 100)),
             matches: matches.length > 0 ? matches : local.matches,
             modelUsed: res.modelUsed,
-            isOfflineHeuristic: false
+            isOfflineHeuristic: false,
+            corpusWarning
           };
         }
       }
@@ -451,7 +472,8 @@ Incluye solo matches con score >= 20.`;
     overallScore: local.overallScore,
     matches: local.matches,
     modelUsed: 'Heurística Local Offline',
-    isOfflineHeuristic: true
+    isOfflineHeuristic: true,
+    corpusWarning
   };
 }
 
@@ -488,13 +510,13 @@ Devuelve EXACTAMENTE un objeto JSON válido:
 }
 Si no hay errores, devuelve correctedText igual al original y corrections: [].`;
 
-    const res = await runLLM(prompt, settings, 0.1);
+    const res = await runLLM(prompt, settings, 0.1, 90000);
     if (res && res.text) {
       const parsed = extractJSON<{
         correctedText?: string;
         corrections?: Array<{ original?: string; corrected?: string; explanation?: string }>;
       }>(res.text);
-      if (parsed && typeof parsed.correctedText === 'string') {
+      if (parsed && typeof parsed.correctedText === 'string' && parsed.correctedText.trim()) {
         const corrections = (parsed.corrections || [])
           .filter((c) => c && typeof c.original === 'string' && typeof c.corrected === 'string')
           .map((c) => ({
@@ -503,9 +525,24 @@ Si no hay errores, devuelve correctedText igual al original y corrections: [].`;
             explanation: typeof c.explanation === 'string' ? c.explanation : ''
           }));
         return {
-          correctedText: parsed.correctedText,
+          correctedText: parsed.correctedText.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'"),
           corrections,
           modelUsed: res.modelUsed,
+          isOfflineHeuristic: false
+        };
+      }
+      // Retry once with a simpler, JSON-lenient prompt (some models wrap the
+      // JSON in markdown fences or add prose). Fallback keeps the user from
+      // losing work to a transient LLM hiccup.
+      const retryPrompt = `Corrige ortografía y gramática del siguiente texto académico en español. Devuelve SOLO el texto corregido, sin explicaciones.
+
+${text}`;
+      const retry = await runLLM(retryPrompt, settings, 0.1, 90000);
+      if (retry && retry.text && retry.text.trim().length > text.trim().length * 0.5) {
+        return {
+          correctedText: retry.text.trim().replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'"),
+          corrections: [],
+          modelUsed: retry.modelUsed,
           isOfflineHeuristic: false
         };
       }
@@ -522,6 +559,8 @@ Si no hay errores, devuelve correctedText igual al original y corrections: [].`;
       issue.suggestion
     );
   }
+  // Heuristic: "las 6:40 horas" → "6:40" (Peruvian time phrasing, not an error)
+  corrected = corrected.replace(/\blas\s+(\d{1,2}:\d{2})\s+horas\b/gi, '$1');
   return {
     correctedText: corrected,
     corrections: issues.map((i) => ({

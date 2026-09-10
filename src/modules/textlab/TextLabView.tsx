@@ -767,6 +767,11 @@ export const TextLabView: React.FC<TextLabViewProps> = ({ initialTool = 'detecto
                     >
                       {m.sourceTitle}
                     </p>
+                    {m.cited && (
+                      <Badge variant="partially_verified" size="sm">
+                        Citada — score descontado
+                      </Badge>
+                    )}
                     <Badge
                       variant={
                         m.score > 0.4
@@ -786,6 +791,11 @@ export const TextLabView: React.FC<TextLabViewProps> = ({ initialTool = 'detecto
                 El contraste es local (tus abstracts y notas). No reemplaza el Turnitin institucional:
                 úsalo como chequeo previo de paralelismo antes de entregar.
               </p>
+              {plagResult.corpusWarning && (
+                <p className="text-[10px] text-[#8C3A32] mt-1.5 leading-relaxed font-medium">
+                  ⚠ {plagResult.corpusWarning}
+                </p>
+              )}
             </>
           )}
         </Card>
