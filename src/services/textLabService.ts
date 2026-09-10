@@ -164,15 +164,17 @@ async function runLLM(
   settings: AISettings,
   temperature?: number,
   timeoutMs = 10000,
-  samplingOpts?: { topP?: number; seed?: number }
+  samplingOpts?: { topP?: number; seed?: number },
+  signal?: AbortSignal
 ): Promise<LLMCallResult | null> {
   try {
     return await callLLM(
       prompt,
       temperature !== undefined ? { ...settings, temperature } : settings,
-      { timeoutMs, ...samplingOpts }
+      { timeoutMs, ...samplingOpts, signal }
     );
   } catch (err) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     console.warn('TextLab LLM call failed, falling back offline:', err);
     return null;
   }
@@ -575,11 +577,24 @@ ${text}`;
 
 // ─── 5. Humanizer (LLM primary + local fallback) ─────────────────────────────
 
+export interface HumanizeProgress {
+  phase: 'audit' | 'rewriting' | 'self-audit' | 'fix' | 'done';
+  /** 0-1 overall progress across all phases (chunk-aware). */
+  progress: number;
+  detail?: string;
+}
+
 export async function humanizeText(
   text: string,
-  explicitSettings?: AISettings
+  explicitSettings?: AISettings,
+  options?: { signal?: AbortSignal; onProgress?: (p: HumanizeProgress) => void }
 ): Promise<HumanizeResult> {
   const settings = await getEffectiveAISettings(explicitSettings);
+  const { signal, onProgress } = options || {};
+
+  const throwIfAborted = () => {
+    if (signal?.aborted) throw new DOMException('Humanización cancelada', 'AbortError');
+  };
 
   const canUseLLM =
     settings.provider !== 'offline_heuristics' &&
@@ -587,6 +602,9 @@ export async function humanizeText(
 
   if (canUseLLM) {
     // ── Chat-procedure pipeline (2026-09-08, "como lo hicimos en el chat") ──
+    // Cancel check BEFORE any work: an already-cancelled run must not
+    // spend a single token nor fall back to offline humanization.
+    throwIfAborted();
     // The single mega-prompt failed on small models (gemini-3.5-flash-lite
     // ignored 8 abstract strategies at once — measured: 100% AI on Pangram
     // after "humanizing"). The chat procedure that produced 0% AI texts works
@@ -734,7 +752,7 @@ Devuelve EXACTAMENTE este JSON:
     const auditRes = await runLLM(auditPrompt, settings, 0.3, 90000, {
       topP: 0.95,
       seed: Math.floor(Math.random() * 2 ** 30)
-    });
+    }, signal);
     if (auditRes && auditRes.text) {
       modelUsed = auditRes.modelUsed;
       const audit = extractJSON<{
@@ -757,11 +775,13 @@ Devuelve EXACTAMENTE este JSON:
     // limpio = huella estilométrica: la reescritura por fragmentos es
     // exactamente lo que la mueve (cada fragmento re-muestreado con entropía).
     const chunks = paragraphChunks(text);
+    onProgress?.({ phase: 'rewriting', progress: 0.15, detail: `${chunks.length} fragmento${chunks.length === 1 ? '' : 's'} a reescribir` });
     const rewrittenChunks: string[] = [];
     const chunkChanges: string[] = [];
     let lastFrag: string | null = null;
 
     for (let ci = 0; ci < chunks.length; ci++) {
+      throwIfAborted();
       // Quotes relevantes a ESTE chunk (los que aparecen dentro del fragmento)
       const relevant = auditQuotes.filter((q) => chunkIncludes(chunks[ci], q));
       const originalWords = chunks[ci].split(/\s+/).length;
@@ -779,7 +799,8 @@ Devuelve EXACTAMENTE este JSON:
           settings,
           0.85,
           90000,
-          { topP: 0.98, seed: Math.floor(Math.random() * 2 ** 30) }
+          { topP: 0.98, seed: Math.floor(Math.random() * 2 ** 30) },
+          signal
         );
         if (!res || !res.text) break; // API fail: conservar original del chunk
         if (!modelUsed) modelUsed = res.modelUsed;
@@ -807,16 +828,23 @@ Devuelve EXACTAMENTE este JSON:
         }
       }
       if (!done) rewrittenChunks.push(chunks[ci]); // API fail path
+      onProgress?.({
+        phase: 'rewriting',
+        progress: 0.15 + (0.55 * (ci + 1)) / chunks.length,
+        detail: `Fragmento ${ci + 1}/${chunks.length} reescrito`
+      });
     }
 
     const candidate = detourLLMUniformity(rewrittenChunks.join('\n\n'));
 
     // ══ FASE 3: AUTO-CRITICA del candidato (el chat: "¿qué aún suena a IA?") ═
+    throwIfAborted();
+    onProgress?.({ phase: 'self-audit', progress: 0.72, detail: 'Auto-crítica del borrador' });
     let selfAuditProblems: string[] = [];
     const selfAuditRes = await runLLM(selfAuditPrompt(candidate), settings, 0.3, 90000, {
       topP: 0.95,
       seed: Math.floor(Math.random() * 2 ** 30)
-    });
+    }, signal);
     if (selfAuditRes && selfAuditRes.text) {
       const selfAudit = extractJSON<{ problems?: Array<{ quote?: string; fixHint?: string }> }>(selfAuditRes.text);
       selfAuditProblems = (selfAudit?.problems || [])
@@ -826,13 +854,15 @@ Devuelve EXACTAMENTE este JSON:
     }
 
     // ══ FASE 4: CORRECCIÓN de los puntos que la auto-critica encontró ═══════
+    throwIfAborted();
     let finalText = candidate;
     let finalStrategies = chunkChanges;
     if (selfAuditProblems.length > 0) {
+      onProgress?.({ phase: 'fix', progress: 0.85, detail: 'Aplicando correcciones finales' });
       const fixRes = await runLLM(fixPrompt(candidate, selfAuditProblems), settings, 0.8, 90000, {
         topP: 0.98,
         seed: Math.floor(Math.random() * 2 ** 30)
-      });
+      }, signal);
       if (fixRes && fixRes.text) {
         const fixed = extractJSON<{ correctedText?: string }>(fixRes.text);
         if (fixed && typeof fixed.correctedText === 'string' && fixed.correctedText.trim()) {

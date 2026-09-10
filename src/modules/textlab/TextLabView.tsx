@@ -12,7 +12,8 @@ import {
   FileText,
   Lightbulb,
   RotateCcw,
-  Wand2
+  Wand2,
+  XCircle
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { Card } from '../../components/common/Card';
@@ -100,7 +101,27 @@ const TOOLS: Array<{
 export const TextLabView: React.FC<TextLabViewProps> = ({ initialTool = 'detector' }) => {
   const { showToast } = useToast();
   const [activeTool, setActiveTool] = useState<LabTool>(initialTool);
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState(() => {
+    // Persist input across tab reloads: losing a pasted thesis fragment to a
+    // stray F5 was a real risk during multi-minute humanizer runs.
+    try {
+      return localStorage.getItem('textlab:draft') || '';
+    } catch {
+      return '';
+    }
+  });
+  // Debounced persistence — one write per second of typing, not per keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        if (inputText) localStorage.setItem('textlab:draft', inputText);
+        else localStorage.removeItem('textlab:draft');
+      } catch {
+        /* private mode: persistence unavailable, input still works */
+      }
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [inputText]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -112,6 +133,9 @@ export const TextLabView: React.FC<TextLabViewProps> = ({ initialTool = 'detecto
   const [plagResult, setPlagResult] = useState<PlagiarismScanReport | null>(null);
   const [spellResult, setSpellResult] = useState<SpellcheckResult | null>(null);
   const [humanResult, setHumanResult] = useState<HumanizeResult | null>(null);
+  // Humanizer cancelation + phase progress (runs can take minutes with slow models)
+  const [humanizeAbort, setHumanizeAbort] = useState<AbortController | null>(null);
+  const [humanizeProgress, setHumanizeProgress] = useState<{ phase: string; progress: number; detail?: string } | null>(null);
 
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wordCount = useMemo(
@@ -256,9 +280,16 @@ export const TextLabView: React.FC<TextLabViewProps> = ({ initialTool = 'detecto
     }
     setIsProcessing(true);
     setHumanResult(null);
+    setHumanizeProgress({ phase: 'audit', progress: 0.05, detail: 'Audit inicial' });
+    const abort = new AbortController();
+    setHumanizeAbort(abort);
     try {
-      const res = await humanizeText(inputText);
+      const res = await humanizeText(inputText, undefined, {
+        signal: abort.signal,
+        onProgress: (p) => setHumanizeProgress(p)
+      });
       setHumanResult(res);
+      setHumanizeProgress(null);
       if (res.isOfflineHeuristic) {
         showToast(
           'Modo offline',
@@ -275,9 +306,15 @@ export const TextLabView: React.FC<TextLabViewProps> = ({ initialTool = 'detecto
           leftover ? 'warning' : 'success'
         );
       }
-    } catch {
-      showToast('Error', 'No se pudo humanizar el texto.', 'error');
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        showToast('Cancelado', 'Humanización detenida. El texto original queda intacto.', 'info');
+      } else {
+        showToast('Error', 'No se pudo humanizar el texto.', 'error');
+      }
     } finally {
+      setHumanizeAbort(null);
+      setHumanizeProgress(null);
       setIsProcessing(false);
     }
   };
@@ -434,7 +471,17 @@ export const TextLabView: React.FC<TextLabViewProps> = ({ initialTool = 'detecto
           disabled={isProcessing}
           className="w-full text-sm text-[#2B2D42] placeholder:text-[#5A6275]/60 bg-[#FAF8F5] border border-[#EBE5DF] rounded-2xl px-3.5 py-3 focus:outline-none focus:border-[#E8A598] focus:ring-1 focus:ring-[#E8A598]/40 resize-y leading-relaxed disabled:opacity-60 transition-colors"
         />
-        <div className="flex items-center justify-end mt-3">
+        <div className="flex items-center justify-end mt-3 gap-2">
+          {humanizeAbort && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => humanizeAbort.abort()}
+              icon={<XCircle className="w-4 h-4" />}
+            >
+              Cancelar
+            </Button>
+          )}
           <Button
             variant="primary"
             size="sm"
@@ -446,6 +493,25 @@ export const TextLabView: React.FC<TextLabViewProps> = ({ initialTool = 'detecto
             {isProcessing ? 'Procesando...' : activeToolMeta.cta}
           </Button>
         </div>
+        {humanizeProgress && (
+          <div className="mt-3" role="status" aria-live="polite">
+            <div className="flex items-center justify-between text-[10px] font-medium text-[#5A6275] mb-1">
+              <span>
+                {humanizeProgress.phase === 'audit' && 'Auditando qué suena a IA…'}
+                {humanizeProgress.phase === 'rewriting' && `Reescribiendo fragmentos… ${humanizeProgress.detail || ''}`}
+                {humanizeProgress.phase === 'self-audit' && 'Auto-crítica del borrador…'}
+                {humanizeProgress.phase === 'fix' && 'Aplicando correcciones finales…'}
+              </span>
+              <span>{Math.round(humanizeProgress.progress * 100)}%</span>
+            </div>
+            <div className="h-1.5 bg-[#EBE5DF] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#E8A598] rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, humanizeProgress.progress * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* ══ DETECTOR: QuillBot-style three-bar breakdown ══ */}

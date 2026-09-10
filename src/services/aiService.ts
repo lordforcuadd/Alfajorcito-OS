@@ -509,7 +509,8 @@ async function callGemini(
   requestedModel?: string,
   temperature = 0.2,
   timeoutMs = 10000,
-  samplingOpts?: { topP?: number; seed?: number }
+  samplingOpts?: { topP?: number; seed?: number },
+  signal?: AbortSignal
 ): Promise<{ text: string; modelUsed: string } | null> {
   const cleanModel = (requestedModel || '').trim().replace(/^models\//, '');
   const targetModel = cleanModel || 'gemini-2.5-flash';
@@ -537,7 +538,9 @@ async function callGemini(
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig
         }),
-        signal: AbortSignal.timeout(timeoutMs)
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)])
+          : AbortSignal.timeout(timeoutMs)
       });
       if (res.ok) {
         const data = await res.json();
@@ -574,7 +577,9 @@ async function callGemini(
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig
         }),
-        signal: AbortSignal.timeout(timeoutMs)
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)])
+          : AbortSignal.timeout(timeoutMs)
       });
 
       if (res.ok) {
@@ -624,10 +629,17 @@ export interface LLMCallResult {
 export async function callLLM(
   prompt: string,
   settings: AISettings,
-  opts?: { timeoutMs?: number; topP?: number; seed?: number }
+  opts?: { timeoutMs?: number; topP?: number; seed?: number; signal?: AbortSignal }
 ): Promise<LLMCallResult | null> {
   const { provider, apiKey, modelName, ollamaEndpoint } = settings;
   const timeoutMs = opts?.timeoutMs ?? 10000;
+  // Combine caller's cancellation signal with the per-call timeout: either
+  // one aborting kills the fetch. Without a caller signal, behavior is
+  // identical to the previous AbortSignal.timeout(timeoutMs).
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  const signal = opts?.signal
+    ? AbortSignal.any([opts.signal, timeoutSignal])
+    : timeoutSignal;
 
   let resultText: string | null = null;
   let resolvedModel = modelName || '';
@@ -641,7 +653,8 @@ export async function callLLM(
       timeoutMs,
       opts?.topP !== undefined || opts?.seed !== undefined
         ? { topP: opts?.topP, seed: opts?.seed }
-        : undefined
+        : undefined,
+      signal
     );
     if (geminiRes) {
       resultText = geminiRes.text;
@@ -665,7 +678,7 @@ export async function callLLM(
         messages: [{ role: 'user', content: prompt }],
         temperature: settings.temperature ?? 0.2
       }),
-      signal: AbortSignal.timeout(timeoutMs)
+      signal
     });
     if (!res.ok) {
       const errText = await res.text();
@@ -684,7 +697,7 @@ export async function callLLM(
         prompt,
         stream: false
       }),
-      signal: AbortSignal.timeout(Math.max(timeoutMs, 12000))
+      signal
     });
     if (!res.ok) {
       const errText = await res.text();
